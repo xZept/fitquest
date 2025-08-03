@@ -2,7 +2,8 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/wooden_flanks_bg">
+    android:background="@drawable/wooden_flanks_bg"
+    android:id="@+id/registerLayout">
 
     <!-- Decorative Container Image -->
     <ImageView
@@ -10,6 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="fitXY"
+        android:layout_marginTop="30dp"
         android:paddingBottom="20dp"
         android:src="@drawable/sign_up_paper" />
 
@@ -46,6 +48,7 @@
                 android:layout_height="wrap_content"
                 android:hint="First Name"
                 android:padding="12dp"
+                android:background="@drawable/user_input_bg"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -57,6 +60,7 @@
                 android:layout_height="wrap_content"
                 android:hint="Last Name"
                 android:padding="12dp"
+                android:background="@drawable/user_input_bg"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -70,16 +74,28 @@
                 android:focusable="false"
                 android:clickable="true"
                 android:padding="12dp"
+                android:background="@drawable/user_input_bg"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:id="@+id/tv_age"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Age: "
+                android:background="@drawable/user_input_bg"
+                android:textColor="@color/white"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp" />
+
 
             <TextView
                 android:id="@+id/tv_sex_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Select Your Avatar"
-                android:textSize="18sp"
+                android:textSize="20sp"
                 android:textColor="#FFFFFF" />
 
             <LinearLayout
@@ -120,6 +136,7 @@
                 android:layout_height="wrap_content"
                 android:hint="Username"
                 android:padding="12dp"
+                android:background="@drawable/user_input_bg"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -132,6 +149,7 @@
                 android:hint="Email"
                 android:inputType="textEmailAddress"
                 android:padding="12dp"
+                android:background="@drawable/user_input_bg"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -144,6 +162,7 @@
                 android:hint="Password"
                 android:inputType="textPassword"
                 android:padding="12dp"
+                android:background="@drawable/user_input_bg"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -156,6 +175,7 @@
                 android:hint="Confirm Password"
                 android:inputType="textPassword"
                 android:padding="12dp"
+                android:background="@drawable/user_input_bg"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -182,5 +202,8 @@
         android:layout_marginBottom="-125dp"
         android:layout_marginHorizontal="90dp"
         android:text="@string/enter_the_realm"
-        android:textColor="#FFFFFF" />
+        android:textColor="#FFFFFF"
+        android:clickable="true"
+        android:focusable="true" />
+
 </RelativeLayout>
