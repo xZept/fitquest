@@ -2,12 +2,16 @@ package com.example.fitquest
 
 import android.app.DatePickerDialog
 import android.content.Intent
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputFilter
 import android.text.TextWatcher
 import android.util.Patterns
 import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -21,6 +25,23 @@ class RegisterActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register)
+
+        // hides the system navigation
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            window.insetsController?.apply {
+                systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                hide(WindowInsets.Type.navigationBars())
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = Color.TRANSPARENT
+        }
 
         setupInputFocusEffects()
 
@@ -102,13 +123,11 @@ class RegisterActivity : AppCompatActivity() {
             val month = calendar.get(Calendar.MONTH)
             val day = calendar.get(Calendar.DAY_OF_MONTH)
 
-            DatePickerDialog(this, { _, y, m, d ->
+            val datePickerDialog = DatePickerDialog(this, { _, y, m, d ->
                 birthdayEditText.setText(String.format("%04d-%02d-%02d", y, m + 1, d))
 
                 val today = Calendar.getInstance()
-                val birthDate = Calendar.getInstance().apply {
-                    set(y, m, d)
-                }
+                val birthDate = Calendar.getInstance().apply { set(y, m, d) }
 
                 var age = today.get(Calendar.YEAR) - birthDate.get(Calendar.YEAR)
                 if (today.get(Calendar.DAY_OF_YEAR) < birthDate.get(Calendar.DAY_OF_YEAR)) {
@@ -117,8 +136,18 @@ class RegisterActivity : AppCompatActivity() {
 
                 ageTextView.text = "Age: $age"
 
-            }, year, month, day).show()
+            }, year, month, day)
+
+            // Use spinner instead of calendar view
+            datePickerDialog.datePicker.calendarViewShown = false
+            datePickerDialog.datePicker.spinnersShown = true
+
+            // Prevent selecting future dates
+            datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
+
+            datePickerDialog.show()
         }
+
 
         // Password validation
         fun isValidPassword(password: String): Boolean {
