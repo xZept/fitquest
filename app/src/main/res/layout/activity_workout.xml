@@ -4,7 +4,8 @@
     android:id="@+id/workout_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#ffffff"
+    android:gravity="center"
+    android:background="@drawable/workout_bg"
     tools:context=".WorkoutActivity">
 
     <!-- Title -->
@@ -24,7 +25,7 @@
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:layout_alignParentBottom="true"
-        android:background="@drawable/navigation_container"
+        android:background="@android:color/transparent"
         android:gravity="center"
         android:orientation="horizontal"
         android:padding="8dp"

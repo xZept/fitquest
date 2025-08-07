@@ -19,12 +19,14 @@
         android:layout_centerHorizontal="true"/>
 
     <!-- Add macro tracking UI here -->
+
+    <!-- Navigation -->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:layout_alignParentBottom="true"
-        android:background="@drawable/navigation_container"
+        android:background="@android:color/transparent"
         android:gravity="center"
         android:orientation="horizontal"
         android:padding="8dp"
