@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.widget.Button
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 
@@ -31,6 +32,14 @@ class WorkoutActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             window.navigationBarColor = Color.TRANSPARENT
         }
+
+
+        val btnStartWorkout = findViewById<Button>(R.id.btn_start_workout)
+        btnStartWorkout.setOnClickListener {
+            val intent = Intent(this, WorkoutGeneratorActivity::class.java)
+            startActivity(intent)
+        }
+
 
         // Find the nav icons
         val navDashboard = findViewById<ImageView>(R.id.nav_icon_dashboard)

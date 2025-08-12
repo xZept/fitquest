@@ -20,6 +20,24 @@
         android:layout_centerHorizontal="true"/>
 
     <!-- Add workout content here (e.g. list of exercises) -->
+
+
+
+    <!-- Custom button above navigation bar -->
+    <Button
+        android:id="@+id/btn_start_workout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/bottom_nav"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/take_quest_button"
+        android:paddingLeft="24dp"
+        android:paddingRight="24dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"/>
+
+    <!--Navigation-->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"

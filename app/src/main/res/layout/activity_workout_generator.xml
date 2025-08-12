@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/workout_subpage_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/workout_subpage_bg"
+    tools:context=".WorkoutGeneratorActivity">
+
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:layout_marginTop="50dp"
+        android:paddingHorizontal="68dp">
+
+        <!-- Height -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp">
+
+            <EditText
+                android:id="@+id/input_height"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal"
+                android:hint="Height (cm)"
+                android:padding="12dp"
+                android:background="@drawable/user_input_bg"
+                android:textColorHint="@color/white"
+                android:textColor="@color/white" />
+        </LinearLayout>
+
+        <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="12dp">
+            <EditText
+                android:id="@+id/input_weight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberDecimal"
+                android:hint="Weight (kg)"
+                android:padding="12dp"
+                android:background="@drawable/user_input_bg"
+                android:textColorHint="@color/white"
+                android:textColor="@color/white"/>
+        </LinearLayout>
+
+        <!-- Fitness Goal -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp">
+
+            <Spinner
+                android:id="@+id/spinner_goal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/user_input_bg"
+                android:entries="@array/fitness_goals"
+                android:textColor="@color/white"
+                />
+        </LinearLayout>
+
+        <!-- Activity Level -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp">
+            <Spinner
+                android:id="@+id/spinner_activity"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/user_input_bg"
+                android:entries="@array/activity_levels"
+                android:textColor="@color/white"/>
+        </LinearLayout>
+
+        <!-- Workout Split -->
+        <LinearLayout
+            android:id="@+id/split_activity"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/user_input_bg"
+            android:paddingVertical="12dp"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/tv_split_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Workout Split: 3 days/week"
+                android:textSize="20sp"
+                android:textColor="@android:color/white"
+                android:layout_marginBottom="8dp"
+                android:paddingStart="20dp"/>
+
+            <SeekBar
+                android:id="@+id/seekbar_split"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:progress="3"
+                android:max="6"
+                android:min="1"
+                android:progressTint="@color/primary"
+                android:thumbTint="@color/primary"/>
+<!--                    android:background="@drawable/user_input_bg" />-->
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Explanation Container -->
+    <LinearLayout
+        android:id="@+id/explanation_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/speech_bubble"
+        android:padding="16dp"
+        android:layout_above="@id/btn_generate_plan"
+        android:layout_marginHorizontal="25dp"
+        android:layout_marginBottom="155dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/explanation_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/white"
+            android:textSize="14sp" />
+    </LinearLayout>
+
+    <!-- Submit Button at bottom -->
+    <Button
+        android:id="@+id/btn_generate_plan"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="40dp"
+        android:background="@drawable/forge_quest_button"
+        android:textColor="@android:color/white"
+        android:paddingLeft="24dp"
+        android:paddingRight="24dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"/>
+
+</RelativeLayout>
