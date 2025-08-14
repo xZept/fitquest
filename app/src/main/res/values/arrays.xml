@@ -21,4 +21,11 @@
         <item>5 days/week</item>
         <item>6 days/week</item>
     </string-array>
+
+    <string-array name="equipment_choices">
+        <item>Gym Equipment</item>
+        <item>Home Gym</item>
+        <item>Body Weight</item>
+    </string-array>
+
 </resources>

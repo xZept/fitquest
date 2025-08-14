@@ -49,6 +49,8 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
         val inputWeight = findViewById<EditText>(R.id.input_weight)
         val spinnerGoal = findViewById<Spinner>(R.id.spinner_goal)
         val spinnerActivity = findViewById<Spinner>(R.id.spinner_activity)
+        val inputHealthCondition = findViewById<EditText>(R.id.input_health_condition)
+        val spinnerEquipment = findViewById<Spinner>(R.id.spinner_equipment)
         val seekbarSplit = findViewById<SeekBar>(R.id.seekbar_split)
         val tvSplitLabel = findViewById<TextView>(R.id.tv_split_label)
         val btnSubmit = findViewById<Button>(R.id.btn_generate_plan)
@@ -58,20 +60,57 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
         explanationContainer.visibility = View.GONE
 
         val messages = mapOf(
-            R.id.input_height to "Height is used to calculate your BMI and tailor your workout intensity.",
-            R.id.input_weight to "Weight is used to calculate calorie needs and track progress.",
-            R.id.spinner_goal to "Your fitness goal determines the type of workout plan you'll get.",
-            R.id.spinner_activity to "Activity level helps estimate your daily calorie burn.",
-            R.id.seekbar_split to "Workout split is the number of workout days per week."
+            R.id.input_height to "Your height is used to calculate Body Mass Index (BMI) and adjust workout intensity accordingly.",
+            R.id.input_weight to "Your weight is used to calculate calorie requirements and track fitness progress over time.",
+            R.id.spinner_goal to "Your selected fitness goal determines the type and structure of your workout program.",
+            R.id.spinner_activity to "Your activity level helps estimate daily energy expenditure for a more accurate plan.",
+            R.id.seekbar_split to "The workout split specifies how many days per week you will train, affecting intensity and recovery.",
+            R.id.input_health_condition to "Your health condition helps ensure your workout plan is safe and tailored to your needs.",
+            R.id.spinner_equipment to "Your available equipment determines the type of exercises included in your program."
         )
 
+        val spinner: Spinner = findViewById(R.id.spinner_equipment,)
+
+
+        val equipmentAdapter = ArrayAdapter.createFromResource(
+            this,
+            R.array.equipment_choices,
+            R.layout.spinner_item
+        )
+        equipmentAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        findViewById<Spinner>(R.id.spinner_equipment).adapter = equipmentAdapter
+
+
+        val activityAdapter = ArrayAdapter.createFromResource(
+            this,
+            R.array.activity_levels,
+            R.layout.spinner_item
+        )
+        activityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        findViewById<Spinner>(R.id.spinner_activity).adapter = activityAdapter
+
+        val goalAdapter = ArrayAdapter.createFromResource(
+            this,
+            R.array.fitness_goals,
+            R.layout.spinner_item
+        )
+        goalAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        findViewById<Spinner>(R.id.spinner_goal).adapter = goalAdapter
+
+//        adapter.setDropDownViewResource(R.layout.spinner_item)
+//        spinner.adapter = adapter
+
+
+        // explanation
         inputHeight.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) showExplanation(messages[R.id.input_height]!!)
         }
         inputWeight.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) showExplanation(messages[R.id.input_weight]!!)
         }
-
+        inputHealthCondition.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) showExplanation(messages[R.id.input_health_condition]!!)
+        }
         spinnerGoal.setOnTouchListener { _, _ ->
             showExplanation(messages[R.id.spinner_goal]!!)
             false
@@ -80,6 +119,11 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
             showExplanation(messages[R.id.spinner_activity]!!)
             false
         }
+        spinnerEquipment.setOnTouchListener { _, _ ->
+            showExplanation(messages[R.id.spinner_equipment]!!)
+            false
+        }
+
 
         seekbarSplit.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -130,7 +174,7 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
     }
 
     private fun setupInputFocusEffects() {
-        val editTextIds = listOf(R.id.input_height, R.id.input_weight)
+        val editTextIds = listOf(R.id.input_height, R.id.input_weight, R.id.input_health_condition)
         for (id in editTextIds) {
             val edit = findViewById<EditText?>(id)
             edit?.setOnFocusChangeListener { view, hasFocus ->
@@ -141,7 +185,7 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
             }
         }
 
-        val spinnerIds = listOf(R.id.spinner_goal, R.id.spinner_activity)
+        val spinnerIds = listOf(R.id.spinner_goal, R.id.spinner_activity,R.id.spinner_equipment)
         for (id in spinnerIds) {
             val s = findViewById<Spinner?>(id)
             s?.setOnTouchListener { view, _ ->
