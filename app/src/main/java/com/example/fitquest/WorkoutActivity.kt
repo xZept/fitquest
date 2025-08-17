@@ -4,17 +4,66 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.text.TextUtils
+import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
-import android.widget.Button
-import android.widget.ImageView
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import kotlin.math.max
+import kotlin.random.Random
 
 class WorkoutActivity : AppCompatActivity() {
+
+    // ---------- Data models ----------
+    data class Exercise(
+        val id: Int,
+        val name: String,
+        val equipment: String,
+        val variation: String,
+        val utility: String,
+        val mechanics: String,
+        val force: String,
+        val targetMuscles: String,
+        val mainMuscle: String,
+        val difficulty: Int,
+        val type: String,
+        val description: String
+    )
+
+    data class WorkoutSplit(
+        val splitName: String,
+        val exercises: List<Exercise>
+    )
+
+
+    // Holds all exercises loaded from CSV
+    private lateinit var dataset: List<Exercise>
+
+    // Holds generated workout plan, grouped by bucket
+    private val workoutPlan: MutableMap<String, List<Exercise>> = mutableMapOf()
+
+
+
+    private fun addSome(bucket: String, pick: Int = 5, filter: (Exercise) -> Boolean) {
+        val matches = dataset.filter(filter).shuffled().take(pick)
+        workoutPlan[bucket] = matches
+    }
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout)
+
+
 
         // hides the system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -32,14 +81,6 @@ class WorkoutActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             window.navigationBarColor = Color.TRANSPARENT
         }
-
-
-        val btnStartWorkout = findViewById<Button>(R.id.btn_start_workout)
-        btnStartWorkout.setOnClickListener {
-            val intent = Intent(this, WorkoutGeneratorActivity::class.java)
-            startActivity(intent)
-        }
-
 
         // Find the nav icons
         val navDashboard = findViewById<ImageView>(R.id.nav_icon_dashboard)
@@ -76,5 +117,516 @@ class WorkoutActivity : AppCompatActivity() {
             startActivity(intent)
             overridePendingTransition(0, 0)
         }
+
+        val startWorkoutBtn: Button = findViewById(R.id.btn_start_workout)
+        startWorkoutBtn.setOnClickListener {
+            val intent = Intent(this, WorkoutGeneratorActivity::class.java)
+            startActivity(intent)
+        }
+
+
+
+        val container = findViewById<LinearLayout>(R.id.workout_container)
+
+        // ---- Read user inputs passed from generator screen ----
+        val splitDays     = intent.getIntExtra("SPLIT_DAYS", 0)
+        val goal          = intent.getStringExtra("GOAL") ?: ""
+        val activityLevel = intent.getStringExtra("ACTIVITY_LEVEL") ?: ""
+        val healthCond    = intent.getStringExtra("HEALTH_CONDITION")?.lowercase() ?: ""
+        val equipmentPref = intent.getStringExtra("EQUIPMENT_PREF")?.lowercase() ?: ""
+
+        if (splitDays <= 0) {
+            // Nothing to generate yet
+            return
+        }
+
+
+        dataset = loadExercisesFromAssets("exercise_dataset.csv")
+
+        container.removeAllViews()
+
+        for ((day, exercises) in workoutPlan) {
+            // Add Day Header
+            val dayHeader = TextView(this).apply {
+                text = day
+                textSize = 20f
+                setPadding(0, 16, 0, 8)
+            }
+            container.addView(dayHeader)
+
+            // Add each exercise under the day
+            for (exercise in exercises) {
+                val exerciseView = TextView(this).apply {
+                    text = "• ${exercise.name} (${exercise.type})"
+                    textSize = 16f
+                    setPadding(32, 4, 0, 4)
+                }
+                container.addView(exerciseView)
+            }
+        }
+
+
+        // ---- Load datasets ----
+        val allExercises = loadExercisesFromAssets("exercise_dataset.csv")
+            // If you keep videos in separate file:
+            //.attachVideoUrls(loadVideoMapIfExists("workout_videos.csv"))
+
+        // ---- Apply rules ----
+        val filtered = allExercises
+            .filterByEquipment(equipmentPref)
+            .filterByHealthCondition(healthCond)
+            .filterByDifficulty(activityLevel)
+            .prioritizeByGoal(goal)
+
+        // ---- Allocate per split ----
+        val dayBuckets = splitMap(splitDays) // e.g., 6 -> [Push, Pull, Legs, Push, Pull, Legs]
+        val pool = filtered.shuffled(Random(System.currentTimeMillis()))
+        val bucketed = allocateToBuckets(pool, dayBuckets)
+
+        // Build an ordered plan with labels "Day i - Split"
+        val orderedPlan: List<Pair<String, List<Exercise>>> =
+            dayBuckets.mapIndexed { idx, name ->
+                "Day ${idx + 1} - $name" to (bucketed[name] ?: emptyList())
+            }
+
+        // Render
+        displayWorkoutOrdered(orderedPlan)
+
+        // ---- Render horizontal day cards ----
+        dayBuckets.forEachIndexed { index, dayName ->
+            val exercisesForDay = bucketed[dayName] ?: emptyList()
+            container.addView(buildDayCard(dayName, exercisesForDay))
+        }
+
+        val exercises = loadExercisesFromAssets("exercise_dataset.csv")
+        val grouped = groupExercisesBySplit(exercises)
+        val workoutSplits = grouped.map { (muscle, exList) ->
+            WorkoutSplit(muscle, exList)
+        }
+
+        val exerciseList = loadExercisesFromCSV()
+
+        if (exerciseList.isEmpty()) {
+            Log.e("UI_ERROR", "No exercises loaded from CSV!")
+        } else {
+            Log.d("UI_DATA", "Loaded ${exerciseList.size} exercises")
+        }
+
+        val workoutContainer = findViewById<LinearLayout>(R.id.workout_container)
+
+
+        // Display on screen
+        displayWorkout(workoutPlan, workoutContainer)
+
     }
+
+    private fun displayWorkoutOrdered(plan: List<Pair<String, List<Exercise>>>) {
+        val container = findViewById<LinearLayout>(R.id.workout_container)
+        container.removeAllViews()
+        val inflater = layoutInflater
+
+        plan.forEach { (label, exercises) ->
+            val dayView = inflater.inflate(R.layout.item_workout_day, container, false)
+
+            dayView.findViewById<TextView>(R.id.tv_day_title).text = label
+            val exerciseList = dayView.findViewById<LinearLayout>(R.id.exercise_list)
+
+            exercises.forEach { ex ->
+                val tv = TextView(this).apply {
+                    text = "• ${ex.name}"
+                    textSize = 16f
+                    setPadding(0, dp(6), 0, 0)
+                    setTextColor(ContextCompat.getColor(this@WorkoutActivity, android.R.color.white))
+                    maxLines = 2
+                    ellipsize = TextUtils.TruncateAt.END
+                }
+                exerciseList.addView(tv)
+            }
+
+            container.addView(dayView)
+        }
+    }
+
+    private fun loadExercisesFromCSV(): List<String> {
+        val exercises = mutableListOf<String>()
+        try {
+            val inputStream = assets.open("exercise_dataset.csv")
+            val reader = BufferedReader(InputStreamReader(inputStream))
+
+            // Skip header
+            var line = reader.readLine()
+
+            while (reader.readLine().also { line = it } != null) {
+                val tokens = line.split(",")
+                if (tokens.size > 1) {
+                    val exerciseName = tokens[1] // second column is exercise_name
+                    exercises.add(exerciseName)
+                    Log.d("CSV_LOAD", "Loaded exercise: $exerciseName")
+                }
+            }
+            reader.close()
+        } catch (e: Exception) {
+            Log.e("CSV_ERROR", "Error reading CSV", e)
+        }
+        return exercises
+    }
+
+    // ---------- CSV loading ----------
+    private fun loadExercisesFromAssets(exercise_dataset: String): List<Exercise> {
+        val list = mutableListOf<Exercise>()
+        val input = assets.open(exercise_dataset)
+        BufferedReader(InputStreamReader(input)).use { br ->
+            val header = br.readLine() ?: return emptyList()
+            // Expected headers (order-insensitive); we’ll map by name
+            val cols = header.parseCsvLine()
+            val idx = cols.withIndex().associate { it.value.trim().lowercase() to it.index }
+
+            fun col(name: String) = idx[name.lowercase()] ?: -1
+
+            val iId          = col("exercise_id")
+            val iName        = col("exercise_name")
+            val iEquip       = col("equipment")
+            val iVar         = col("variation")
+            val iUtil        = col("utility")
+            val iMech        = col("mechanics")
+            val iForce       = col("force")
+            val iTargets     = col("target_muscles")
+            val iMain        = col("main_muscle")
+            val iDiff        = col("difficulty_(1-5)")
+            val iType        = col("type")
+            val iDesc        = col("description")
+            val iVideo       = col("video_url") // optional if included in main CSV
+
+            br.lineSequence().forEach { raw ->
+                if (raw.isBlank()) return@forEach
+                val row = raw.parseCsvLine()
+                fun safe(i: Int) = if (i in row.indices) row[i].trim() else ""
+
+                val id    = safe(iId).toIntOrNull() ?: return@forEach
+                val name  = safe(iName)
+                val equip = safe(iEquip)
+                val vari  = safe(iVar)
+                val util  = safe(iUtil)
+                val mech  = safe(iMech)
+                val force = safe(iForce)
+                val targ  = safe(iTargets)
+                val main  = safe(iMain)
+                val diff  = safe(iDiff).toIntOrNull() ?: 1
+                val type  = safe(iType)
+                val desc  = safe(iDesc)
+                val vid   = if (iVideo >= 0) safe(iVideo).ifBlank { null } else null
+
+                list.add(
+                    Exercise(
+                        id, name, equip, vari, util, mech, force, targ, main, diff, type, desc, //vid
+                    )
+                )
+            }
+        }
+        return list
+    }
+
+    // parse CSV with quotes handling
+    private fun String.parseCsvLine(): List<String> {
+        val out = mutableListOf<String>()
+        val sb = StringBuilder()
+        var inQuotes = false
+        var i = 0
+        while (i < this.length) {
+            val c = this[i]
+            when (c) {
+                '"' -> {
+                    if (inQuotes && i + 1 < this.length && this[i + 1] == '"') {
+                        sb.append('"'); i++ // escaped quote
+                    } else inQuotes = !inQuotes
+                }
+                ',' -> if (!inQuotes) { out.add(sb.toString()); sb.setLength(0) } else sb.append(c)
+                else -> sb.append(c)
+            }
+            i++
+        }
+        out.add(sb.toString())
+        return out
+    }
+
+    // Optional second CSV for videos
+//    private fun loadVideoMapIfExists(filename: String): Map<Int, String> {
+//        return try {
+//            val input = assets.open(filename)
+//            val map = mutableMapOf<Int, String>()
+//            BufferedReader(InputStreamReader(input)).use { br ->
+//                val header = br.readLine() ?: return emptyMap()
+//                val cols = header.parseCsvLine()
+//                val idx = cols.withIndex().associate { it.value.trim().lowercase() to it.index }
+//                val iId = idx["exercise_id"] ?: return emptyMap()
+//                val iUrl = idx["video_url"] ?: return emptyMap()
+//                br.lineSequence().forEach { raw ->
+//                    if (raw.isBlank()) return@forEach
+//                    val row = raw.parseCsvLine()
+//                    val id = row.getOrNull(iId)?.trim()?.toIntOrNull() ?: return@forEach
+//                    val url = row.getOrNull(iUrl)?.trim().orEmpty()
+//                    if (url.isNotEmpty()) map[id] = url
+//                }
+//            }
+//            map
+//        } catch (_: Exception) {
+//            emptyMap()
+//        }
+//    }
+
+//    private fun List<Exercise>.attachVideoUrls(videoMap: Map<Int, String>): List<Exercise> {
+//        if (videoMap.isEmpty()) return this
+//        return this.map { ex ->
+//            if (videoMap.containsKey(ex.id)) ex.copy(videoUrl = videoMap[ex.id]) else ex
+//        }
+//    }
+
+
+
+    // ---------- Rules ----------
+
+    // Equipment filter
+    private fun List<Exercise>.filterByEquipment(pref: String): List<Exercise> {
+        if (pref.isBlank()) return this
+        val p = pref.lowercase()
+        fun String.containsAny(keys: List<String>) =
+            keys.any { this.lowercase().contains(it) }
+
+        return when {
+            p.contains("bodyweight") || p.contains("body weight") -> {
+                this.filter { it.equipment.lowercase().contains("body weight") || it.type.lowercase() == "cardio" }
+            }
+            p.contains("home") -> {
+                val allowed = listOf("dumbbell", "barbell", "kettlebell", "bench", "resistance band", "pull-up bar")
+                this.filter { it.equipment.containsAny(allowed) || it.type.lowercase() == "cardio" }
+            }
+            else -> this // Gym Equipment → allow all
+        }
+    }
+
+    // Health condition exclusions (expanded)
+    private val restrictionMap = mapOf(
+        "knee" to listOf("squat", "jump", "lunge", "step-up", "plyometric", "box jump", "split squat"),
+        "shoulder" to listOf("overhead press", "snatch", "upright row", "lateral raise", "lat raise"),
+        "back" to listOf("deadlift", "good morning", "bent-over row", "superman"),
+        "wrist" to listOf("push-up", "bench press", "plank", "handstand", "clean"),
+        "neck" to listOf("shrug", "neck curl", "neck extension"),
+        "hypertension" to listOf("heavy squat", "heavy deadlift", "overhead press", "clean and jerk", "snatch"),
+        "heart disease" to listOf("sprint", "high-intensity", "plyometric", "burpee", "mountain climber"),
+        "asthma" to listOf("sprint", "high-intensity", "running", "burpee", "mountain climber"),
+        "stroke" to listOf("high-intensity", "balance", "overhead press"),
+        "thyroid" to listOf("high-intensity", "sprint", "plyometric"),
+        "diabetes" to listOf("long-duration cardio without break"),
+        "osteoarthritis" to listOf("jump", "plyometric", "deep squat", "lunge"),
+        "vertigo" to listOf("inverted", "handstand", "overhead press", "clean"),
+        "cancer recovery" to listOf("high-intensity", "heavy lifting"),
+        "anemia" to listOf("long-duration cardio without break", "high-intensity")
+    )
+
+
+    private fun List<Exercise>.filterByHealthCondition(health: String): List<Exercise> {
+        if (health.isBlank()) return this
+        val lowered = health.lowercase()
+        val keys = restrictionMap.keys.filter { lowered.contains(it) }
+        if (keys.isEmpty()) return this
+        val bannedTerms = keys.flatMap { restrictionMap[it] ?: emptyList() }
+        return this.filter { ex ->
+            val hay = (ex.name + " " + ex.description).lowercase()
+            bannedTerms.none { term -> hay.contains(term) }
+        }
+    }
+
+    // Difficulty by activity level
+    private fun List<Exercise>.filterByDifficulty(activityLevel: String): List<Exercise> {
+        val range = when (activityLevel.lowercase()) {
+            "sedentary"   -> 1..2
+            "light"       -> 1..2
+            "moderate"    -> 2..4
+            "active"      -> 3..5
+            else          -> 1..5
+        }
+        return this.filter { it.difficulty in range }
+    }
+
+    // Goal-based prioritization (re-orders list; still keeps variety)
+    private fun List<Exercise>.prioritizeByGoal(goal: String): List<Exercise> {
+        val g = goal.lowercase()
+        fun score(ex: Exercise): Int {
+            var s = 0
+            val mech = ex.mechanics.lowercase()
+            val type = ex.type.lowercase()
+            when {
+                g.contains("build") || g.contains("muscle") -> { // muscle gain
+                    if (mech == "compound") s += 3
+                    if (ex.utility.lowercase() == "basic") s += 2
+                }
+                g.contains("lose") || g.contains("fat") -> { // fat loss
+                    if (type == "cardio") s += 3
+                    if (mech == "compound") s += 2
+                }
+                g.contains("maintain") -> {
+                    if (mech == "compound") s += 2
+                    if (ex.utility.lowercase() == "auxiliary") s += 1
+                }
+                g.contains("endurance") -> {
+                    if (type == "cardio") s += 3
+                }
+            }
+            return s
+        }
+        return this.sortedByDescending { score(it) }
+    }
+
+    // Split mapping (your exact mapping)
+    private fun splitMap(days: Int): List<String> = when (days) {
+        1 -> listOf("Full Body")
+        2 -> listOf("Upper", "Lower")
+        3 -> listOf("Push", "Pull", "Legs")
+        4 -> listOf("Upper", "Lower", "Upper", "Lower")
+        5 -> listOf("Push", "Pull", "Legs", "Upper", "Lower")
+        6 -> listOf("Push", "Pull", "Legs", "Push", "Pull", "Legs")
+        7 -> listOf("Chest", "Back", "Legs", "Shoulders", "Arms", "Core", "Full Body")
+        else -> listOf("Full Body")
+    }
+
+    // Assign exercises to each bucket name
+    private fun allocateToBuckets(pool: List<Exercise>, dayBuckets: List<String>): Map<String, List<Exercise>> {
+        val result = mutableMapOf<String, MutableList<Exercise>>()
+        val used = mutableSetOf<Int>()
+
+        fun addSome(name: String, pick: (Exercise) -> Boolean, minCount: Int = 4, maxCount: Int = 6) {
+            val wanted = max(minCount, 4)
+            val limit = maxCount
+            val selected = pool.filter { pick(it) && it.id !in used }.take(limit).toMutableList()
+            // if not enough, fill with any remaining compounds
+            if (selected.size < wanted) {
+                val fillers = pool.filter { it.id !in used }
+                    .sortedBy { it.mechanics.lowercase() != "compound" } // prefer compound
+                    .take(wanted - selected.size)
+                selected.addAll(fillers)
+            }
+            result.getOrPut(name) { mutableListOf() }.addAll(selected)
+            used.addAll(selected.map { it.id })
+        }
+
+        dayBuckets.forEach { bucket ->
+            when (bucket) {
+                "Upper" -> addSome(bucket) { ex ->
+                    ex.mainMuscle.containsAny(listOf("Chest","Back","Shoulder","Arm","Biceps","Triceps","Core")) &&
+                            !ex.mainMuscle.contains("Leg", ignoreCase = true)
+                }
+                "Lower" -> addSome(bucket) { ex ->
+                    ex.mainMuscle.containsAny(listOf("Leg","Glute","Hamstring","Quad","Calf"))
+                }
+                "Push" -> addSome(bucket) { ex ->
+                    ex.force.equals("push", true) || ex.mainMuscle.containsAny(listOf("Chest","Shoulder","Triceps"))
+                }
+                "Pull" -> addSome(bucket) { ex ->
+                    ex.force.equals("pull", true) || ex.mainMuscle.containsAny(listOf("Back","Biceps","Rear Delts"))
+                }
+                "Legs" -> addSome(bucket) { ex ->
+                    ex.mainMuscle.containsAny(listOf("Leg","Glute","Hamstring","Quad","Calf"))
+                }
+                "Chest","Back","Shoulders","Arms","Core" -> addSome(bucket) { ex ->
+                    ex.mainMuscle.contains(bucket, ignoreCase = true)
+                }
+                "Full Body" -> addSome(bucket) { ex ->
+                    ex.mechanics.equals("compound", true) || ex.type.equals("cardio", true)
+                }
+                else -> addSome(bucket) { true }
+            }
+        }
+        return result
+    }
+
+    // Extension function for containsAny
+    fun String.containsAny(keywords: List<String>): Boolean {
+        return keywords.any { this.contains(it, ignoreCase = true) }
+    }
+
+    // ---------- UI builders ----------
+
+    private fun buildDayCard(dayName: String, exercises: List<Exercise>): View {
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.user_input_bg) // your custom container
+            val p = dp(16)
+            setPadding(p, p, p, p)
+            val lp = LinearLayout.LayoutParams(dp(260), ViewGroup.LayoutParams.WRAP_CONTENT)
+            lp.setMargins(dp(12), dp(4), dp(12), dp(4))
+            layoutParams = lp
+        }
+
+        val title = TextView(this).apply {
+            text = dayName
+            setTextColor(ContextCompat.getColor(this@WorkoutActivity, android.R.color.white))
+            textSize = 20f
+            setPadding(0, 0, 0, dp(8))
+            ellipsize = TextUtils.TruncateAt.END
+            maxLines = 1
+        }
+        card.addView(title)
+
+        exercises.forEach { ex ->
+            val name = TextView(this).apply {
+                text = "• ${ex.name}"
+                setTextColor(ContextCompat.getColor(this@WorkoutActivity, android.R.color.white))
+                textSize = 14f
+                setPadding(0, dp(6), 0, 0)
+                maxLines = 2
+                ellipsize = TextUtils.TruncateAt.END
+            }
+            card.addView(name)
+
+            // tiny “Watch” link if video available
+//            (ex.videoUrl ?: "").takeIf { it.startsWith("http", true) }?.let { url ->
+//                val btn = TextView(this).apply {
+//                    text = "Watch"
+//                    setTextColor(ContextCompat.getColor(this@WorkoutActivity, android.R.color.holo_blue_light))
+//                    textSize = 13f
+//                    setPadding(0, dp(2), 0, 0)
+//                    setOnClickListener {
+//                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+//                    }
+//                }
+//                card.addView(btn)
+//            }
+        }
+
+        return card
+    }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
+
+    private fun groupExercisesBySplit(exercises: List<Exercise>): Map<String, List<Exercise>> {
+        return exercises.groupBy { it.mainMuscle }
+    }
+
+    private fun displayWorkout(
+        workoutPlan: Map<String, List<Exercise>>,
+        workoutContainer: LinearLayout
+    ) {
+        val inflater = LayoutInflater.from(this)
+        workoutContainer.removeAllViews()
+
+        for ((day, exercises) in workoutPlan) {
+            val dayView = inflater.inflate(R.layout.item_workout_day, workoutContainer, false)
+
+            val dayTitle = dayView.findViewById<TextView>(R.id.tv_day_title)
+            dayTitle.text = day
+
+            val exerciseContainer = dayView.findViewById<LinearLayout>(R.id.exercise_list)
+
+            for (exercise in exercises) {
+                val exerciseText = TextView(this)
+                exerciseText.text = "• ${exercise.name}"
+                exerciseText.textSize = 16f
+                exerciseContainer.addView(exerciseText)
+            }
+
+            workoutContainer.addView(dayView)
+        }
+    }
+
 }

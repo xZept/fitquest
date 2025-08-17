@@ -185,8 +185,6 @@
             android:textSize="25sp" />
     </LinearLayout>
 
-
-
     <!-- Submit Button -->
     <Button
         android:id="@+id/btn_generate_plan"

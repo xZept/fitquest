@@ -1,10 +1,12 @@
 package com.example.fitquest
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.InputFilter
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -60,12 +62,12 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
         explanationContainer.visibility = View.GONE
 
         val messages = mapOf(
-            R.id.input_height to "Your height is used to calculate Body Mass Index (BMI) and adjust workout intensity accordingly.",
-            R.id.input_weight to "Your weight is used to calculate calorie requirements and track fitness progress over time.",
+            R.id.input_height to "Your height is used to calculate Body Mass Index (BMI) and adjust workout intensity accordingly. Please enter a valid height (50–300 cm)",
+            R.id.input_weight to "Your weight is used to calculate calorie requirements and track fitness progress over time. Please enter a valid weight (10–500 kg)",
             R.id.spinner_goal to "Your selected fitness goal determines the type and structure of your workout program.",
             R.id.spinner_activity to "Your activity level helps estimate daily energy expenditure for a more accurate plan.",
             R.id.seekbar_split to "The workout split specifies how many days per week you will train, affecting intensity and recovery.",
-            R.id.input_health_condition to "Your health condition helps ensure your workout plan is safe and tailored to your needs.",
+            R.id.input_health_condition to "Your health condition helps ensure your workout plan is safe and tailored to your needs. Please avoid numbers, and special characters",
             R.id.spinner_equipment to "Your available equipment determines the type of exercises included in your program."
         )
 
@@ -124,6 +126,48 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
             false
         }
 
+        // Custom InputFilter for letters, spaces, and hyphens only
+        val filter = InputFilter { source, start, end, dest, dstart, dend ->
+            val regex = Regex("^[a-zA-Z\\s-]+$")
+            for (i in start until end) {
+                if (!source[i].toString().matches(regex)) {
+                    return@InputFilter ""
+                }
+            }
+            null
+        }
+
+        inputHeight.filters = arrayOf<InputFilter>(InputFilter.LengthFilter(3)) // max 3 digits
+        inputWeight.filters = arrayOf<InputFilter>(InputFilter.LengthFilter(3))
+
+        fun validateHeightWeight(): Boolean {
+            val heightText = inputHeight.text.toString()
+            val weightText = inputWeight.text.toString()
+
+            if (heightText.isEmpty() || weightText.isEmpty()) {
+                Toast.makeText(this, "Please enter both height and weight", Toast.LENGTH_SHORT).show()
+                return false
+            }
+
+            val height = heightText.toInt()
+            val weight = weightText.toInt()
+
+            // Validate height
+            if (height < 50 || height > 300) {
+                Toast.makeText(this, "Please enter a valid height (50–300 cm)", Toast.LENGTH_SHORT).show()
+                return false
+            }
+
+            // Validate weight
+            if (weight < 10 || weight > 500) {
+                Toast.makeText(this, "Please enter a valid weight (10–500 kg)", Toast.LENGTH_SHORT).show()
+                return false
+            }
+
+            return true
+        }
+
+        inputHealthCondition.filters = arrayOf(filter)
 
         seekbarSplit.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -136,12 +180,15 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
+
         btnSubmit.setOnClickListener {
             val heightStr = inputHeight.text.toString().trim()
             val weightStr = inputWeight.text.toString().trim()
 
+
             if (heightStr.isEmpty() || weightStr.isEmpty()) {
                 Toast.makeText(this, "Please enter both height and weight.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
                 return@setOnClickListener
             }
 
@@ -150,11 +197,23 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
             if (height == null || weight == null) {
                 Toast.makeText(this, "Height and Weight must be valid numbers.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
+                return@setOnClickListener
             }
 
             val goal = spinnerGoal.selectedItem?.toString() ?: ""
             val activity = spinnerActivity.selectedItem?.toString() ?: ""
-            val splitDays = if (seekbarSplit.progress < 1) 1 else seekbarSplit.progress
+            val splitDays = seekbarSplit.progress.coerceAtLeast(1) // ensures min 1 day
+
+            // In WorkoutGeneratorActivity.kt (inside your existing btnSubmit.setOnClickListener)
+            val intent = Intent(this, WorkoutActivity::class.java)
+            intent.putExtra("HEIGHT_CM", height)
+            intent.putExtra("WEIGHT_KG", weight)
+            intent.putExtra("GOAL", goal)                       // e.g., "Lose Fat", "Build Muscle", "Maintain"
+            intent.putExtra("ACTIVITY_LEVEL", activity)         // e.g., "Sedentary", "Light", "Moderate", "Active"
+            intent.putExtra("HEALTH_CONDITION", findViewById<EditText>(R.id.input_health_condition).text.toString())
+            intent.putExtra("EQUIPMENT_PREF", findViewById<Spinner>(R.id.spinner_equipment).selectedItem?.toString() ?: "")
+            intent.putExtra("SPLIT_DAYS", splitDays)
+            startActivity(intent)
 
             Toast.makeText(
                 this,
@@ -162,7 +221,12 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+
     }
+
+
+
+
 
     private fun showExplanation(message: String) {
         explanationText.text = message
