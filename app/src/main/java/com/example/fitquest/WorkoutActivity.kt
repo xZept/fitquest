@@ -34,10 +34,12 @@ class WorkoutActivity : AppCompatActivity() {
         val force: String,
         val targetMuscles: String,
         val mainMuscle: String,
+        val restrictedFor: List<String>, // now parsed into a list
         val difficulty: Int,
         val type: String,
         val description: String
     )
+
 
     data class WorkoutSplit(
         val splitName: String,
@@ -53,7 +55,7 @@ class WorkoutActivity : AppCompatActivity() {
 
 
 
-    private fun addSome(bucket: String, pick: Int = 5, filter: (Exercise) -> Boolean) {
+    private fun addSome(bucket: String, pick: Int = 6, filter: (Exercise) -> Boolean) {
         val matches = dataset.filter(filter).shuffled().take(pick)
         workoutPlan[bucket] = matches
     }
@@ -174,9 +176,10 @@ class WorkoutActivity : AppCompatActivity() {
         // ---- Apply rules ----
         val filtered = allExercises
             .filterByEquipment(equipmentPref)
-            .filterByHealthCondition(healthCond)
+            .filter { ex -> isSafeForUser(ex, healthCond.split(",").map { it.trim() }) }
             .filterByDifficulty(activityLevel)
             .prioritizeByGoal(goal)
+
 
         // ---- Allocate per split ----
         val dayBuckets = splitMap(splitDays) // e.g., 6 -> [Push, Pull, Legs, Push, Pull, Legs]
@@ -277,25 +280,25 @@ class WorkoutActivity : AppCompatActivity() {
         val input = assets.open(exercise_dataset)
         BufferedReader(InputStreamReader(input)).use { br ->
             val header = br.readLine() ?: return emptyList()
-            // Expected headers (order-insensitive); we’ll map by name
             val cols = header.parseCsvLine()
             val idx = cols.withIndex().associate { it.value.trim().lowercase() to it.index }
 
             fun col(name: String) = idx[name.lowercase()] ?: -1
 
-            val iId          = col("exercise_id")
-            val iName        = col("exercise_name")
-            val iEquip       = col("equipment")
-            val iVar         = col("variation")
-            val iUtil        = col("utility")
-            val iMech        = col("mechanics")
-            val iForce       = col("force")
-            val iTargets     = col("target_muscles")
-            val iMain        = col("main_muscle")
-            val iDiff        = col("difficulty_(1-5)")
-            val iType        = col("type")
-            val iDesc        = col("description")
-            val iVideo       = col("video_url") // optional if included in main CSV
+            val iId      = col("exercise_id")
+            val iName    = col("exercise_name")
+            val iEquip   = col("equipment")
+            val iVar     = col("variation")
+            val iUtil    = col("utility")
+            val iMech    = col("mechanics")
+            val iForce   = col("force")
+            val iTargets = col("target_muscles")
+            val iMain    = col("main_muscle")
+            val iRestr   = col("restricted_for")
+            val iDiff    = col("difficulty_(1-5)")
+            val iType    = col("type")
+            val iDesc    = col("description")
+            val iVideo   = col("video_url") // optional if added later
 
             br.lineSequence().forEach { raw ->
                 if (raw.isBlank()) return@forEach
@@ -311,6 +314,10 @@ class WorkoutActivity : AppCompatActivity() {
                 val force = safe(iForce)
                 val targ  = safe(iTargets)
                 val main  = safe(iMain)
+                val restr = safe(iRestr)
+                    .split(",", "/")
+                    .map { it.trim().lowercase() }
+                    .filter { it.isNotEmpty() }
                 val diff  = safe(iDiff).toIntOrNull() ?: 1
                 val type  = safe(iType)
                 val desc  = safe(iDesc)
@@ -318,13 +325,27 @@ class WorkoutActivity : AppCompatActivity() {
 
                 list.add(
                     Exercise(
-                        id, name, equip, vari, util, mech, force, targ, main, diff, type, desc, //vid
+                        id = id,
+                        name = name,
+                        equipment = equip,
+                        variation = vari,
+                        utility = util,
+                        mechanics = mech,
+                        force = force,
+                        targetMuscles = targ,
+                        mainMuscle = main,
+                        restrictedFor = restr, // 👈 now part of model
+                        difficulty = diff,
+                        type = type,
+                        description = desc,
+                        // videoUrl = vid (if you later add this to your Exercise class)
                     )
                 )
             }
         }
         return list
     }
+
 
     // parse CSV with quotes handling
     private fun String.parseCsvLine(): List<String> {
@@ -389,52 +410,78 @@ class WorkoutActivity : AppCompatActivity() {
     private fun List<Exercise>.filterByEquipment(pref: String): List<Exercise> {
         if (pref.isBlank()) return this
         val p = pref.lowercase()
-        fun String.containsAny(keys: List<String>) =
-            keys.any { this.lowercase().contains(it) }
+
+        fun String.containsAny(keys: List<String>): Boolean {
+            val text = this.lowercase()
+            return keys.any { key ->
+                key.split(" ").all { text.contains(it) }
+            }
+        }
 
         return when {
+            // Bodyweight only
             p.contains("bodyweight") || p.contains("body weight") -> {
-                this.filter { it.equipment.lowercase().contains("body weight") || it.type.lowercase() == "cardio" }
+                this.filter {
+                    it.equipment.containsAny(listOf("body weight")) ||
+                            it.type.lowercase() == "cardio" && it.equipment.containsAny(listOf("jump rope", "none"))
+                }
             }
+
+            // Home Gym
             p.contains("home") -> {
-                val allowed = listOf("dumbbell", "barbell", "kettlebell", "bench", "resistance band", "pull-up bar")
-                this.filter { it.equipment.containsAny(allowed) || it.type.lowercase() == "cardio" }
+                val allowed = listOf(
+                    "dumbbell", "barbell", "kettlebell",
+                    "bench", "resistance band", "pull-up bar",
+                    "body weight", "yoga mat", "medicine ball"
+                )
+                val banned = listOf(
+                    "smith machine", "cable", "lever",
+                    "pec deck", "hack squat", "leg press",
+                    "machine", "sled", "treadmill", "elliptical", "stationary bike"
+                )
+
+                this.filter { ex ->
+                    val equip = ex.equipment.lowercase()
+                    val isAllowed = equip.containsAny(allowed) || ex.type.lowercase() == "cardio" && equip.containsAny(listOf("jump rope", "none", "body weight"))
+                    val isBanned = equip.containsAny(banned)
+                    isAllowed && !isBanned
+                }
             }
-            else -> this // Gym Equipment → allow all
+
+            // Gym Equipment → return everything
+            else -> this
         }
     }
 
-    // Health condition exclusions (expanded)
-    private val restrictionMap = mapOf(
-        "knee" to listOf("squat", "jump", "lunge", "step-up", "plyometric", "box jump", "split squat"),
-        "shoulder" to listOf("overhead press", "snatch", "upright row", "lateral raise", "lat raise"),
-        "back" to listOf("deadlift", "good morning", "bent-over row", "superman"),
-        "wrist" to listOf("push-up", "bench press", "plank", "handstand", "clean"),
-        "neck" to listOf("shrug", "neck curl", "neck extension"),
-        "hypertension" to listOf("heavy squat", "heavy deadlift", "overhead press", "clean and jerk", "snatch"),
-        "heart disease" to listOf("sprint", "high-intensity", "plyometric", "burpee", "mountain climber"),
-        "asthma" to listOf("sprint", "high-intensity", "running", "burpee", "mountain climber"),
-        "stroke" to listOf("high-intensity", "balance", "overhead press"),
-        "thyroid" to listOf("high-intensity", "sprint", "plyometric"),
-        "diabetes" to listOf("long-duration cardio without break"),
-        "osteoarthritis" to listOf("jump", "plyometric", "deep squat", "lunge"),
-        "vertigo" to listOf("inverted", "handstand", "overhead press", "clean"),
-        "cancer recovery" to listOf("high-intensity", "heavy lifting"),
-        "anemia" to listOf("long-duration cardio without break", "high-intensity")
+    // Map user conditions to broader keywords
+    private val conditionKeywords = mapOf(
+        "wrist" to listOf("wrist", "carpal tunnel", "forearm"),
+        "shoulder" to listOf("shoulder", "rotator cuff", "labral tear", "impingement"),
+        "elbow" to listOf("elbow", "tennis elbow", "golfer"),
+        "knee" to listOf("knee", "patellar", "acl", "mcl"),
+        "back" to listOf("back", "spine", "disc", "lumbar"),
+        "neck" to listOf("neck", "cervical"),
+        "asthma" to listOf("asthma", "breathing"),
+        "heart" to listOf("heart", "cardiac", "hypertension"),
+        "stroke" to listOf("stroke"),
+        "thyroid" to listOf("thyroid"),
+        "diabetes" to listOf("diabetes"),
+        "vertigo" to listOf("vertigo", "dizzy"),
+        "cancer" to listOf("cancer"),
+        "anemia" to listOf("anemia"),
+        "arthritis" to listOf("arthritis", "osteoarthritis", "joint pain")
     )
 
+    fun isSafeForUser(ex: Exercise, userConditions: List<String>): Boolean {
+        val restrictions = ex.restrictedFor.map { it.lowercase() }
 
-    private fun List<Exercise>.filterByHealthCondition(health: String): List<Exercise> {
-        if (health.isBlank()) return this
-        val lowered = health.lowercase()
-        val keys = restrictionMap.keys.filter { lowered.contains(it) }
-        if (keys.isEmpty()) return this
-        val bannedTerms = keys.flatMap { restrictionMap[it] ?: emptyList() }
-        return this.filter { ex ->
-            val hay = (ex.name + " " + ex.description).lowercase()
-            bannedTerms.none { term -> hay.contains(term) }
+        return userConditions.none { cond ->
+            val key = cond.lowercase()
+            val keywords = conditionKeywords[key] ?: listOf(key) // fallback: direct text match
+            keywords.any { kw -> restrictions.contains(kw) }
         }
     }
+
 
     // Difficulty by activity level
     private fun List<Exercise>.filterByDifficulty(activityLevel: String): List<Exercise> {
@@ -494,7 +541,7 @@ class WorkoutActivity : AppCompatActivity() {
         val result = mutableMapOf<String, MutableList<Exercise>>()
         val used = mutableSetOf<Int>()
 
-        fun addSome(name: String, pick: (Exercise) -> Boolean, minCount: Int = 4, maxCount: Int = 6) {
+        fun addSome(name: String, pick: (Exercise) -> Boolean, minCount: Int = 3, maxCount: Int = 4) {
             val wanted = max(minCount, 4)
             val limit = maxCount
             val selected = pool.filter { pick(it) && it.id !in used }.take(limit).toMutableList()

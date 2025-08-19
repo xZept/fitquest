@@ -62,14 +62,15 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
         explanationContainer.visibility = View.GONE
 
         val messages = mapOf(
-            R.id.input_height to "Your height is used to calculate Body Mass Index (BMI) and adjust workout intensity accordingly. Please enter a valid height (50–300 cm)",
-            R.id.input_weight to "Your weight is used to calculate calorie requirements and track fitness progress over time. Please enter a valid weight (10–500 kg)",
-            R.id.spinner_goal to "Your selected fitness goal determines the type and structure of your workout program.",
-            R.id.spinner_activity to "Your activity level helps estimate daily energy expenditure for a more accurate plan.",
-            R.id.seekbar_split to "The workout split specifies how many days per week you will train, affecting intensity and recovery.",
-            R.id.input_health_condition to "Your health condition helps ensure your workout plan is safe and tailored to your needs. Please avoid numbers, and special characters",
-            R.id.spinner_equipment to "Your available equipment determines the type of exercises included in your program."
+            R.id.input_height to "Enter your height in centimeters (e.g., 170). Valid range: 130–300 cm. This is used to calculate your BMI and adjust workout intensity.",
+            R.id.input_weight to "Enter your weight in kilograms (e.g., 65). Valid range: 10–500 kg. This is used to estimate calorie needs and track progress.",
+            R.id.spinner_goal to "Select your primary fitness goal (e.g., Build Muscle, Lose Weight, Improve Endurance). This determines your workout structure.",
+            R.id.spinner_activity to "Select your daily activity level (e.g., Beginner, Moderate, Active, Very Active). This helps estimate energy expenditure.",
+            R.id.seekbar_split to "Choose how many days per week you plan to train (e.g., 3, 4, or 5 days). This affects workout intensity and recovery balance.",
+            R.id.input_health_condition to "Type any health conditions you have (e.g., wrist injury, knee pain, asthma). Please use plain words only (no numbers or special characters).",
+            R.id.spinner_equipment to "Select your available equipment (Gym Equipment, Home Gym, or Body Weight only). This ensures the program matches your setup."
         )
+
 
         val spinner: Spinner = findViewById(R.id.spinner_equipment,)
 
@@ -140,6 +141,7 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
         inputHeight.filters = arrayOf<InputFilter>(InputFilter.LengthFilter(3)) // max 3 digits
         inputWeight.filters = arrayOf<InputFilter>(InputFilter.LengthFilter(3))
 
+
         fun validateHeightWeight(): Boolean {
             val heightText = inputHeight.text.toString()
             val weightText = inputWeight.text.toString()
@@ -153,7 +155,7 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
             val weight = weightText.toInt()
 
             // Validate height
-            if (height < 50 || height > 300) {
+            if (height < 130 || height > 300) {
                 Toast.makeText(this, "Please enter a valid height (50–300 cm)", Toast.LENGTH_SHORT).show()
                 return false
             }
@@ -182,9 +184,17 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
 
 
         btnSubmit.setOnClickListener {
+            if (!validateHeightWeight()) {
+                return@setOnClickListener
+            }
+
             val heightStr = inputHeight.text.toString().trim()
             val weightStr = inputWeight.text.toString().trim()
-
+            val height = heightStr.toFloatOrNull()
+            val weight = weightStr.toFloatOrNull()
+            val goal = spinnerGoal.selectedItem?.toString() ?: ""
+            val activity = spinnerActivity.selectedItem?.toString() ?: ""
+            val splitDays = seekbarSplit.progress.coerceAtLeast(1) // ensures min 1 day
 
             if (heightStr.isEmpty() || weightStr.isEmpty()) {
                 Toast.makeText(this, "Please enter both height and weight.", Toast.LENGTH_SHORT).show()
@@ -192,17 +202,12 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val height = heightStr.toFloatOrNull()
-            val weight = weightStr.toFloatOrNull()
+
             if (height == null || weight == null) {
                 Toast.makeText(this, "Height and Weight must be valid numbers.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
                 return@setOnClickListener
             }
-
-            val goal = spinnerGoal.selectedItem?.toString() ?: ""
-            val activity = spinnerActivity.selectedItem?.toString() ?: ""
-            val splitDays = seekbarSplit.progress.coerceAtLeast(1) // ensures min 1 day
 
             // In WorkoutGeneratorActivity.kt (inside your existing btnSubmit.setOnClickListener)
             val intent = Intent(this, WorkoutActivity::class.java)
@@ -223,10 +228,6 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
         }
 
     }
-
-
-
-
 
     private fun showExplanation(message: String) {
         explanationText.text = message
