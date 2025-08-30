@@ -1,0 +1,71 @@
+﻿meal_id,meal_name,meal_type,calories,protein,carbs,fat,goal,diet_type
+1,Oatmeal with Banana,Breakfast,350,10,60,5,Weight Loss,Regular
+2,Egg White Omelette with Veggies,Breakfast,280,20,15,10,Weight Loss,Regular
+3,Greek Yogurt with Berries,Breakfast,200,15,20,5,Weight Loss,Regular
+4,Avocado Toast on Whole Wheat,Breakfast,300,10,25,15,Weight Loss,Vegetarian
+5,Smoothie with Spinach and Protein Powder,Breakfast,250,20,30,5,Weight Loss,Regular
+6,Chicken Breast with Brown Rice,Lunch,500,40,60,10,Muscle Gain,Regular
+7,Grilled Salmon with Quinoa,Lunch,550,45,35,18,Muscle Gain,Regular
+8,Lean Beef Burrito Bowl,Lunch,600,45,70,15,Muscle Gain,Regular
+9,Tuna Salad Wrap,Lunch,400,35,30,12,Weight Loss,Regular
+10,Vegetable Stir Fry with Tofu,Lunch,400,25,50,15,Weight Loss,Vegetarian
+11,Turkey Sandwich on Whole Wheat,Dinner,450,30,40,12,Maintenance,Regular
+12,Grilled Chicken with Sweet Potato,Dinner,500,40,50,10,Maintenance,Regular
+13,Beef Steak with Mashed Potatoes,Dinner,600,50,45,20,Muscle Gain,Regular
+14,Salmon with Brown Rice and Veggies,Dinner,550,45,40,18,Muscle Gain,Regular
+15,Vegetarian Chili with Beans,Dinner,420,22,55,12,Weight Loss,Vegetarian
+16,Apple with Peanut Butter,Snack,200,6,25,10,Weight Loss,Regular
+17,Protein Shake with Milk,Snack,250,25,15,5,Muscle Gain,Regular
+18,Carrot Sticks with Hummus,Snack,180,6,20,8,Weight Loss,Vegetarian
+19,Trail Mix with Nuts and Dried Fruit,Snack,300,10,25,15,Maintenance,Regular
+20,Boiled Eggs and Whole Wheat Crackers,Snack,220,12,18,9,Maintenance,Regular
+21,Pancakes with Maple Syrup,Breakfast,400,12,60,12,Maintenance,Regular
+22,Scrambled Eggs with Cheese,Breakfast,350,20,10,20,Muscle Gain,Regular
+23,Cottage Cheese with Pineapple,Breakfast,250,18,20,6,Weight Loss,Regular
+24,Overnight Oats with Chia Seeds,Breakfast,320,12,45,9,Weight Loss,Vegetarian
+25,Whole Grain Bagel with Cream Cheese,Breakfast,380,10,50,14,Maintenance,Regular
+26,Chicken Caesar Salad,Lunch,420,35,25,18,Weight Loss,Regular
+27,Grilled Shrimp with Couscous,Lunch,480,40,45,12,Maintenance,Regular
+28,Lentil Soup with Whole Wheat Bread,Lunch,400,20,55,10,Weight Loss,Vegetarian
+29,Turkey and Brown Rice Bowl,Lunch,520,42,55,14,Muscle Gain,Regular
+30,BBQ Chicken Wrap,Lunch,450,35,40,12,Maintenance,Regular
+31,Spaghetti with Marinara and Meatballs,Dinner,600,35,70,18,Muscle Gain,Regular
+32,Stuffed Bell Peppers with Quinoa,Dinner,430,22,55,14,Weight Loss,Vegetarian
+33,Grilled Tilapia with Rice,Dinner,480,38,50,10,Maintenance,Regular
+34,Chicken Curry with Rice,Dinner,550,40,60,16,Muscle Gain,Regular
+35,Veggie Burger with Sweet Potato Fries,Dinner,500,25,60,15,Maintenance,Vegetarian
+36,Almonds and Dark Chocolate,Snack,250,8,20,16,Maintenance,Regular
+37,Protein Bar,Snack,220,20,25,6,Weight Loss,Regular
+38,Greek Yogurt with Granola,Snack,280,16,40,8,Maintenance,Regular
+39,Edamame with Sea Salt,Snack,200,18,15,6,Weight Loss,Vegetarian
+40,Cheese and Whole Wheat Crackers,Snack,240,12,20,10,Maintenance,Regular
+41,Tofu Scramble with Vegetables,Breakfast,300,20,25,12,Weight Loss,Vegetarian
+42,Peanut Butter Banana Smoothie,Breakfast,400,18,50,14,Muscle Gain,Regular
+43,Whole Grain Cereal with Milk,Breakfast,280,10,45,6,Maintenance,Regular
+44,Egg Sandwich with Turkey Bacon,Breakfast,350,22,30,12,Muscle Gain,Regular
+45,Spinach and Feta Wrap,Breakfast,320,16,35,10,Weight Loss,Vegetarian
+46,Baked Chicken with Roasted Veggies,Lunch,450,40,35,14,Weight Loss,Regular
+47,Quinoa and Black Bean Bowl,Lunch,420,20,55,12,Weight Loss,Vegetarian
+48,Pasta with Grilled Chicken,Lunch,500,35,65,15,Muscle Gain,Regular
+49,Sushi Roll with Salmon,Lunch,400,28,45,10,Maintenance,Regular
+50,Chickpea Salad Wrap,Lunch,380,18,50,12,Weight Loss,Vegetarian
+51,Grilled Pork Chop with Rice,Dinner,550,45,55,16,Muscle Gain,Regular
+52,Vegetable Lasagna,Dinner,500,25,65,15,Maintenance,Vegetarian
+53,Chicken Alfredo Pasta,Dinner,600,38,70,18,Muscle Gain,Regular
+54,Grilled Cod with Steamed Veggies,Dinner,420,35,30,12,Weight Loss,Regular
+55,Stuffed Zucchini Boats,Dinner,400,20,35,14,Weight Loss,Vegetarian
+56,Yogurt with Nuts,Snack,250,12,20,14,Maintenance,Regular
+57,Apple Slices with Almond Butter,Snack,200,6,25,9,Weight Loss,Regular
+58,Beef Jerky,Snack,180,20,5,7,Muscle Gain,Regular
+59,Hard-Boiled Eggs,Snack,150,12,2,10,Weight Loss,Regular
+60,Granola Bar,Snack,210,8,30,8,Maintenance,Regular
+61,Avocado Smoothie,Breakfast,380,10,40,18,Weight Loss,Vegetarian
+62,Protein Pancakes,Breakfast,420,25,45,12,Muscle Gain,Regular
+63,Toast with Peanut Butter and Honey,Breakfast,350,12,40,14,Maintenance,Regular
+64,Vegetable Omelette,Breakfast,320,18,20,12,Weight Loss,Vegetarian
+65,Breakfast Burrito with Chicken,Breakfast,450,28,40,16,Muscle Gain,Regular
+66,Chicken Fajita Bowl,Lunch,500,40,50,14,Maintenance,Regular
+67,Vegetable Soup with Bread,Lunch,380,15,50,10,Weight Loss,Vegetarian
+68,Grilled Lamb with Couscous,Lunch,550,42,55,16,Muscle Gain,Regular
+69,Turkey Meatloaf with Mashed Potatoes,Dinner,520,40,45,15,Maintenance,Regular
+70,Grilled Veggie Skewers with Rice,Dinner,430,20,55,12,Weight Loss,Vegetarian

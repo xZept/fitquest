@@ -2,6 +2,7 @@ package com.example.fitquest
 
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
@@ -40,6 +41,15 @@ class WorkoutActivity : AppCompatActivity() {
         val type: String,
         val description: String
     )
+
+    data class ExerciseVideo(
+        val videoId: Int,
+        val exerciseId: Int,
+        val exerciseName: String,
+        val equipment: String,
+        val youtubeLink: String
+    )
+
 
 
     data class WorkoutSplit(
@@ -269,6 +279,27 @@ class WorkoutActivity : AppCompatActivity() {
         return list
     }
 
+    private fun loadExerciseVideos(): List<ExerciseVideo> {
+        val videoList = mutableListOf<ExerciseVideo>()
+        val inputStream = assets.open("exercise_video_dataset.csv")
+        val reader = BufferedReader(InputStreamReader(inputStream))
+        reader.readLine() // skip header
+        reader.forEachLine { line ->
+            val tokens = line.split(",")
+            if (tokens.size >= 5) {
+                videoList.add(
+                    ExerciseVideo(
+                        tokens[0].toInt(),
+                        tokens[1].toInt(),
+                        tokens[2],
+                        tokens[3],
+                        tokens[4]
+                    )
+                )
+            }
+        }
+        return videoList
+    }
 
     // parse CSV with quotes handling
     private fun String.parseCsvLine(): List<String> {
@@ -292,39 +323,6 @@ class WorkoutActivity : AppCompatActivity() {
         out.add(sb.toString())
         return out
     }
-
-    // Optional second CSV for videos
-//    private fun loadVideoMapIfExists(filename: String): Map<Int, String> {
-//        return try {
-//            val input = assets.open(filename)
-//            val map = mutableMapOf<Int, String>()
-//            BufferedReader(InputStreamReader(input)).use { br ->
-//                val header = br.readLine() ?: return emptyMap()
-//                val cols = header.parseCsvLine()
-//                val idx = cols.withIndex().associate { it.value.trim().lowercase() to it.index }
-//                val iId = idx["exercise_id"] ?: return emptyMap()
-//                val iUrl = idx["video_url"] ?: return emptyMap()
-//                br.lineSequence().forEach { raw ->
-//                    if (raw.isBlank()) return@forEach
-//                    val row = raw.parseCsvLine()
-//                    val id = row.getOrNull(iId)?.trim()?.toIntOrNull() ?: return@forEach
-//                    val url = row.getOrNull(iUrl)?.trim().orEmpty()
-//                    if (url.isNotEmpty()) map[id] = url
-//                }
-//            }
-//            map
-//        } catch (_: Exception) {
-//            emptyMap()
-//        }
-//    }
-
-//    private fun List<Exercise>.attachVideoUrls(videoMap: Map<Int, String>): List<Exercise> {
-//        if (videoMap.isEmpty()) return this
-//        return this.map { ex ->
-//            if (videoMap.containsKey(ex.id)) ex.copy(videoUrl = videoMap[ex.id]) else ex
-//        }
-//    }
-
 
 
     // ---------- Rules ----------
@@ -569,17 +567,26 @@ class WorkoutActivity : AppCompatActivity() {
     // ---------- UI builders ----------
 
     private var currentlyExpanded: View? = null
+    private var currentlyExpandedBtn: ImageButton? = null
+
+    private val exerciseVideos by lazy { loadExerciseVideos() }
+
+    private fun getVideosForExercise(exerciseId: Int): List<ExerciseVideo> {
+        return exerciseVideos.filter { it.exerciseId == exerciseId }
+    }
+
     private fun buildDayCard(dayName: String, exercises: List<Exercise>): View {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundResource(R.drawable.active_quest_goblin) // your custom container
+            setBackgroundResource(R.drawable.active_quest_goblin) // goblin container
             val p = dp(24)
             setPadding(p, p, p, p)
             val lp = LinearLayout.LayoutParams(
                 dp(340),
-                ViewGroup.LayoutParams.WRAP_CONTENT)
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
             lp.setMargins(dp(2), dp(8), dp(2), dp(8))
-            lp.gravity = Gravity.CENTER_HORIZONTAL  // <-- centers the container
+            lp.gravity = Gravity.CENTER_HORIZONTAL
             layoutParams = lp
         }
 
@@ -593,10 +600,28 @@ class WorkoutActivity : AppCompatActivity() {
         }
         card.addView(title)
 
+        // Scrollable section for exercises
+        val scrollArea = ScrollView(this).apply {
+            // you can adjust this height to control how much of the goblin shows
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dp(250) // fixed height → scrollable
+            )
+        }
+
+        val innerLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+
         exercises.forEach { ex ->
             val exerciseCard = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setBackgroundResource(R.drawable.item_container)
+                setBackgroundResource(R.drawable.item_container) // custom bg
                 val p = dp(12)
                 setPadding(p, p, p, p)
                 val lp = LinearLayout.LayoutParams(
@@ -647,36 +672,57 @@ class WorkoutActivity : AppCompatActivity() {
             }
             details.addView(detailText)
 
-            // Toggle expand/collapse with only one open at a time
+            // Accordion behavior
             expandBtn.setOnClickListener {
                 if (details.visibility == View.GONE) {
-                    // Collapse currently expanded
-                    currentlyExpanded?.let { expanded ->
-                        expanded.visibility = View.GONE
-                        val parent = expanded.parent as ViewGroup
-                        val btn = parent.findViewById<ImageButton>(expandBtn.id)
-                        btn?.setImageResource(android.R.drawable.arrow_down_float)
-                    }
+                    currentlyExpanded?.let { expanded -> expanded.visibility = View.GONE }
+                    currentlyExpandedBtn?.setImageResource(android.R.drawable.arrow_down_float)
 
-                    // Expand this one
                     details.visibility = View.VISIBLE
                     expandBtn.setImageResource(android.R.drawable.arrow_up_float)
+
                     currentlyExpanded = details
+                    currentlyExpandedBtn = expandBtn
                 } else {
-                    // Collapse this one
                     details.visibility = View.GONE
                     expandBtn.setImageResource(android.R.drawable.arrow_down_float)
                     currentlyExpanded = null
+                    currentlyExpandedBtn = null
+                }
+            }
+            // Lookup matching videos
+            val videos = getVideosForExercise(ex.id)
+
+            if (videos.isNotEmpty()) {
+                videos.forEach { video ->
+                    val videoBtn = Button(this).apply {
+                        text = "Watch: ${video.equipment}"
+                        textSize = 14f
+                        setTextColor(ContextCompat.getColor(this@WorkoutActivity, android.R.color.holo_red_light))
+                        setBackgroundColor(Color.TRANSPARENT)
+                        setPadding(0, dp(4), 0, dp(4))
+                        setOnClickListener {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(video.youtubeLink))
+                            startActivity(intent)
+                        }
+                    }
+                    details.addView(videoBtn)
                 }
             }
 
+
             exerciseCard.addView(headerRow)
             exerciseCard.addView(details)
-            card.addView(exerciseCard)
+            innerLayout.addView(exerciseCard)
         }
+
+        scrollArea.addView(innerLayout)
+        card.addView(scrollArea)
 
         return card
     }
+
+
 
     // tiny “Watch” link if video available
 //            (ex.videoUrl ?: "").takeIf { it.startsWith("http", true) }?.let { url ->
