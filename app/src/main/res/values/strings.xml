@@ -2,5 +2,5 @@
     <string name="app_name">FitQuest</string>
     <string name="enlist_text">New to the realm? <font color="#ff2d00">Enlist now</font></string>
     <string name="enter_the_realm">Already part of the guild? <font color="#ff2d00">Enter the Realm</font></string>
-
+    <string name="close">Close</string>
 </resources>

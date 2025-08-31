@@ -1,5 +1,6 @@
 package com.example.fitquest
 
+import android.app.Dialog
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -18,10 +19,16 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlin.math.max
 import kotlin.random.Random
+import android.graphics.drawable.ColorDrawable
+import android.view.Window
+import android.widget.ImageButton
 
 class WorkoutActivity : AppCompatActivity() {
 
@@ -168,45 +175,9 @@ class WorkoutActivity : AppCompatActivity() {
             container.addView(buildDayCard(dayName, exercisesForDay))
         }
 
-
-        val exerciseList = loadExercisesFromCSV()
-
-        if (exerciseList.isEmpty()) {
-            Log.e("UI_ERROR", "No exercises loaded from CSV!")
-        } else {
-            Log.d("UI_DATA", "Loaded ${exerciseList.size} exercises")
-        }
-
         val workoutContainer = findViewById<LinearLayout>(R.id.workout_container)
 
-
     }
-
-
-    private fun loadExercisesFromCSV(): List<String> {
-        val exercises = mutableListOf<String>()
-        try {
-            val inputStream = assets.open("exercise_dataset.csv")
-            val reader = BufferedReader(InputStreamReader(inputStream))
-
-            // Skip header
-            var line = reader.readLine()
-
-            while (reader.readLine().also { line = it } != null) {
-                val tokens = line.split(",")
-                if (tokens.size > 1) {
-                    val exerciseName = tokens[1] // second column is exercise_name
-                    exercises.add(exerciseName)
-                    Log.d("CSV_LOAD", "Loaded exercise: $exerciseName")
-                }
-            }
-            reader.close()
-        } catch (e: Exception) {
-            Log.e("CSV_ERROR", "Error reading CSV", e)
-        }
-        return exercises
-    }
-
     // ---------- CSV loading ----------
     private fun loadExercisesFromAssets(exercise_dataset: String): List<Exercise> {
         val list = mutableListOf<Exercise>()
@@ -270,8 +241,7 @@ class WorkoutActivity : AppCompatActivity() {
                         restrictedFor = restr, // 👈 now part of model
                         difficulty = diff,
                         type = type,
-                        description = desc,
-                        // videoUrl = vid (if you later add this to your Exercise class)
+                        description = desc
                     )
                 )
             }
@@ -300,6 +270,65 @@ class WorkoutActivity : AppCompatActivity() {
         }
         return videoList
     }
+
+    private fun extractYoutubeId(url: String): String? {
+        return try {
+            val uri = Uri.parse(url)
+            val host = uri.host ?: return null
+
+            // youtu.be/VIDEOID
+            if (host.contains("youtu.be")) {
+                return uri.lastPathSegment
+            }
+
+            // youtube.com/watch?v=VIDEOID
+            if (host.contains("youtube.com")) {
+                uri.getQueryParameter("v")
+                    ?: uri.pathSegments
+                        .windowed(2, 1, partialWindows = true)
+                        .firstOrNull { it.size == 2 && it[0].equals("embed", true) }
+                        ?.get(1)
+            } else null
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun showVideoDialog(youtubeUrl: String) {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_youtube)
+
+        // Pretty floating look
+        dialog.window?.apply {
+            setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            setGravity(Gravity.CENTER)
+            setDimAmount(0.6f)
+        }
+
+        val closeBtn = dialog.findViewById<ImageButton>(R.id.btn_close)
+        val youTubePlayerView =
+            dialog.findViewById<YouTubePlayerView>(R.id.youtube_player_view)
+
+        // Tie the player to the Activity lifecycle
+        lifecycle.addObserver(youTubePlayerView)
+
+        youTubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
+            override fun onReady(player: YouTubePlayer) {
+                val id = extractYoutubeId(youtubeUrl)
+                if (id != null) {
+                    player.loadVideo(id, 0f)
+                }
+            }
+        })
+
+        closeBtn.setOnClickListener { dialog.dismiss() }
+        dialog.setOnDismissListener { youTubePlayerView.release() }
+
+        dialog.show()
+    }
+
 
     // parse CSV with quotes handling
     private fun String.parseCsvLine(): List<String> {
@@ -702,13 +731,13 @@ class WorkoutActivity : AppCompatActivity() {
                         setBackgroundColor(Color.TRANSPARENT)
                         setPadding(0, dp(4), 0, dp(4))
                         setOnClickListener {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(video.youtubeLink))
-                            startActivity(intent)
+                            showVideoDialog(video.youtubeLink) // 👈 instead of Intent
                         }
                     }
                     details.addView(videoBtn)
                 }
             }
+
 
 
             exerciseCard.addView(headerRow)
@@ -724,19 +753,6 @@ class WorkoutActivity : AppCompatActivity() {
 
 
 
-    // tiny “Watch” link if video available
-//            (ex.videoUrl ?: "").takeIf { it.startsWith("http", true) }?.let { url ->
-//                val btn = TextView(this).apply {
-//                    text = "Watch"
-//                    setTextColor(ContextCompat.getColor(this@WorkoutActivity, android.R.color.holo_blue_light))
-//                    textSize = 13f
-//                    setPadding(0, dp(2), 0, 0)
-//                    setOnClickListener {
-//                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-//                    }
-//                }
-//                card.addView(btn)
-//            }
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
@@ -770,5 +786,6 @@ class WorkoutActivity : AppCompatActivity() {
             workoutContainer.addView(dayView)
         }
     }
+
 
 }
