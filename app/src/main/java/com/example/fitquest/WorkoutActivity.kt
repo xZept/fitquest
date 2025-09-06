@@ -631,7 +631,6 @@ class WorkoutActivity : AppCompatActivity() {
 
         // Scrollable section for exercises
         val scrollArea = ScrollView(this).apply {
-            // you can adjust this height to control how much of the goblin shows
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 dp(250) // fixed height → scrollable
@@ -645,7 +644,6 @@ class WorkoutActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
         }
-
 
         exercises.forEach { ex ->
             val exerciseCard = LinearLayout(this).apply {
@@ -719,9 +717,9 @@ class WorkoutActivity : AppCompatActivity() {
                     currentlyExpandedBtn = null
                 }
             }
+
             // Lookup matching videos
             val videos = getVideosForExercise(ex.id)
-
             if (videos.isNotEmpty()) {
                 videos.forEach { video ->
                     val videoBtn = Button(this).apply {
@@ -738,11 +736,30 @@ class WorkoutActivity : AppCompatActivity() {
                 }
             }
 
-
-
             exerciseCard.addView(headerRow)
             exerciseCard.addView(details)
             innerLayout.addView(exerciseCard)
+
+            // ✅ Long press delete/edit popup
+            exerciseCard.setOnLongClickListener {
+                val builder = android.app.AlertDialog.Builder(this)
+                builder.setTitle(ex.name)
+                builder.setMessage("What do you want to do?")
+
+                // Delete button
+                builder.setPositiveButton("Delete") { dialog, _ ->
+                    innerLayout.removeView(exerciseCard) // removes this exercise
+                    dialog.dismiss()
+                }
+
+                // Cancel button
+                builder.setNeutralButton("Cancel") { dialog, _ ->
+                    dialog.dismiss()
+                }
+
+                builder.show()
+                true
+            }
         }
 
         scrollArea.addView(innerLayout)
@@ -752,6 +769,32 @@ class WorkoutActivity : AppCompatActivity() {
     }
 
 
+    private fun showDeleteDialog(parent: ViewGroup, item: View) {
+        val dialog = Dialog(this)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.dialog_delete_only)
+
+        dialog.window?.apply {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setLayout(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            setGravity(Gravity.CENTER)
+            setDimAmount(0.6f)
+        }
+
+        val btnDelete = dialog.findViewById<Button>(R.id.btn_delete)
+        val btnCancel = dialog.findViewById<Button>(R.id.btn_cancel)
+
+        btnDelete.setOnClickListener {
+            parent.removeView(item) // remove from UI
+            dialog.dismiss()
+        }
+
+        btnCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
 
 
     private fun dp(value: Int): Int =

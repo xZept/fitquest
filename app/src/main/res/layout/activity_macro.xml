@@ -4,31 +4,150 @@
     android:id="@+id/macro_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:gravity="center"
     android:background="@drawable/wooden_flanks_bg"
     tools:context=".MacroActivity">
 
-    <TextView
-        android:id="@+id/tv_macro_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Macro Tracker"
-        android:textSize="24sp"
-        android:textColor="#000"
-        android:layout_marginTop="32dp"
-        android:layout_centerHorizontal="true" />
-
-    <!-- Horizontal Meal RecyclerView (Snap to Center) -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/meal_recycler_view"
+    <!-- Meal Plan Section -->
+    <HorizontalScrollView
+        android:id="@+id/meal_scroll"
         android:layout_width="match_parent"
-        android:layout_height="400dp"
+        android:layout_height="wrap_content"
         android:layout_above="@id/btn_add_meal"
-        android:layout_marginBottom="6dp"
-        android:clipToPadding="false"
-        android:paddingHorizontal="32dp"
-        android:overScrollMode="never" />
+        android:fillViewport="true"
+        android:scrollbars="none">
 
+        <LinearLayout
+            android:id="@+id/meal_plan_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <!-- Breakfast container -->
+            <LinearLayout
+                android:layout_width="250dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:layout_marginRight="12dp"
+                android:background="@drawable/breakfast_container">
+
+                <TextView
+                    android:id="@+id/breakfastText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Breakfast"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:padding="4dp" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:fillViewport="true">
+
+                    <LinearLayout
+                        android:id="@+id/breakfastContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </ScrollView>
+            </LinearLayout>
+
+            <!-- Snack container -->
+            <LinearLayout
+                android:layout_width="250dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:layout_marginRight="12dp"
+                android:background="@drawable/empty_plate_container">
+
+                <TextView
+                    android:id="@+id/snackText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Snack"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:padding="4dp" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:fillViewport="true">
+
+                    <LinearLayout
+                        android:id="@+id/snackContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </ScrollView>
+            </LinearLayout>
+
+            <!-- Lunch container -->
+            <LinearLayout
+                android:layout_width="250dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:layout_marginRight="12dp"
+                android:background="@drawable/lunch_container">
+
+                <TextView
+                    android:id="@+id/lunchText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Lunch"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:padding="4dp" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:fillViewport="true">
+
+                    <LinearLayout
+                        android:id="@+id/lunchContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </ScrollView>
+            </LinearLayout>
+
+            <!-- Dinner container -->
+            <LinearLayout
+                android:layout_width="250dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:layout_marginRight="12dp"
+                android:background="@drawable/dinner_container">
+
+                <TextView
+                    android:id="@+id/dinnerText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Dinner"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:padding="4dp" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:fillViewport="true">
+
+                    <LinearLayout
+                        android:id="@+id/dinnerContainer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </ScrollView>
+            </LinearLayout>
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <!-- Add Meal Button -->
     <ImageButton
@@ -41,7 +160,7 @@
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="12dp" />
 
-    <!-- Navigation -->
+    <!-- Bottom Navigation -->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
@@ -82,7 +201,7 @@
                 android:layout_height="64dp"
                 android:layout_gravity="center"
                 android:src="@drawable/navigation_shop"
-                android:contentDescription="Workout" />
+                android:contentDescription="Shop" />
         </FrameLayout>
 
         <!-- profile icon -->
@@ -98,7 +217,7 @@
                 android:layout_height="64dp"
                 android:layout_gravity="center"
                 android:src="@drawable/navigation_user"
-                android:contentDescription="Macros" />
+                android:contentDescription="Profile" />
         </FrameLayout>
 
         <!-- workout icon -->
@@ -114,7 +233,7 @@
                 android:layout_height="64dp"
                 android:layout_gravity="center"
                 android:src="@drawable/navigation_workout"
-                android:contentDescription="Profile" />
+                android:contentDescription="Workout" />
         </FrameLayout>
 
         <!-- macro icon -->
@@ -130,7 +249,7 @@
                 android:layout_height="64dp"
                 android:layout_gravity="center"
                 android:src="@drawable/navigation_macro"
-                android:contentDescription="Shop" />
+                android:contentDescription="Macros" />
         </FrameLayout>
     </LinearLayout>
 </RelativeLayout>
