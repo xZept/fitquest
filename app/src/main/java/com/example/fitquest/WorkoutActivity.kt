@@ -619,6 +619,14 @@ class WorkoutActivity : AppCompatActivity() {
             layoutParams = lp
         }
 
+        card.setOnClickListener {
+            val intent = Intent(this, ExerciseActivity::class.java).apply {
+                putExtra("DAY_NAME", dayName)
+                putExtra("EXERCISES", ArrayList(exercises.map { it.name })) // send names for now
+            }
+            startActivity(intent)
+        }
+
         val title = TextView(this).apply {
             text = dayName
             setTextColor(ContextCompat.getColor(this@WorkoutActivity, android.R.color.white))

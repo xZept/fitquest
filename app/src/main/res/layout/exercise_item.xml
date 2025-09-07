@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/exercise_card"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/exercise_card_bg"
+    android:padding="16dp">
+
+    <!-- Exercise name (we'll optionally add Set #/3) -->
+<TextView
+android:id="@+id/exercise_name"
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:text="Exercise Name"
+android:textSize="22sp"
+android:textStyle="bold"
+android:gravity="center"
+android:textColor="@android:color/white" />
+
+<View
+android:layout_width="match_parent"
+android:layout_height="24dp" />
+
+    <!-- Big reps indicator -->
+<TextView
+android:id="@+id/exercise_sets_reps"
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:text="x8"
+android:textSize="36sp"
+android:gravity="center"
+android:textColor="@android:color/holo_green_light" />
+
+    <!-- flexible spacer to push buttons to the bottom -->
+<View
+android:layout_width="match_parent"
+android:layout_height="0dp"
+android:layout_weight="1" />
+
+    <!-- Buttons row -->
+<LinearLayout
+android:layout_width="match_parent"
+android:layout_height="wrap_content"
+android:orientation="horizontal"
+android:gravity="center">
+
+<Button
+    android:id="@+id/btn_previous"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:text="Previous" />
+
+<Button
+    android:id="@+id/btn_done"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:text="Done"
+    android:layout_marginStart="8dp"
+    android:layout_marginEnd="8dp" />
+
+<Button
+    android:id="@+id/btn_skip"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:text="Skip" />
+</LinearLayout>
+    </LinearLayout>

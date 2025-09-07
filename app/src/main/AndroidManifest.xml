@@ -33,6 +33,7 @@
         <activity android:name=".DashboardActivity" />
         <activity android:name=".WorkoutActivity" />
         <activity android:name=".WorkoutGeneratorActivity" />
+        <activity android:name=".ExerciseActivity" />
         <activity android:name=".MacroActivity" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".ShopActivity" />
