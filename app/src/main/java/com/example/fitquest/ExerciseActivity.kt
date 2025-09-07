@@ -11,6 +11,10 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import android.app.Dialog
+import android.graphics.drawable.ColorDrawable
+import android.os.CountDownTimer
+import android.view.Window
 
 class ExerciseActivity : AppCompatActivity() {
 
@@ -60,7 +64,6 @@ class ExerciseActivity : AppCompatActivity() {
     private fun showContainer(index: Int) {
         if (index !in containers.indices) return
 
-        // Remove previous view and inflate a new one that fills the FrameLayout
         exerciseContainer.removeAllViews()
         val itemView = layoutInflater.inflate(R.layout.exercise_item, exerciseContainer, false)
 
@@ -71,43 +74,91 @@ class ExerciseActivity : AppCompatActivity() {
         val btnSkip = itemView.findViewById<Button>(R.id.btn_skip)
 
         val (name, reps) = containers[index]
-
-        // Optional: show set number in the title (Set 1/3) for clarity
         val setNumber = (index % 3) + 1
-        tvName.text = "$name  (Set $setNumber/3)"
+        tvName.text = "$name (Set $setNumber/3)"
         tvReps.text = reps
 
-        // Prev
         btnPrev.setOnClickListener {
             if (currentIndex > 0) {
                 currentIndex--
                 showContainer(currentIndex)
-            } else {
-                Toast.makeText(this, "This is the first container", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Skip -> jump to next container
         btnSkip.setOnClickListener {
-            if (currentIndex < containers.size - 1) {
-                currentIndex++
-                showContainer(currentIndex)
-            } else {
-                Toast.makeText(this, "This is the last container", Toast.LENGTH_SHORT).show()
-            }
+            goToNext()
         }
 
-        // Done -> mark as done (for now: just advance to next container)
         btnDone.setOnClickListener {
-            // TODO: replace with timer popup or completion handling later
-            if (currentIndex < containers.size - 1) {
-                currentIndex++
-                showContainer(currentIndex)
-            } else {
-                Toast.makeText(this, "Workout complete 🎉", Toast.LENGTH_LONG).show()
-            }
+            // Instead of jumping immediately → open timer popup
+            showTimerDialog(name)
         }
 
         exerciseContainer.addView(itemView)
+    }
+
+    private fun goToNext() {
+        if (currentIndex < containers.size - 1) {
+            currentIndex++
+            showContainer(currentIndex)
+        } else {
+            Toast.makeText(this, "Workout complete 🎉", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun showTimerDialog(exerciseName: String) {
+        val dialog = Dialog(this)
+        // Optional: remove title bar
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.popup_timer)
+        dialog.setCancelable(false)
+
+        // Make dialog background transparent so rounded corners in drawable show
+        dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+
+        val tvName = dialog.findViewById<TextView>(R.id.timer_exercise_name)
+        val tvTimer = dialog.findViewById<TextView>(R.id.timer_text)
+        val btnSkip = dialog.findViewById<Button>(R.id.btn_skip_timer)
+
+        tvName.text = exerciseName
+        tvTimer.text = "04:00"
+
+        // total time in milliseconds (4 minutes)
+        val totalTime = 4 * 60 * 1000L
+
+        // create a reference so we can cancel it from multiple places
+        var countDownTimer: CountDownTimer? = object : CountDownTimer(totalTime, 1000L) {
+            override fun onTick(millisUntilFinished: Long) {
+                val minutes = (millisUntilFinished / 1000) / 60
+                val seconds = (millisUntilFinished / 1000) % 60
+                tvTimer.text = String.format("%02d:%02d", minutes, seconds)
+            }
+
+            override fun onFinish() {
+                // dismiss and proceed to next container
+                try {
+                    dialog.dismiss()
+                } catch (_: Exception) {}
+                goToNext() // your existing method to advance
+            }
+        }
+
+        // start the timer
+        countDownTimer?.start()
+
+        btnSkip.setOnClickListener {
+            // user wants to skip immediately
+            countDownTimer?.cancel()
+            dialog.dismiss()
+            goToNext()
+        }
+
+        // Ensure timer is cancelled if dialog is dismissed by any other means
+        dialog.setOnDismissListener {
+            try { countDownTimer?.cancel() } catch (_: Exception) {}
+            countDownTimer = null
+        }
+
+        dialog.show()
     }
 }
