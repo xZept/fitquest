@@ -5,14 +5,16 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.example.fitquest.utils.TipsHelper
+import com.example.fitquest.utils.TipsLoader
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
@@ -84,18 +86,18 @@ class MacroActivity : AppCompatActivity() {
         }
 
         navMacro.setOnClickListener {
-            // You're already on dashboard, optionally do nothing
+            // Already here
         }
 
-//        val startWorkoutBtn: Button = findViewById(R.id.btn_start_workout)
-//        startWorkoutBtn.setOnClickListener {
-//            val intent = Intent(this, WorkoutGeneratorActivity::class.java)
-//            startActivity(intent)
-//        }
-
-        // ✅ Get the goal and diet type passed from WorkoutGeneratorActivity
-        val goal = intent.getStringExtra("GOAL") ?: ""
+        // ✅ Get extras (coming from Workout/Dashboard)
+        val rawGoal = intent.getStringExtra("GOAL") ?: "any"
+        val userGoal = TipsHelper.mapGoalToCsv(rawGoal) // normalize to match CSV ("weight_loss", "muscle_gain", "endurance")
+        val rawSplit = intent.getStringExtra("SPLIT") ?: "any"
+        val splitKey = TipsHelper.mapSplitToCsv(rawSplit)
+        val userCondition = intent.getStringExtra("HEALTH_CONDITION") ?: "any"
         val dietType = intent.getStringExtra("DIET_TYPE") ?: ""
+
+        Log.d("MacroDebug", "Raw Goal: $rawGoal | Mapped Goal: $userGoal | Split: $splitKey | Condition: $userCondition")
 
         // ✅ Get references to meal containers
         val breakfastContainer = findViewById<LinearLayout>(R.id.breakfastContainer)
@@ -105,18 +107,16 @@ class MacroActivity : AppCompatActivity() {
 
         // ✅ Load meals filtered by user’s goal + diet type
         val meals = loadMealsFromCSV(this).filter {
-            (goal.isEmpty() || it.goal.equals(goal, ignoreCase = true)) &&
+            (rawGoal == "any" || it.goal.equals(userGoal, ignoreCase = true)) &&
                     (dietType.isEmpty() || it.dietType.equals(dietType, ignoreCase = true))
         }
 
-        // Helper to pick 4–7 random meals for each type
         fun pickRandomMeals(list: List<MealItem>): List<MealItem> {
             if (list.isEmpty()) return emptyList()
             val count = (4..7).random().coerceAtMost(list.size)
             return list.shuffled().take(count)
         }
 
-        // ✅ Populate containers by type
         pickRandomMeals(meals.filter { it.mealType.equals("Breakfast", true) })
             .forEach { addMealToContainer(it, breakfastContainer) }
 
@@ -128,16 +128,35 @@ class MacroActivity : AppCompatActivity() {
 
         pickRandomMeals(meals.filter { it.mealType.equals("Dinner", true) })
             .forEach { addMealToContainer(it, dinnerContainer) }
+
+        // Load tips and debug
+        val tips = TipsLoader.loadTips(this)
+        Log.d("MacroDebug", "Loaded tips count=${tips.size}")
+        tips.take(10).forEach { Log.d("MacroDump", "id=${it.id} cat='${it.category}' goal='${it.goal}' split='${it.split}' cond='${it.condition}' tip='${it.tip}'") }
+
+// get macro tips using the helper (with fallback)
+        val macroTips = TipsHelper.getMacroTips(tips, userGoal, userCondition)
+        Log.d("MacroDebug", "Filtered macro tips count=${macroTips.size} for mappedGoal='$userGoal' condition='$userCondition'")
+
+        val macroTipText = findViewById<TextView>(R.id.macroTip)
+        if (macroTips.isNotEmpty()) {
+            val tipOfMacro = macroTips.random()
+            macroTipText.text = tipOfMacro.tip
+            Log.d("MacroDebug", "Showing macro tip: ${tipOfMacro.tip}")
+        } else {
+            macroTipText.text = "No macro tips available for your plan yet."
+            Log.d("MacroDebug", "No macro tips found for Goal='$userGoal', Condition='$userCondition'")
+        }
+
+
     }
 
-    // Adds a meal row into the container
-    // Adds a meal row into the container
     // Adds a meal row into the container
     private fun addMealToContainer(meal: MealItem, container: LinearLayout) {
         val mealView = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(16, 16, 16, 16)
-            setBackgroundResource(android.R.drawable.dialog_holo_light_frame) // card-style
+            setBackgroundResource(android.R.drawable.dialog_holo_light_frame)
         }
 
         val nameText = TextView(this).apply {
@@ -160,28 +179,16 @@ class MacroActivity : AppCompatActivity() {
         )
         params.setMargins(0, 0, 0, 16)
 
-        // ✅ Long press to show dialog
         mealView.setOnLongClickListener {
             val builder = android.app.AlertDialog.Builder(this)
             builder.setTitle(meal.mealName)
             builder.setMessage("What do you want to do?")
-
-            // Delete button
             builder.setPositiveButton("Delete") { dialog, _ ->
-                container.removeView(mealView) // removes the meal row
+                container.removeView(mealView)
                 dialog.dismiss()
             }
-
-            // Edit button (no functionality yet)
-            builder.setNegativeButton("Edit") { dialog, _ ->
-                dialog.dismiss()
-            }
-
-            // Cancel button
-            builder.setNeutralButton("Cancel") { dialog, _ ->
-                dialog.dismiss()
-            }
-
+            builder.setNegativeButton("Edit") { dialog, _ -> dialog.dismiss() }
+            builder.setNeutralButton("Cancel") { dialog, _ -> dialog.dismiss() }
             builder.show()
             true
         }
@@ -189,9 +196,6 @@ class MacroActivity : AppCompatActivity() {
         container.addView(mealView, params)
     }
 
-
-
-    // Loads meals from CSV in assets
     private fun loadMealsFromCSV(context: Context): List<MealItem> {
         val meals = mutableListOf<MealItem>()
         try {

@@ -1,34 +1,31 @@
-<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/root_exercise"
-    android:orientation="vertical"
+    android:id="@+id/exercise_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/black">
+    android:orientation="vertical">
 
-    <!-- TOP: animation area -->
+    <!-- Top GIF container -->
     <FrameLayout
-        android:id="@+id/animation_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:padding="12dp">
+        android:layout_weight="3"
+        android:gravity="center"
+        android:padding="8dp">
 
         <ImageView
-            android:id="@+id/animation_placeholder"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@android:drawable/ic_media_play"
-            android:layout_gravity="center"/>
+            android:id="@+id/exercise_gif"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            android:layout_gravity="center"
+            android:scaleType="centerInside" />
     </FrameLayout>
 
-    <!-- BOTTOM: this FrameLayout is where we add ONE exercise container at a time.
-         NOTE: it has id "exercise_container" referenced by the Activity -->
+    <!-- Bottom exercise container -->
     <FrameLayout
         android:id="@+id/exercise_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_margin="12dp" />
+        android:layout_weight="7"
+        android:padding="8dp" />
 
 </LinearLayout>

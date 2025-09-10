@@ -9,11 +9,17 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type
+import com.example.fitquest.utils.TipsLoader
+
 
 class DashboardActivity : AppCompatActivity() {
+
+    private lateinit var dashboardTip: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dashboard)
@@ -80,5 +86,22 @@ class DashboardActivity : AppCompatActivity() {
             insets
         }
 
+        dashboardTip = findViewById(R.id.dashboardTip)
+
+        // Load all tips
+        val tips = TipsLoader.loadTips(this)
+
+        // Filter only general tips
+        val generalTips = tips.filter { it.category == "general" }
+
+        if (generalTips.isNotEmpty()) {
+            // Rotate by day (using day of year as index)
+            val dayIndex = (System.currentTimeMillis() / (1000 * 60 * 60 * 24)).toInt()
+            val tipOfDay = generalTips[dayIndex % generalTips.size]
+
+            dashboardTip.text = tipOfDay.tip
+        } else {
+            dashboardTip.text = "Stay strong and keep going!"
+        }
     }
 }

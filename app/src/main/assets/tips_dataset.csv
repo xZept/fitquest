@@ -1,0 +1,51 @@
+﻿id,category,goal,split,condition,tip
+1,general,any,any,any,Stay consistent! Progress takes time.
+2,general,any,any,any,Make sure to warm up before each workout.
+3,general,any,any,any,Sleep is just as important as training.
+4,general,any,any,any,Stay hydrated—water helps recovery and performance.
+5,general,any,any,any,Track your progress to stay motivated.
+6,general,any,any,any,"Rest days are part of the process, not a setback."
+7,workout,weight_loss,3_days,any,"For weight loss on a 3-day split, focus on full-body workouts."
+8,workout,weight_loss,5_days,any,Add HIIT sessions to maximize calorie burn.
+9,workout,muscle_gain,5_days,any,"For muscle gain on 5-day split, prioritize progressive overload."
+10,workout,muscle_gain,4_days,any,"Focus on compound lifts like squats, bench press, and deadlifts."
+11,workout,endurance,4_days,any,Include steady-state cardio to build stamina.
+12,workout,endurance,3_days,asthma,"If you have asthma, pace your cardio and focus on breathing."
+13,workout,muscle_gain,any,joint_pain,Use machines or resistance bands to reduce joint strain.
+14,workout,weight_loss,any,obesity,Start with low-impact exercises like cycling or swimming.
+15,workout,endurance,any,heart_issue,Prioritize doctor-approved moderate cardio over high intensity.
+16,macro,weight_loss,any,any,Focus on a calorie deficit with lean protein and veggies.
+17,macro,weight_loss,any,diabetes,Limit refined carbs and balance meals with fiber.
+18,macro,weight_loss,any,hypertension,Reduce sodium intake and prioritize whole foods.
+19,macro,muscle_gain,any,any,Aim for high protein intake (1.6–2.2g per kg bodyweight).
+20,macro,muscle_gain,any,underweight,"Add calorie-dense foods like nuts, oats, and dairy."
+21,macro,muscle_gain,any,lactose_intolerance,Choose lactose-free protein sources like soy or pea protein.
+22,macro,endurance,any,any,Carbs are key for endurance—fuel up before long sessions.
+23,macro,endurance,any,diabetes,Choose slow-digesting carbs like oats and sweet potatoes.
+24,macro,endurance,any,anemia,"Boost iron intake with lean meats, spinach, and legumes."
+25,recovery,any,any,any,Always stretch after workouts to reduce stiffness.
+26,recovery,any,any,joint_pain,Use proper warm-up and low-impact exercises to protect joints.
+27,recovery,any,any,back_pain,Strengthen your core and avoid heavy overhead lifts.
+28,recovery,any,any,shoulder_injury,Focus on rotator cuff strengthening and avoid pressing overhead.
+29,recovery,any,any,knee_pain,Prioritize proper squat form and avoid high-impact jumping.
+30,recovery,any,any,ankle_injury,Wear supportive shoes and use balance exercises for rehab.
+31,recovery,weight_loss,any,any,Prioritize sleep (7–9 hrs) to aid recovery and fat loss.
+32,recovery,weight_loss,any,obesity,"Choose low-impact cardio like cycling, swimming, or elliptical."
+33,recovery,weight_loss,any,any,Foam rolling can help reduce soreness after cardio sessions.
+34,recovery,muscle_gain,any,any,Take at least 48 hours before training the same muscle group again.
+35,recovery,muscle_gain,5_days,any,Alternate push/pull splits to reduce overuse injuries.
+36,recovery,muscle_gain,any,joint_pain,Use resistance machines or bands instead of heavy free weights.
+37,recovery,muscle_gain,any,shoulder_injury,Avoid dips and upright rows to protect your shoulders.
+38,recovery,endurance,any,shin_splints,Replace some runs with cycling/swimming to avoid shin stress.
+39,recovery,endurance,any,asthma,Practice controlled breathing during cool-down to recover faster.
+40,recovery,endurance,any,dehydration,Replenish electrolytes post-workout with water and fruits.
+41,recovery,endurance,any,any,Stretch calves and hamstrings to prevent cramps during runs.
+42,recovery,any,any,dehydration,"Drink water throughout the day, not just after workouts."
+43,recovery,any,any,any,Use foam rolling to improve blood flow and reduce soreness.
+44,recovery,any,any,stress,Include yoga or meditation to aid recovery and mental health.
+45,recovery,any,any,insomnia,Avoid late caffeine intake to improve sleep quality.
+46,recovery,any,any,fatigue,Take a deload week if fatigue persists for more than 2 weeks.
+47,recovery,any,any,any,Use contrast showers (hot/cold) to boost recovery circulation.
+48,recovery,any,any,any,Schedule at least 1–2 full rest days weekly.
+49,recovery,muscle_gain,any,any,Stretch tight muscles after lifting to improve flexibility.
+50,recovery,endurance,any,anemia,Prioritize iron-rich foods to support oxygen delivery.

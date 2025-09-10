@@ -15,6 +15,8 @@ import android.app.Dialog
 import android.graphics.drawable.ColorDrawable
 import android.os.CountDownTimer
 import android.view.Window
+import android.widget.ImageView
+import com.bumptech.glide.Glide
 
 class ExerciseActivity : AppCompatActivity() {
 
@@ -25,6 +27,13 @@ class ExerciseActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_exercise)
+
+        // 🎬 Load your single GIF into the top ImageView
+        val gifView = findViewById<ImageView>(R.id.exercise_gif)
+        Glide.with(this)
+            .asGif()
+            .load(R.raw.test) // your single GIF in res/raw/workout.gif
+            .into(gifView)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
@@ -60,6 +69,7 @@ class ExerciseActivity : AppCompatActivity() {
             Toast.makeText(this, "No exercises found", Toast.LENGTH_SHORT).show()
         }
     }
+
 
     private fun showContainer(index: Int) {
         if (index !in containers.indices) return
@@ -108,25 +118,27 @@ class ExerciseActivity : AppCompatActivity() {
 
     private fun showTimerDialog(exerciseName: String) {
         val dialog = Dialog(this)
-        // Optional: remove title bar
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
         dialog.setContentView(R.layout.popup_timer)
         dialog.setCancelable(false)
-
-        // Make dialog background transparent so rounded corners in drawable show
         dialog.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
 
         val tvName = dialog.findViewById<TextView>(R.id.timer_exercise_name)
         val tvTimer = dialog.findViewById<TextView>(R.id.timer_text)
         val btnSkip = dialog.findViewById<Button>(R.id.btn_skip_timer)
+        val animationView = dialog.findViewById<ImageView>(R.id.timer_animation)
 
-        tvName.text = exerciseName
+        // Always show "Rest" instead of the exercise name
+        tvName.text = "Rest"
         tvTimer.text = "04:00"
 
-        // total time in milliseconds (4 minutes)
-        val totalTime = 4 * 60 * 1000L
+        // Load fantasy/pixel style GIF into ImageView
+        Glide.with(this)
+            .asGif()
+            .load(R.drawable.rest_timer_animation) // put your GIF in res/drawable/
+            .into(animationView)
 
-        // create a reference so we can cancel it from multiple places
+        val totalTime = 4 * 60 * 1000L
         var countDownTimer: CountDownTimer? = object : CountDownTimer(totalTime, 1000L) {
             override fun onTick(millisUntilFinished: Long) {
                 val minutes = (millisUntilFinished / 1000) / 60
@@ -135,30 +147,25 @@ class ExerciseActivity : AppCompatActivity() {
             }
 
             override fun onFinish() {
-                // dismiss and proceed to next container
-                try {
-                    dialog.dismiss()
-                } catch (_: Exception) {}
-                goToNext() // your existing method to advance
+                dialog.dismiss()
+                goToNext()
             }
         }
 
-        // start the timer
         countDownTimer?.start()
 
         btnSkip.setOnClickListener {
-            // user wants to skip immediately
             countDownTimer?.cancel()
             dialog.dismiss()
             goToNext()
         }
 
-        // Ensure timer is cancelled if dialog is dismissed by any other means
         dialog.setOnDismissListener {
-            try { countDownTimer?.cancel() } catch (_: Exception) {}
+            countDownTimer?.cancel()
             countDownTimer = null
         }
 
         dialog.show()
     }
+
 }

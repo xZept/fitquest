@@ -29,6 +29,9 @@ import kotlin.random.Random
 import android.graphics.drawable.ColorDrawable
 import android.view.Window
 import android.widget.ImageButton
+import com.example.fitquest.models.Tips
+import com.example.fitquest.utils.TipsHelper
+import com.example.fitquest.utils.TipsLoader
 
 class WorkoutActivity : AppCompatActivity() {
 
@@ -68,12 +71,12 @@ class WorkoutActivity : AppCompatActivity() {
     // Holds all exercises loaded from CSV
     private lateinit var dataset: List<Exercise>
 
+    private lateinit var workoutTip: TextView
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout)
-
-
 
         // hides the system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -170,13 +173,71 @@ class WorkoutActivity : AppCompatActivity() {
         val pool = filtered.shuffled(Random(System.currentTimeMillis()))
         val bucketed = allocateToBuckets(pool, dayBuckets)
 
-// ---- Render horizontal day cards ----
+    // ---- Render horizontal day cards ----
         bucketed.forEach { (dayName, exercisesForDay) ->
             container.addView(buildDayCard(dayName, exercisesForDay))
         }
 
+
         val workoutContainer = findViewById<LinearLayout>(R.id.workout_container)
 
+        // 📌 Grab user data from intent
+        val rawGoal = intent.getStringExtra("GOAL") ?: "any"
+        val userGoal = mapGoalToCsv(rawGoal) // ✅ use mapping
+        val userSplitDays = intent.getIntExtra("SPLIT_DAYS", 3) // default 3-day split
+        val userCondition = intent.getStringExtra("HEALTH_CONDITION") ?: "any"
+
+        // 📌 Map split int -> CSV format (e.g., "3_days", "4_days")
+        val splitKey = "${userSplitDays}_days"
+
+        // 📌 Load all tips
+        val tips: List<Tips> = TipsLoader.loadTips(this)
+
+        // 📌 Get workout-specific tips
+        val workoutTips = TipsHelper.getWorkoutTips(
+            tips,
+            userGoal.lowercase(),
+            splitKey,
+            userCondition.lowercase()
+        )
+
+        // 📌 Display one tip
+        val workoutTipText = findViewById<TextView>(R.id.workoutTip)
+        if (workoutTips.isNotEmpty()) {
+            val tipOfSplit = workoutTips.random() // show random tip for that split
+            workoutTipText.text = tipOfSplit.tip
+        } else {
+            workoutTipText.text = "No workout tips available for your plan yet."
+        }
+
+        // 📌 Recovery Tips
+        val recoveryTips = tips.filter {
+            it.category.equals("recovery", ignoreCase = true) &&
+                    (it.goal.equals(userGoal, ignoreCase = true) || it.goal == "any") &&
+                    (it.split.equals(splitKey, ignoreCase = true) || it.split == "any") &&
+                    (it.condition.equals(userCondition, ignoreCase = true) || it.condition == "any")
+        }
+
+        val recoveryTipText = findViewById<TextView>(R.id.recoveryTip)
+
+        if (recoveryTips.isNotEmpty()) {
+            val tipOfRecovery = recoveryTips.random()
+            recoveryTipText.text = tipOfRecovery.tip
+        } else {
+            recoveryTipText.text = "No recovery tips available for your plan yet."
+        }
+
+
+
+    }
+
+    private fun mapGoalToCsv(userGoal: String): String {
+        return when (userGoal.lowercase()) {
+            "lose fat" -> "weight_loss"
+            "build muscle" -> "muscle_gain"
+            "maintain" -> "endurance" // or "any"
+            else -> "any"
+        }
     }
     // ---------- CSV loading ----------
     private fun loadExercisesFromAssets(exercise_dataset: String): List<Exercise> {

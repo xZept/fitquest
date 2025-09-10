@@ -110,6 +110,9 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
             val macroIntent = Intent(this, MacroActivity::class.java)
             macroIntent.putExtra("GOAL", goal)
             macroIntent.putExtra("DIET_TYPE", dietType)
+            macroIntent.putExtra("HEALTH_CONDITION", inputHealthCondition.text.toString())
+            macroIntent.putExtra("SPLIT", "${splitDays}_days") // optional
+
             startActivity(macroIntent)
 
             // ✅ Send workout data to WorkoutActivity

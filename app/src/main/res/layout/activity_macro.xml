@@ -7,6 +7,18 @@
     android:background="@drawable/wooden_flanks_bg"
     tools:context=".MacroActivity">
 
+    <TextView
+        android:id="@+id/macroTip"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Loading macro tip..."
+        android:textSize="16sp"
+        android:padding="12dp"
+        android:textColor="@android:color/black"
+        android:background="@drawable/user_input_bg"
+        android:layout_marginTop="16dp"/>
+
+
     <!-- Meal Plan Section -->
     <HorizontalScrollView
         android:id="@+id/meal_scroll"
