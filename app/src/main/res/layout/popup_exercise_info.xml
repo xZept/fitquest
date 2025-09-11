@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- Example details -->
+    <TextView
+        android:id="@+id/tvMuscle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Target Muscle"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:paddingBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/tvEquipment"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Equipment: Dumbbell"
+        android:paddingBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/tvMechanics"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Mechanics: Isolation"
+        android:paddingBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/tvForce"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Force: Push"
+        android:paddingBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/tvDescription"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Description of the exercise..."
+        android:paddingBottom="12dp"/>
+
+    <!-- Embedded YouTube Video -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:scrollbars="none"
+        android:fillViewport="true">
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scrollbars="horizontal">
+
+            <LinearLayout
+                android:id="@+id/videoContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:padding="8dp" />
+        </HorizontalScrollView>
+    </ScrollView>
+
+
+
+</LinearLayout>
+

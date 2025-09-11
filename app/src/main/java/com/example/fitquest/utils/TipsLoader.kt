@@ -14,7 +14,7 @@ object TipsLoader {
                 val header = br.readLine() ?: return emptyList() // skip header
                 br.lineSequence().forEach { raw ->
                     if (raw.isBlank()) return@forEach
-                    val cols = parseCsvLine(raw)
+                    val cols = raw.parseCsvLine()  // ✅ use shared parser
                     if (cols.size < 6) return@forEach
                     // tip text might contain commas so join remaining columns
                     val id = cols[0].trim().toIntOrNull() ?: return@forEach
@@ -30,35 +30,5 @@ object TipsLoader {
             e.printStackTrace()
         }
         return out
-    }
-
-    // CSV parser that respects quoted fields (handles commas inside quotes)
-    private fun parseCsvLine(line: String): List<String> {
-        val result = mutableListOf<String>()
-        val sb = StringBuilder()
-        var inQuotes = false
-        var i = 0
-        while (i < line.length) {
-            val c = line[i]
-            when (c) {
-                '"' -> {
-                    if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
-                        sb.append('"'); i++ // escaped quote
-                    } else {
-                        inQuotes = !inQuotes
-                    }
-                }
-                ',' -> {
-                    if (inQuotes) sb.append(c) else {
-                        result.add(sb.toString())
-                        sb.setLength(0)
-                    }
-                }
-                else -> sb.append(c)
-            }
-            i++
-        }
-        result.add(sb.toString())
-        return result
     }
 }
