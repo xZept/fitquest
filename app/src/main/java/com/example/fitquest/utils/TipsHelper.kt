@@ -60,7 +60,6 @@ object TipsHelper {
             else -> "any"
         }
     }
-
     fun mapSplitToCsv(split: String): String {
         return when {
             split.contains("1 day") -> "any"

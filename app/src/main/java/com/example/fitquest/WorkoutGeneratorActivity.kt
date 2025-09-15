@@ -151,6 +151,9 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
         }
     }
 
+
+
+
     // ---------------- Meal Plan Section ----------------
 
     data class MealItem(
