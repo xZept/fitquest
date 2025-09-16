@@ -5,6 +5,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -14,14 +15,21 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
+import androidx.lifecycle.lifecycleScope
+import com.example.fitquest.repository.FitquestRepository
+import kotlinx.coroutines.launch
 
 
 class LoginActivity : AppCompatActivity() {
+
+    private lateinit var repository: FitquestRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
+        // Initialize repository
+        repository = FitquestRepository(this)
 
         // hides the system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -54,17 +62,34 @@ class LoginActivity : AppCompatActivity() {
         }
 
         btnLogin.setOnClickListener {
-            val username = edtUsername.text.toString()
-            val password = edtPassword.text.toString()
+            val username = edtUsername.text.toString().trim()
+            val password = edtPassword.text.toString().trim()
 
-            // TODO: Replace this with actual user data check or Firebase/Auth
-            if (username == "admin" && password == "admin123") {
-                Toast.makeText(this, "Login Successful!", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, DashboardActivity::class.java)
-                startActivity(intent)
-                finish()
-            } else {
-                Toast.makeText(this, "Invalid Credentials!", Toast.LENGTH_SHORT).show()
+            Log.d("FitquestDB", "Attempting login with username=$username, password=$password")
+
+            // User authentication
+            lifecycleScope.launch {
+                var userId = repository.authenticateUser(username, password)
+                Log.d("FitquestDB", "authenticateUser() returned userId=$userId")
+
+                if (userId != null) {
+                    Toast.makeText(
+                        this@LoginActivity,
+                        "Login Successful!, User ID = $userId", // For debugging
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                    val intent = Intent(this@LoginActivity, DashboardActivity::class.java)
+                    intent.putExtra("userId", userId)
+                    startActivity(intent)
+                    finish()
+                } else {
+                    Toast.makeText(
+                        this@LoginActivity,
+                        "User not found!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             }
         }
 

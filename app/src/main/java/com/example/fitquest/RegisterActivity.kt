@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.InputFilter
 import android.text.TextWatcher
+import android.util.Log
 import android.util.Patterns
 import android.view.View
 import android.view.WindowInsets
@@ -16,15 +17,39 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type
+import androidx.lifecycle.lifecycleScope
+import com.example.fitquest.database.User
+import com.example.fitquest.repository.FitquestRepository
+import kotlinx.coroutines.launch
 import java.util.*
 
 class RegisterActivity : AppCompatActivity() {
+    private lateinit var repository: FitquestRepository
 
     private var selectedSex: String? = null
+    private lateinit var male: ImageView
+    private lateinit var female: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Initialize repository
+        repository = FitquestRepository(this)
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register)
+
+        // Initialize sex options
+        male = findViewById(R.id.iv_male)
+        female = findViewById(R.id.iv_female)
+
+        male.setOnClickListener {
+            selectedSex = "Male"
+            highlightSelected(male, female)
+        }
+
+        female.setOnClickListener {
+            selectedSex = "Female"
+            highlightSelected(female, male)
+        }
 
         // hides the system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -57,21 +82,6 @@ class RegisterActivity : AppCompatActivity() {
             val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)
             finish()
-        }
-
-        val ivMale = findViewById<ImageView>(R.id.iv_male)
-        val ivFemale = findViewById<ImageView>(R.id.iv_female)
-
-        ivMale.setOnClickListener {
-            ivMale.setBackgroundResource(R.drawable.sex_container_selected)
-            ivFemale.setBackgroundResource(R.drawable.sex_container)
-            selectedSex = "Male"
-        }
-
-        ivFemale.setOnClickListener {
-            ivFemale.setBackgroundResource(R.drawable.sex_container_selected)
-            ivMale.setBackgroundResource(R.drawable.sex_container)
-            selectedSex = "Female"
         }
 
         val firstNameEditText = findViewById<EditText>(R.id.et_first_name)
@@ -165,8 +175,9 @@ class RegisterActivity : AppCompatActivity() {
             val lastName = lastNameEditText.text.toString().trim()
             val birthday = birthdayEditText.text.toString().trim()
             val username = usernameEditText.text.toString().trim()
+            val age = ageTextView.text.toString().replace("Age:", "").trim()
             val email = emailEditText.text.toString().trim()
-            val password = passwordEditText.text.toString()
+            val password = passwordEditText.text.toString().trim()
             val confirmPassword = confirmPasswordEditText.text.toString()
 
             when {
@@ -196,6 +207,38 @@ class RegisterActivity : AppCompatActivity() {
                 }
 
                 else -> {
+
+                    val newUser = User(
+                        firstName = firstName.trim(),
+                        lastName = lastName.trim(),
+                        birthday = birthday.trim(), // placeholder until you add DatePicker
+                        age = age.toInt(),
+                        sex = selectedSex!!.trim(),
+                        username = username.trim(),
+                        email = email.trim(),
+                        password = password.trim()
+                    )
+
+                    Log.d("FitquestDB", "Registering new user: $newUser")
+
+                    lifecycleScope.launch {
+                        repository.insertAll(newUser)
+                        Log.d("FitquestDB", "User inserted into DB successfully.")
+
+                        // Debug: print all users after insert
+                        val allUsers = repository.getAllUsers()
+                        Log.d("FitquestDB", "All users in DB after insert: $allUsers")
+
+                        Toast.makeText(
+                            this@RegisterActivity,
+                            "Registration Successful!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        startActivity(Intent(this@RegisterActivity, LoginActivity::class.java))
+                        finish()
+                    }
+
                     Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show()
 
                     listOf(
@@ -204,15 +247,17 @@ class RegisterActivity : AppCompatActivity() {
                     ).forEach { it.text.clear() }
 
                     selectedSex = null
-                    ivMale.setBackgroundResource(R.drawable.sex_container)
-                    ivFemale.setBackgroundResource(R.drawable.sex_container)
+                    male.setBackgroundResource(R.drawable.sex_container)
+                    female.setBackgroundResource(R.drawable.sex_container)
                     ageTextView.text = "Age:"
-
-                    startActivity(Intent(this, LoginActivity::class.java))
-                    finish()
                 }
             }
         }
+    }
+
+    private fun highlightSelected(selected: ImageView, unselected: ImageView) {
+        selected.setBackgroundResource(R.drawable.sex_container_selected)
+        unselected.setBackgroundResource(R.drawable.sex_container)
     }
 
     private fun setupInputFocusEffects() {

@@ -131,7 +131,6 @@
                     android:focusable="true" />
             </LinearLayout>
 
-            <!-- Username -->
             <EditText
                 android:id="@+id/et_username"
                 android:layout_width="match_parent"
