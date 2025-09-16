@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.ksp)
     id("org.jetbrains.kotlin.kapt")
 }
 
@@ -44,6 +45,11 @@ android {
 }
 
 dependencies {
+    val room_version = "2.8.0"
+
+    implementation("androidx.room:room-runtime:$room_version")
+    ksp("androidx.room:room-compiler:$room_version")
+
     implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:12.1.0")
     implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0")
     implementation(libs.androidx.core.ktx)
