@@ -14,11 +14,26 @@ class FitquestRepository(context: Context) {
 
     private val userDAO = db.userDAO()
 
-    suspend fun insertAll(vararg users: User) {
-        Log.d("FitquestDB", "Inserting users: ${users.toList()}")
-        userDAO.insertAll(*users)
-        Log.d("FitquestDB", "Users inserted successfully")
+    // --- START OF CHANGES ---
+
+    // MODIFIED: This function now inserts a SINGLE user and returns its new ID.
+    // It calls the `insert` function in your DAO that you correctly updated.
+    suspend fun insert(user: User): Long {
+        Log.d("FitquestDB", "Inserting single user to get ID: $user")
+        val newId = userDAO.insert(user)
+        Log.d("FitquestDB", "User inserted successfully with ID: $newId")
+        return newId
     }
+
+    // This function is likely unused now, but can be kept if you ever need to insert
+    // multiple users at once without needing their IDs back.
+    //suspend fun insertAll(vararg users: User) {
+        //Log.d("FitquestDB", "Inserting multiple users: ${users.toList()}")
+        //userDAO.insertAll(*users)
+        //Log.d("FitquestDB", "Users inserted successfully")
+    //}
+
+    // --- END OF CHANGES ---
 
     suspend fun authenticateUser(username: String, password: String): Int? {
         Log.d("FitquestDB", "Authenticating user: username=$username, password=$password")

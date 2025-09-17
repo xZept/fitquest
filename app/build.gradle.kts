@@ -10,12 +10,14 @@ plugins {
 
 android {
     namespace = "com.example.fitquest"
-    compileSdk = 36
+    // FIX: Using latest stable SDK version
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.fitquest"
         minSdk = 24
-        targetSdk = 36
+        // FIX: Target SDK should match compile SDK
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -45,13 +47,17 @@ android {
 }
 
 dependencies {
-    val room_version = "2.8.0"
+    // FIX: Using latest stable Room version
+    val room_version = "2.6.1"
 
     implementation("androidx.room:room-runtime:$room_version")
+    // ADDED: KTX extensions for coroutine support, which your DAO uses
+    implementation("androidx.room:room-ktx:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
 
+    // FIX: Removed duplicate YouTube player dependency
     implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:12.1.0")
-    implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:11.1.0")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -65,6 +71,7 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("com.airbnb.android:lottie:6.4.0")
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation("com.google.android.material:material:1.12.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 
     testImplementation(libs.junit)

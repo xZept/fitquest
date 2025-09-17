@@ -14,5 +14,13 @@ data class User(
     @ColumnInfo(name = "sex") val sex: String,
     @ColumnInfo(name = "username") val username: String,
     @ColumnInfo(name = "email") val email: String,
-    @ColumnInfo(name = "password") val password: String
+    @ColumnInfo(name = "password") val password: String,
+
+    // Fitness-related fields
+    @ColumnInfo(name = "height") val height: Int, // cm
+    @ColumnInfo(name = "weight") val weight: Int, // kg
+    @ColumnInfo(name = "activity_level") val activityLevel: String? = null,
+    @ColumnInfo(name = "goal") val goal: String? = null,
+    @ColumnInfo(name = "equipment_prefs") val equipmentPrefs: String? = null
 )
+

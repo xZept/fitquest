@@ -8,24 +8,32 @@
 
     <string-array name="activity_levels">
         <item>Sedentary</item>
-        <item>Light</item>
-        <item>Moderate</item>
-        <item>Active</item>
-    </string-array>
-
-    <string-array name="workout_splits">
-        <item>1 day/week</item>
-        <item>2 days/week</item>
-        <item>3 days/week</item>
-        <item>4 days/week</item>
-        <item>5 days/week</item>
-        <item>6 days/week</item>
+        <item>Lightly Active</item>
+        <item>Moderately Active</item>
+        <item>Very Active</item>
     </string-array>
 
     <string-array name="equipment_choices">
         <item>Gym Equipment</item>
-        <item>Home Gym</item>
+        <item>My Equipment</item>
         <item>Body Weight</item>
+    </string-array>
+
+    <string-array name="equipment_list">
+        <item>Bodyweight</item>
+        <item>Cardio Equipment</item>
+        <item>Machine</item>
+        <item>Battle Ropes</item>
+        <item>Kettlebell</item>
+        <item>Barbell</item>
+        <item>Dumbbell</item>
+        <item>Bench</item>
+        <item>Barbell Plate</item>
+        <item>Cable</item>
+        <item>Resistance Band</item>
+        <item>Bar</item>
+        <item>Ab Wheel</item>
+        <item>Plate</item>
     </string-array>
 
 </resources>

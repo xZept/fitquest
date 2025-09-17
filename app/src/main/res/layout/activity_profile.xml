@@ -1,113 +1,247 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/profile_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#E8F5E9"
+    android:background="#F9FAFB"
     tools:context=".ProfileActivity">
 
-    <TextView
-        android:id="@+id/tv_profile_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Profile"
-        android:textSize="24sp"
-        android:textColor="#000"
-        android:layout_marginTop="32dp"
-        android:layout_centerHorizontal="true"/>
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="16dp"
+        android:layout_above="@id/bottom_nav">
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:spacing="12dp">
+
+            <!-- Profile Header -->
+            <TextView
+                android:id="@+id/tv_profile_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Your Profile"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="#111827"
+                android:layout_marginBottom="24dp" />
+
+            <!-- Card: User Info -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="6dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tv_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Name: John Doe"
+                        android:textSize="18sp"
+                        android:textColor="#111827"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:id="@+id/tv_age"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Age: 25"
+                        android:textSize="16sp"
+                        android:textColor="#374151"
+                        android:layout_marginBottom="8dp" />
+
+                    <EditText
+                        android:id="@+id/et_height"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Enter Height (cm)"
+                        android:inputType="number"
+                        android:textSize="16sp"
+                        android:background="@android:drawable/edit_text"
+                        android:padding="8dp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <EditText
+                        android:id="@+id/et_weight"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:hint="Enter Weight (kg)"
+                        android:inputType="numberDecimal"
+                        android:textSize="16sp"
+                        android:background="@android:drawable/edit_text"
+                        android:padding="8dp" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Card: Activity + Goal -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="6dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tv_activity_level"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Activity Level: Moderate"
+                        android:textSize="16sp"
+                        android:textColor="#374151"
+                        android:layout_marginBottom="4dp" />
+
+                    <TextView
+                        android:id="@+id/tv_fitness_goal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Goal: Build Muscle"
+                        android:textSize="16sp"
+                        android:textColor="#374151" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Card: Equipment Selection -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Available Equipment"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#111827"
+                        android:layout_marginBottom="12dp" />
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/chipGroup_equipment"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="false"
+                        app:chipSpacing="8dp"
+                        app:singleLine="false"
+                        android:paddingBottom="8dp" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Save Button -->
+            <Button
+                android:id="@+id/btn_save_profile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Save Profile"
+                android:backgroundTint="#10B981"
+                android:textColor="#FFFFFF"
+                android:layout_marginTop="20dp"
+                android:padding="12dp"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Bottom Navigation -->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:layout_alignParentBottom="true"
-        android:background="@android:color/transparent"
+        android:background="@android:color/white"
         android:gravity="center"
         android:orientation="horizontal"
         android:padding="8dp"
         android:weightSum="5">
 
-        <!-- dashboard icon -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_dashboard"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_gravity="center"
-                android:src="@drawable/navigation_dashboard"
-                android:contentDescription="Dashboard" />
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/navigation_dashboard"/>
         </FrameLayout>
 
-        <!-- shop icon -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_shop"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_gravity="center"
-                android:src="@drawable/navigation_shop"
-                android:contentDescription="Workout" />
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/navigation_shop"/>
         </FrameLayout>
 
-        <!-- profile icon -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_profile"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_gravity="center"
-                android:src="@drawable/navigation_user"
-                android:contentDescription="Macros" />
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/navigation_user"/>
         </FrameLayout>
 
-        <!-- workout icon-->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_workout"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_gravity="center"
-                android:src="@drawable/navigation_workout"
-                android:contentDescription="Profile" />
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/navigation_workout"/>
         </FrameLayout>
 
-        <!-- macro icon-->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_macro"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_gravity="center"
-                android:src="@drawable/navigation_macro"
-                android:contentDescription="Shop" />
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:src="@drawable/navigation_macro"/>
         </FrameLayout>
     </LinearLayout>
 
-    <!-- Add profile content here -->
 </RelativeLayout>

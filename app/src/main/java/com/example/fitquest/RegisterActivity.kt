@@ -1,6 +1,7 @@
 package com.example.fitquest
 
 import android.app.DatePickerDialog
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
@@ -31,7 +32,6 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var female: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Initialize repository
         repository = FitquestRepository(this)
 
         super.onCreate(savedInstanceState)
@@ -51,7 +51,7 @@ class RegisterActivity : AppCompatActivity() {
             highlightSelected(female, male)
         }
 
-        // hides the system navigation
+        // Hide system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
             window.insetsController?.apply {
@@ -84,6 +84,7 @@ class RegisterActivity : AppCompatActivity() {
             finish()
         }
 
+        // Form fields
         val firstNameEditText = findViewById<EditText>(R.id.et_first_name)
         val lastNameEditText = findViewById<EditText>(R.id.et_last_name)
         val birthdayEditText = findViewById<EditText>(R.id.et_birthday)
@@ -92,7 +93,30 @@ class RegisterActivity : AppCompatActivity() {
         val emailEditText = findViewById<EditText>(R.id.et_email)
         val passwordEditText = findViewById<EditText>(R.id.et_password)
         val confirmPasswordEditText = findViewById<EditText>(R.id.et_confirm_password)
+        val heightEditText = findViewById<EditText>(R.id.et_height)
+        val weightEditText = findViewById<EditText>(R.id.et_weight)
+        val spinnerActivityLevel = findViewById<Spinner>(R.id.spinner_activity_levels)
+        val spinnerGoal = findViewById<Spinner>(R.id.spinner_fitness_goals)
         val registerButton = findViewById<Button>(R.id.btn_register)
+
+        // Set up spinners
+        ArrayAdapter.createFromResource(
+            this,
+            R.array.activity_levels,
+            android.R.layout.simple_spinner_item
+        ).also { adapter ->
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            spinnerActivityLevel.adapter = adapter
+        }
+
+        ArrayAdapter.createFromResource(
+            this,
+            R.array.fitness_goals,
+            android.R.layout.simple_spinner_item
+        ).also { adapter ->
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            spinnerGoal.adapter = adapter
+        }
 
         // Filter: Allow only letters, space, and hyphen
         val nameFilter = InputFilter { source, _, _, _, _, _ ->
@@ -148,24 +172,17 @@ class RegisterActivity : AppCompatActivity() {
 
             }, year, month, day)
 
-            // Use spinner instead of calendar view
             datePickerDialog.datePicker.calendarViewShown = false
             datePickerDialog.datePicker.spinnersShown = true
-
-            // Prevent selecting future dates
             datePickerDialog.datePicker.maxDate = System.currentTimeMillis()
-
             datePickerDialog.show()
         }
 
-
-        // Password validation
         fun isValidPassword(password: String): Boolean {
             val pattern = Regex("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#\$%^&+=!]).{8,}$")
             return pattern.matches(password)
         }
 
-        // Email validation
         fun isValidEmail(email: String): Boolean {
             return Patterns.EMAIL_ADDRESS.matcher(email).matches()
         }
@@ -175,14 +192,19 @@ class RegisterActivity : AppCompatActivity() {
             val lastName = lastNameEditText.text.toString().trim()
             val birthday = birthdayEditText.text.toString().trim()
             val username = usernameEditText.text.toString().trim()
-            val age = ageTextView.text.toString().replace("Age:", "").trim()
+            val ageString = ageTextView.text.toString().replace("Age:", "").trim()
+            val age = if (ageString.isNotEmpty()) ageString.toInt() else 0
             val email = emailEditText.text.toString().trim()
             val password = passwordEditText.text.toString().trim()
             val confirmPassword = confirmPasswordEditText.text.toString()
+            val height = heightEditText.text.toString().toIntOrNull() ?: 0
+            val weight = weightEditText.text.toString().toIntOrNull() ?: 0
+            val activityLevel = spinnerActivityLevel.selectedItem.toString()
+            val goal = spinnerGoal.selectedItem.toString()
 
             when {
                 firstName.isEmpty() || lastName.isEmpty() || birthday.isEmpty() || username.isEmpty() ||
-                        email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() || selectedSex == null -> {
+                        email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() || selectedSex == null || age == 0 -> {
                     Toast.makeText(this, "Please fill out all fields.", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
@@ -207,27 +229,37 @@ class RegisterActivity : AppCompatActivity() {
                 }
 
                 else -> {
-
                     val newUser = User(
-                        firstName = firstName.trim(),
-                        lastName = lastName.trim(),
-                        birthday = birthday.trim(), // placeholder until you add DatePicker
-                        age = age.toInt(),
-                        sex = selectedSex!!.trim(),
-                        username = username.trim(),
-                        email = email.trim(),
-                        password = password.trim()
+                        firstName = firstName,
+                        lastName = lastName,
+                        birthday = birthday,
+                        age = age,
+                        sex = selectedSex!!,
+                        username = username,
+                        email = email,
+                        password = password, // Note: Passwords should be hashed in a real app
+                        height = height,
+                        weight = weight,
+                        activityLevel = activityLevel,
+                        goal = goal
                     )
 
                     Log.d("FitquestDB", "Registering new user: $newUser")
 
                     lifecycleScope.launch {
-                        repository.insertAll(newUser)
-                        Log.d("FitquestDB", "User inserted into DB successfully.")
+                        // --- START OF FINAL CHANGES ---
 
-                        // Debug: print all users after insert
-                        val allUsers = repository.getAllUsers()
-                        Log.d("FitquestDB", "All users in DB after insert: $allUsers")
+                        // 1. Call the new `insert` function that returns a Long.
+                        val newUserId = repository.insert(newUser)
+                        Log.d("FitquestDB", "User inserted with ID: $newUserId")
+
+                        // 2. Save the Long ID to SharedPreferences using `putLong`.
+                        val sharedPref = getSharedPreferences("FitQuestPrefs", Context.MODE_PRIVATE)
+                        with(sharedPref.edit()) {
+                            putLong("LOGGED_IN_USER_ID", newUserId) // Use putLong, no .toInt() needed
+                            apply()
+                        }
+                        Log.d("FitquestDB", "Saved user ID $newUserId to SharedPreferences.")
 
                         Toast.makeText(
                             this@RegisterActivity,
@@ -235,21 +267,12 @@ class RegisterActivity : AppCompatActivity() {
                             Toast.LENGTH_SHORT
                         ).show()
 
+                        // 3. Go directly to the Profile page.
                         startActivity(Intent(this@RegisterActivity, LoginActivity::class.java))
                         finish()
+
+                        // --- END OF FINAL CHANGES ---
                     }
-
-                    Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show()
-
-                    listOf(
-                        firstNameEditText, lastNameEditText, birthdayEditText,
-                        usernameEditText, emailEditText, passwordEditText, confirmPasswordEditText
-                    ).forEach { it.text.clear() }
-
-                    selectedSex = null
-                    male.setBackgroundResource(R.drawable.sex_container)
-                    female.setBackgroundResource(R.drawable.sex_container)
-                    ageTextView.text = "Age:"
                 }
             }
         }
@@ -268,7 +291,9 @@ class RegisterActivity : AppCompatActivity() {
             R.id.et_username,
             R.id.et_email,
             R.id.et_password,
-            R.id.et_confirm_password
+            R.id.et_confirm_password,
+            R.id.et_height,
+            R.id.et_weight
         )
 
         for (id in inputs) {
