@@ -20,6 +20,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type
 import androidx.lifecycle.lifecycleScope
 import com.example.fitquest.database.User
+import com.example.fitquest.database.UserProfile
 import com.example.fitquest.repository.FitquestRepository
 import kotlinx.coroutines.launch
 import java.util.*
@@ -238,6 +239,9 @@ class RegisterActivity : AppCompatActivity() {
                         username = username,
                         email = email,
                         password = password, // Note: Passwords should be hashed in a real app
+                    )
+
+                    val newUserProfile = UserProfile(
                         height = height,
                         weight = weight,
                         activityLevel = activityLevel,
@@ -245,21 +249,12 @@ class RegisterActivity : AppCompatActivity() {
                     )
 
                     Log.d("FitquestDB", "Registering new user: $newUser")
+                    Log.d("FitquestDB", "Adding new user profile: $newUserProfile")
 
                     lifecycleScope.launch {
-                        // --- START OF FINAL CHANGES ---
-
-                        // 1. Call the new `insert` function that returns a Long.
-                        val newUserId = repository.insert(newUser)
-                        Log.d("FitquestDB", "User inserted with ID: $newUserId")
-
-                        // 2. Save the Long ID to SharedPreferences using `putLong`.
-                        val sharedPref = getSharedPreferences("FitQuestPrefs", Context.MODE_PRIVATE)
-                        with(sharedPref.edit()) {
-                            putLong("LOGGED_IN_USER_ID", newUserId) // Use putLong, no .toInt() needed
-                            apply()
-                        }
-                        Log.d("FitquestDB", "Saved user ID $newUserId to SharedPreferences.")
+                        repository.insertUser(newUser)
+                        repository.insertUserProfile(newUserProfile)
+                        Log.d("FitquestDB", "User and UserProfile inserted.")
 
                         Toast.makeText(
                             this@RegisterActivity,
@@ -267,7 +262,6 @@ class RegisterActivity : AppCompatActivity() {
                             Toast.LENGTH_SHORT
                         ).show()
 
-                        // 3. Go directly to the Profile page.
                         startActivity(Intent(this@RegisterActivity, LoginActivity::class.java))
                         finish()
 

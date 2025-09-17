@@ -5,28 +5,34 @@ import androidx.room.Room
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.database.User
 import android.util.Log
+import com.example.fitquest.database.UserProfile
 
 class FitquestRepository(context: Context) {
     private val db = Room.databaseBuilder(
         context.applicationContext,
         AppDatabase::class.java, "fitquestDB"
-    ).build()
+    ).fallbackToDestructiveMigration().build() // For development phase only
 
     private val userDAO = db.userDAO()
+    private val userProfileDAO = db.userProfileDAO()
 
-    // --- START OF CHANGES ---
-
-    // MODIFIED: This function now inserts a SINGLE user and returns its new ID.
-    // It calls the `insert` function in your DAO that you correctly updated.
-    suspend fun insert(user: User): Long {
+    // Inserts a SINGLE user and returns its new ID.
+    suspend fun insertUser(user: User): Long {
         Log.d("FitquestDB", "Inserting single user to get ID: $user")
         val newId = userDAO.insert(user)
         Log.d("FitquestDB", "User inserted successfully with ID: $newId")
         return newId
     }
 
-    // This function is likely unused now, but can be kept if you ever need to insert
-    // multiple users at once without needing their IDs back.
+    // Insert user values from registration to user profile database
+    suspend fun insertUserProfile(userProfile: UserProfile): Long {
+        Log.d("FitquestDB", "Inserting single user to get ID: $userProfile")
+        val newId = userProfileDAO.insert(userProfile)
+        Log.d("FitquestDB", "User inserted successfully with ID: $newId")
+        return newId
+    }
+
+    // Multiple users at once without needing their IDs back.
     //suspend fun insertAll(vararg users: User) {
         //Log.d("FitquestDB", "Inserting multiple users: ${users.toList()}")
         //userDAO.insertAll(*users)

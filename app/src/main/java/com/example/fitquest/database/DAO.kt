@@ -26,3 +26,9 @@ interface UserDAO {
     @Delete
     suspend fun delete(user: User)
 }
+
+@Dao
+interface UserProfileDAO {
+    @Insert
+    suspend fun insert(userProfile: UserProfile):Long
+}

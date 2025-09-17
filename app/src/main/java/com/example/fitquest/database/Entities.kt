@@ -15,12 +15,15 @@ data class User(
     @ColumnInfo(name = "username") val username: String,
     @ColumnInfo(name = "email") val email: String,
     @ColumnInfo(name = "password") val password: String,
+)
 
-    // Fitness-related fields
+@Entity(tableName = "userProfile")
+data class UserProfile(
+    @PrimaryKey(autoGenerate = true) val profileId: Int = 0,
     @ColumnInfo(name = "height") val height: Int, // cm
     @ColumnInfo(name = "weight") val weight: Int, // kg
     @ColumnInfo(name = "activity_level") val activityLevel: String? = null,
     @ColumnInfo(name = "goal") val goal: String? = null,
-    @ColumnInfo(name = "equipment_prefs") val equipmentPrefs: String? = null
+    @ColumnInfo(name = "equipment") val equipment: String? = null
 )
 
