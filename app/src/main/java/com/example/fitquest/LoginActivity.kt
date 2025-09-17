@@ -1,6 +1,6 @@
 package com.example.fitquest
 
-import androidx.core.view.WindowInsetsCompat.Type
+import android.content.Context // <-- ADDED: Needed for SharedPreferences
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
@@ -15,6 +15,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat.Type
 import androidx.lifecycle.lifecycleScope
 import com.example.fitquest.repository.FitquestRepository
 import kotlinx.coroutines.launch
@@ -65,39 +66,53 @@ class LoginActivity : AppCompatActivity() {
             val username = edtUsername.text.toString().trim()
             val password = edtPassword.text.toString().trim()
 
+            if (username.isEmpty() || password.isEmpty()) {
+                Toast.makeText(this, "Please enter username and password.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             Log.d("FitquestDB", "Attempting login with username=$username, password=$password")
 
-            // User authentication
             lifecycleScope.launch {
-                var userId = repository.authenticateUser(username, password)
+                val userId = repository.authenticateUser(username, password)
                 Log.d("FitquestDB", "authenticateUser() returned userId=$userId")
 
                 if (userId != null) {
-                    Toast.makeText(
-                        this@LoginActivity,
-                        "Login Successful!, User ID = $userId", // For debugging
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    // --- START OF FIX ---
+
+                    // 1. Save the logged-in user's ID to SharedPreferences.
+                    //    This makes it available to all other activities, like ProfileActivity.
+                    val sharedPref = getSharedPreferences("FitQuestPrefs", Context.MODE_PRIVATE)
+                    with(sharedPref.edit()) {
+                        putLong("LOGGED_IN_USER_ID", userId.toLong()) // Save as Long
+                        apply()
+                    }
+                    Log.d("FitquestDB", "Login successful. Saved user ID $userId to SharedPreferences.")
+
+                    // 2. Show success message and navigate to the dashboard.
+                    runOnUiThread {
+                        Toast.makeText(this@LoginActivity, "Login Successful!", Toast.LENGTH_SHORT).show()
+                    }
 
                     val intent = Intent(this@LoginActivity, DashboardActivity::class.java)
-                    intent.putExtra("userId", userId)
                     startActivity(intent)
                     finish()
+
+                    // --- END OF FIX ---
+
                 } else {
-                    Toast.makeText(
-                        this@LoginActivity,
-                        "User not found!",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    runOnUiThread {
+                        Toast.makeText(this@LoginActivity, "Invalid username or password.", Toast.LENGTH_SHORT).show()
+                    }
+                    Log.d("FitquestDB", "Login failed for username: $username")
                 }
             }
         }
 
         val tvSignUpLink = findViewById<TextView>(R.id.tvSignUpLink)
         tvSignUpLink.setOnClickListener {
-            val intent = Intent(this, RegisterActivity::class.java) // replace with your actual SignUp activity
+            val intent = Intent(this, RegisterActivity::class.java)
             startActivity(intent)
         }
-
     }
 }
