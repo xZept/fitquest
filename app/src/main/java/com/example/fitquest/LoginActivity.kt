@@ -16,6 +16,11 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.lifecycleScope
 import com.example.fitquest.repository.FitquestRepository
 import kotlinx.coroutines.launch
@@ -24,6 +29,17 @@ import kotlinx.coroutines.launch
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var repository: FitquestRepository
+
+    // Instance for dataStore
+    val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_prefs")
+    val USER_ID_KEY = intPreferencesKey("LOGGED_IN_USER_ID") // Key for DataStore
+
+    // Async function for storing data using DataStore
+    private suspend fun saveUserId(userId: Int) {
+        applicationContext.dataStore.edit { settings ->
+            settings[USER_ID_KEY] = userId
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -78,16 +94,8 @@ class LoginActivity : AppCompatActivity() {
                 Log.d("FitquestDB", "authenticateUser() returned userId=$userId")
 
                 if (userId != null) {
-                    // --- START OF FIX ---
-
-                    // 1. Save the logged-in user's ID to SharedPreferences.
-                    //    This makes it available to all other activities, like ProfileActivity.
-                    val sharedPref = getSharedPreferences("FitQuestPrefs", Context.MODE_PRIVATE)
-                    with(sharedPref.edit()) {
-                        putLong("LOGGED_IN_USER_ID", userId.toLong()) // Save as Long
-                        apply()
-                    }
-                    Log.d("FitquestDB", "Login successful. Saved user ID $userId to SharedPreferences.")
+                    saveUserId(userId)
+                    Log.d("FitquestDB", "Login successful. Saved user ID $userId to DataStore.")
 
                     // 2. Show success message and navigate to the dashboard.
                     runOnUiThread {

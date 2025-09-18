@@ -18,7 +18,7 @@ interface UserDAO {
     suspend fun getUserById(id: Int): User?
 
     @Insert
-    suspend fun insert(user: User):Long
+    suspend fun insert(user: User): Long
 
     @Update
     suspend fun updateUser(user: User)
@@ -31,4 +31,10 @@ interface UserDAO {
 interface UserProfileDAO {
     @Insert
     suspend fun insert(userProfile: UserProfile):Long
+
+    @Query("SELECT * FROM userProfile WHERE userId = :userId LIMIT 1")
+    suspend fun getProfileByUserId(userId: Int): UserProfile?
+
+    @Update
+    suspend fun update(userProfile: UserProfile)
 }

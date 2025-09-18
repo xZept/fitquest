@@ -48,6 +48,12 @@ class FitquestRepository(context: Context) {
         return user?.userId
     }
 
+    suspend fun getProfileById(userId: Int): UserProfile? {
+        val userProfile = userProfileDAO.getProfileByUserId(userId)
+        Log.d("FitquestDB", "Fetched profile: $userProfile")
+        return userProfile
+    }
+
     suspend fun getAllUsers(): List<User> {
         val users = userDAO.getAllUsers()
         Log.d("FitquestDB", "Fetched all users: $users")

@@ -230,31 +230,31 @@ class RegisterActivity : AppCompatActivity() {
                 }
 
                 else -> {
-                    val newUser = User(
-                        firstName = firstName,
-                        lastName = lastName,
-                        birthday = birthday,
-                        age = age,
-                        sex = selectedSex!!,
-                        username = username,
-                        email = email,
-                        password = password, // Note: Passwords should be hashed in a real app
-                    )
-
-                    val newUserProfile = UserProfile(
-                        height = height,
-                        weight = weight,
-                        activityLevel = activityLevel,
-                        goal = goal
-                    )
-
-                    Log.d("FitquestDB", "Registering new user: $newUser")
-                    Log.d("FitquestDB", "Adding new user profile: $newUserProfile")
-
                     lifecycleScope.launch {
-                        repository.insertUser(newUser)
+
+                        val newUser = User(
+                            firstName = firstName,
+                            lastName = lastName,
+                            birthday = birthday,
+                            age = age,
+                            sex = selectedSex!!,
+                            username = username,
+                            email = email,
+                            password = password, // Note: Passwords should be hashed in a real app
+                        )
+                        val newUserId = repository.insertUser(newUser)
+                        Log.d("FitquestDB", "Inserted user id: $newUserId")
+                        val newUserProfile = UserProfile(
+                            userId = newUserId.toInt(),
+                            height = height,
+                            weight = weight,
+                            activityLevel = activityLevel,
+                            goal = goal
+                        )
                         repository.insertUserProfile(newUserProfile)
                         Log.d("FitquestDB", "User and UserProfile inserted.")
+                        Log.d("FitquestDB", "Registering new user: $newUser")
+                        Log.d("FitquestDB", "Adding new user profile: $newUserProfile")
 
                         Toast.makeText(
                             this@RegisterActivity,

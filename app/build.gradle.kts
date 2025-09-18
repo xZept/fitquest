@@ -47,17 +47,14 @@ android {
 }
 
 dependencies {
-    // FIX: Using latest stable Room version
+    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation(libs.androidx.datastore.core)
+    implementation(libs.androidx.datastore.preferences.core)
     val room_version = "2.6.1"
-
     implementation("androidx.room:room-runtime:$room_version")
-    // ADDED: KTX extensions for coroutine support, which your DAO uses
     implementation("androidx.room:room-ktx:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
-
-    // FIX: Removed duplicate YouTube player dependency
     implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:12.1.0")
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

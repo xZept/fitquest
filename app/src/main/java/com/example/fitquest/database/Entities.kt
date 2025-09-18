@@ -2,6 +2,7 @@ package com.example.fitquest.database
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.ForeignKey
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "user")
@@ -17,9 +18,18 @@ data class User(
     @ColumnInfo(name = "password") val password: String,
 )
 
-@Entity(tableName = "userProfile")
+@Entity(tableName = "userProfile",
+    foreignKeys = [
+        ForeignKey(
+            entity = User::class,                // parent table
+            parentColumns = ["userId"],          // PK in parent
+            childColumns = ["userId"],           // FK in child
+            onDelete = ForeignKey.CASCADE
+        )
+    ])
 data class UserProfile(
     @PrimaryKey(autoGenerate = true) val profileId: Int = 0,
+    @ColumnInfo(name = "userId") val userId: Int,
     @ColumnInfo(name = "height") val height: Int, // cm
     @ColumnInfo(name = "weight") val weight: Int, // kg
     @ColumnInfo(name = "activity_level") val activityLevel: String? = null,

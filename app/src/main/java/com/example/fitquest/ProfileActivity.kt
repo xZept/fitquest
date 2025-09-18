@@ -5,22 +5,30 @@ import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-import android.util.Log // It's good practice to add logs for debugging
+import android.util.Log
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.database.User
+import com.example.fitquest.database.UserProfile
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class ProfileActivity : AppCompatActivity() {
 
+    private var userId: Int = -1
     private lateinit var tvName: TextView
     private lateinit var tvAge: TextView
     private lateinit var tvActivityLevel: TextView
@@ -29,11 +37,23 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var etWeight: EditText
     private lateinit var chipGroupEquipment: ChipGroup
     private lateinit var btnSave: Button
-
     private lateinit var db: AppDatabase
     private var loggedInUser: User? = null
 
     private lateinit var equipmentList: Array<String>
+
+    // Extension property for DataStore
+    val Context.dataStore by preferencesDataStore("user_prefs")
+
+    // Key for storing userId
+    val USER_ID_KEY = intPreferencesKey("LOGGED_IN_USER_ID")
+
+    // Get userId as Flow<Long>
+    fun getUserId(context: Context): Flow<Int> {
+        return context.dataStore.data.map { prefs ->
+            prefs[USER_ID_KEY] ?: -1
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -51,20 +71,15 @@ class ProfileActivity : AppCompatActivity() {
             window.decorView.systemUiVisibility =
                 View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
                         View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-
             @Suppress("DEPRECATION")
             window.navigationBarColor = Color.TRANSPARENT
         }
 
-        // --- START OF CHANGES ---
-
-        // 1. CRITICAL FIX: Use the EXACT SAME database name as in your Repository.
+        // Build database
         db = Room.databaseBuilder(
             applicationContext,
-            AppDatabase::class.java, "fitquestDB" // Was "fitquest-db", now matches the repository
+            AppDatabase::class.java, "fitquestDB"
         ).build()
-
-        // --- END OF CHANGES ---
 
         // Initialize UI elements
         tvName = findViewById(R.id.tv_name)
@@ -76,10 +91,8 @@ class ProfileActivity : AppCompatActivity() {
         chipGroupEquipment = findViewById(R.id.chipGroup_equipment)
         btnSave = findViewById(R.id.btn_save_profile)
 
-        // Load equipment list from arrays.xml
+        // Load equipment list
         equipmentList = resources.getStringArray(R.array.equipment_list)
-
-        // Dynamically add equipment chips
         equipmentList.forEach { equipment ->
             val chip = Chip(this).apply {
                 text = equipment
@@ -88,52 +101,47 @@ class ProfileActivity : AppCompatActivity() {
             chipGroupEquipment.addView(chip)
         }
 
-        // --- START OF CHANGES ---
+        lifecycleScope.launch {
+            userId = getUserId(this@ProfileActivity).first()
+            Log.d("FitquestDB", "User ID from DataStore: $userId")
 
-        // 2. Load user info using the correct Long type
-        val sharedPref = getSharedPreferences("FitQuestPrefs", Context.MODE_PRIVATE)
-        val userId = sharedPref.getLong("LOGGED_IN_USER_ID", -1L) // Use getLong with a Long default value
-        Log.d("FitquestDB", "ProfileActivity: Trying to load user with ID: $userId")
-
-
-        if (userId != -1L) { // Check against the Long default value
-            lifecycleScope.launch {
-                // 3. Convert the Long ID to an Int right before the database call
+            if (userId != -1) {
                 loggedInUser = db.userDAO().getUserById(userId.toInt())
                 Log.d("FitquestDB", "ProfileActivity: Found user data: $loggedInUser")
 
-
                 loggedInUser?.let { user ->
+                    val profile = db.userProfileDAO().getProfileByUserId(userId.toInt())
+                    Log.d("FitquestDB", "User: $user")
+                    Log.d("FitquestDB", "Profile: $profile")
+
                     runOnUiThread {
                         tvName.text = "${user.firstName} ${user.lastName}"
                         tvAge.text = "Age: ${user.age}"
-                        tvActivityLevel.text = "Activity Level: ${user.activityLevel}"
-                        tvFitnessGoal.text = "Goal: ${user.goal}"
-                        etHeight.setText(user.height.toString())
-                        etWeight.setText(user.weight.toString())
 
-                        // Restore previously selected equipment
-                        val savedEquipments = user.equipmentPrefs?.split(",") ?: emptyList()
-                        for (i in 0 until chipGroupEquipment.childCount) {
-                            val chip = chipGroupEquipment.getChildAt(i) as Chip
-                            if (savedEquipments.contains(chip.text.toString())) {
-                                chip.isChecked = true
+                        profile?.let {
+                            tvActivityLevel.text = "Activity Level: ${it.activityLevel}"
+                            tvFitnessGoal.text = "Goal: ${it.goal}"
+                            etHeight.setText(it.height.toString())
+                            etWeight.setText(it.weight.toString())
+
+                            val savedEquipments = it.equipment?.split(",") ?: emptyList()
+                            for (i in 0 until chipGroupEquipment.childCount) {
+                                val chip = chipGroupEquipment.getChildAt(i) as Chip
+                                if (savedEquipments.contains(chip.text.toString())) {
+                                    chip.isChecked = true
+                                }
                             }
                         }
                     }
                 }
+            } else {
+                Log.d("FitquestDB", "ProfileActivity: No valid user ID found in DataStore.")
             }
-        } else {
-            Log.d("FitquestDB", "ProfileActivity: No valid user ID found in SharedPreferences.")
         }
 
-        // --- END OF CHANGES ---
-
-        // Save button listener
         btnSave.setOnClickListener {
-            loggedInUser?.let { user ->
-                val newHeight = etHeight.text.toString().toIntOrNull() ?: user.height
-                val newWeight = etWeight.text.toString().toIntOrNull() ?: user.weight
+            lifecycleScope.launch {
+                val userIdInt = this@ProfileActivity.userId.toInt()
 
                 // Collect selected equipment
                 val selectedEquipments = mutableListOf<String>()
@@ -145,17 +153,29 @@ class ProfileActivity : AppCompatActivity() {
                 }
                 val newEquipmentPrefs = selectedEquipments.joinToString(",")
 
-                val updatedUser = user.copy(
+                // Load existing profile (if any)
+                val existingProfile = db.userProfileDAO().getProfileByUserId(userIdInt)
+                val newHeight = etHeight.text.toString().toIntOrNull() ?: existingProfile?.height ?: 0
+                val newWeight = etWeight.text.toString().toIntOrNull() ?: existingProfile?.weight ?: 0
+
+                val updatedProfile = UserProfile(
+                    profileId = existingProfile?.profileId ?: 0,
+                    userId = userIdInt,
                     height = newHeight,
                     weight = newWeight,
-                    equipmentPrefs = newEquipmentPrefs
+                    activityLevel = tvActivityLevel.text.toString(),
+                    goal = tvFitnessGoal.text.toString(),
+                    equipment = newEquipmentPrefs
                 )
 
-                lifecycleScope.launch {
-                    db.userDAO().updateUser(updatedUser)
-                    runOnUiThread {
-                        Toast.makeText(this@ProfileActivity, "Profile updated!", Toast.LENGTH_SHORT).show()
-                    }
+                if (existingProfile == null) {
+                    db.userProfileDAO().insert(updatedProfile)
+                } else {
+                    db.userProfileDAO().update(updatedProfile)
+                }
+
+                runOnUiThread {
+                    Toast.makeText(this@ProfileActivity, "Profile updated!", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -168,30 +188,20 @@ class ProfileActivity : AppCompatActivity() {
         val navMacro = findViewById<ImageView>(R.id.nav_icon_macro)
 
         navDashboard.setOnClickListener {
-            val intent = Intent(this, DashboardActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, DashboardActivity::class.java))
             overridePendingTransition(0, 0)
         }
-
         navShop.setOnClickListener {
-            val intent = Intent(this, ShopActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, ShopActivity::class.java))
             overridePendingTransition(0, 0)
         }
-
-        navProfile.setOnClickListener {
-            // already here
-        }
-
+        navProfile.setOnClickListener { /* already here */ }
         navWorkout.setOnClickListener {
-            val intent = Intent(this, WorkoutActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, WorkoutActivity::class.java))
             overridePendingTransition(0, 0)
         }
-
         navMacro.setOnClickListener {
-            val intent = Intent(this, MacroActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, MacroActivity::class.java))
             overridePendingTransition(0, 0)
         }
     }
