@@ -19,6 +19,7 @@ import androidx.room.Room
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.database.User
 import com.example.fitquest.database.UserProfile
+import com.example.fitquest.datastore.DataStoreManager
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.flow.Flow
@@ -102,7 +103,7 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            userId = getUserId(this@ProfileActivity).first()
+            userId = DataStoreManager.getUserId(this@ProfileActivity).first()
             Log.d("FitquestDB", "User ID from DataStore: $userId")
 
             if (userId != -1) {

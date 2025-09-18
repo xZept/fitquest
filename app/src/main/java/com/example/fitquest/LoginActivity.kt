@@ -22,6 +22,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.lifecycleScope
+import com.example.fitquest.datastore.DataStoreManager
 import com.example.fitquest.repository.FitquestRepository
 import kotlinx.coroutines.launch
 
@@ -91,30 +92,22 @@ class LoginActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 val userId = repository.authenticateUser(username, password)
-                Log.d("FitquestDB", "authenticateUser() returned userId=$userId")
-
                 if (userId != null) {
-                    saveUserId(userId)
+                    DataStoreManager.saveUserId(applicationContext, userId)
                     Log.d("FitquestDB", "Login successful. Saved user ID $userId to DataStore.")
 
-                    // 2. Show success message and navigate to the dashboard.
                     runOnUiThread {
                         Toast.makeText(this@LoginActivity, "Login Successful!", Toast.LENGTH_SHORT).show()
                     }
-
-                    val intent = Intent(this@LoginActivity, DashboardActivity::class.java)
-                    startActivity(intent)
+                    startActivity(Intent(this@LoginActivity, DashboardActivity::class.java))
                     finish()
-
-                    // --- END OF FIX ---
-
                 } else {
                     runOnUiThread {
                         Toast.makeText(this@LoginActivity, "Invalid username or password.", Toast.LENGTH_SHORT).show()
                     }
-                    Log.d("FitquestDB", "Login failed for username: $username")
                 }
             }
+
         }
 
         val tvSignUpLink = findViewById<TextView>(R.id.tvSignUpLink)
