@@ -136,7 +136,7 @@ class WorkoutActivity : AppCompatActivity() {
     }
 
     private fun setupStartButton() {
-        findViewById<Button>(R.id.btn_start_workout).setOnClickListener {
+        findViewById<ImageButton>(R.id.btn_start_workout).setOnClickListener {
             startActivity(Intent(this, WorkoutGeneratorActivity::class.java))
         }
     }

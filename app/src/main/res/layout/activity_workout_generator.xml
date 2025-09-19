@@ -186,7 +186,7 @@
     </LinearLayout>
 
     <!-- Submit Button -->
-    <Button
+    <ImageButton
         android:id="@+id/btn_generate_plan"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

@@ -98,7 +98,7 @@ class RegisterActivity : AppCompatActivity() {
         val weightEditText = findViewById<EditText>(R.id.et_weight)
         val spinnerActivityLevel = findViewById<Spinner>(R.id.spinner_activity_levels)
         val spinnerGoal = findViewById<Spinner>(R.id.spinner_fitness_goals)
-        val registerButton = findViewById<Button>(R.id.btn_register)
+        val registerButton = findViewById<ImageButton>(R.id.btn_register)
 
         // Set up spinners
         ArrayAdapter.createFromResource(
@@ -180,7 +180,7 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         fun isValidPassword(password: String): Boolean {
-            val pattern = Regex("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#\$%^&+=!]).{8,}$")
+            val pattern = Regex("^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#\$%^&+=!_]).{8,}$")
             return pattern.matches(password)
         }
 

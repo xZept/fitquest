@@ -78,7 +78,7 @@
             android:layout_marginBottom="16dp" />
 
         <!-- Login Button -->
-        <Button
+        <ImageButton
             android:id="@+id/btnLogin"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

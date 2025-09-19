@@ -9,10 +9,7 @@ import android.util.Log
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
-import android.widget.Button
-import android.widget.EditText
-import android.widget.TextView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type
@@ -69,7 +66,7 @@ class LoginActivity : AppCompatActivity() {
 
         val edtUsername = findViewById<EditText>(R.id.editUsername)
         val edtPassword = findViewById<EditText>(R.id.editPassword)
-        val btnLogin = findViewById<Button>(R.id.btnLogin)
+        val btnLogin = findViewById<ImageButton>(R.id.btnLogin)
 
         val mainLayout = findViewById<View>(R.id.loginLayout)
 

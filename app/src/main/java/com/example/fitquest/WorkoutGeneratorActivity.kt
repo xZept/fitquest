@@ -3,6 +3,7 @@ package com.example.fitquest
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.media.Image
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -60,7 +61,7 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
         val spinnerEquipment = findViewById<Spinner>(R.id.spinner_equipment)
         val seekbarSplit = findViewById<SeekBar>(R.id.seekbar_split)
         val tvSplitLabel = findViewById<TextView>(R.id.tv_split_label)
-        val btnSubmit = findViewById<Button>(R.id.btn_generate_plan)
+        val btnSubmit = findViewById<ImageButton>(R.id.btn_generate_plan)
 
         explanationContainer = findViewById(R.id.explanation_container)
         explanationText = findViewById(R.id.explanation_text)

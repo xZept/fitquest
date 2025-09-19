@@ -2,7 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/wooden_flanks_bg"
+    android:background="@drawable/login_bg"
     android:id="@+id/registerLayout">
 
     <!-- Decorative Container Image -->
@@ -229,7 +229,7 @@
     </ScrollView>
 
     <!-- Fixed Register Button -->
-    <Button
+    <ImageButton
         android:id="@+id/btn_register"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
