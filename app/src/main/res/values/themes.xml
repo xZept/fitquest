@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
     <style name="Theme.FitQuest" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Use AppCompat-compatible theme to prevent crash -->
         <item name="android:fontFamily">@font/medodica_regular</item>
@@ -10,5 +9,4 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowTranslucentStatus">true</item>
     </style>
-
 </resources>

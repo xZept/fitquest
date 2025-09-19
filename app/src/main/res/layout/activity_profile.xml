@@ -171,76 +171,96 @@
         </LinearLayout>
     </ScrollView>
 
-    <!-- Bottom Navigation -->
+    <!--Navigation-->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:layout_alignParentBottom="true"
-        android:background="@android:color/white"
+        android:background="@drawable/navigation_bg_user"
         android:gravity="center"
         android:orientation="horizontal"
         android:padding="8dp"
         android:weightSum="5">
 
+        <!-- dashboard icon -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
+
             <ImageView
                 android:id="@+id/nav_icon_dashboard"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/navigation_dashboard"/>
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:src="@drawable/navigation_dashboard"
+                android:contentDescription="Dashboard" />
         </FrameLayout>
 
+        <!-- shop icon -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
+
             <ImageView
                 android:id="@+id/nav_icon_shop"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/navigation_shop"/>
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:src="@drawable/navigation_shop"
+                android:contentDescription="Workout" />
         </FrameLayout>
 
+        <!-- profile icon -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
+
             <ImageView
                 android:id="@+id/nav_icon_profile"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/navigation_user"/>
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:src="@drawable/navigation_user"
+                android:contentDescription="Macros" />
         </FrameLayout>
 
+        <!-- workout icon-->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
+
             <ImageView
                 android:id="@+id/nav_icon_workout"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/navigation_workout"/>
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:src="@drawable/navigation_workout"
+                android:contentDescription="Profile" />
         </FrameLayout>
 
+        <!-- macro icon-->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
+
             <ImageView
                 android:id="@+id/nav_icon_macro"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:src="@drawable/navigation_macro"/>
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:src="@drawable/navigation_macro"
+                android:contentDescription="Shop" />
         </FrameLayout>
     </LinearLayout>
 
