@@ -7,13 +7,19 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 
 class ShopActivity : AppCompatActivity() {
+
+    private lateinit var pressAnim: android.view.animation.Animation
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shop)
+
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         // hides the system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -31,41 +37,25 @@ class ShopActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             window.navigationBarColor = Color.TRANSPARENT
         }
+        setupNavigationBar()
+    }
 
-        // Find the nav icons
-        val navDashboard = findViewById<ImageView>(R.id.nav_icon_dashboard)
-        val navShop = findViewById<ImageView>(R.id.nav_icon_shop)
-        val navProfile = findViewById<ImageView>(R.id.nav_icon_profile)
-        val navWorkout = findViewById<ImageView>(R.id.nav_icon_workout)
-        val navMacro = findViewById<ImageView>(R.id.nav_icon_macro)
-
-        // Set click listeners
-        navDashboard.setOnClickListener {
-            val intent = Intent(this, DashboardActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
+    private fun setupNavigationBar() {
+        findViewById<ImageView>(R.id.nav_icon_workout).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, WorkoutActivity::class.java)); overridePendingTransition(0, 0)
         }
-
-        navShop.setOnClickListener {
-            // You're already on dashboard, optionally do nothing
+        findViewById<ImageView>(R.id.nav_icon_profile).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, ProfileActivity::class.java)); overridePendingTransition(0, 0)
         }
-
-        navProfile.setOnClickListener {
-            val intent = Intent(this, ProfileActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
+        findViewById<ImageView>(R.id.nav_icon_macro).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, MacroActivity::class.java)); overridePendingTransition(0, 0)
         }
-
-        navWorkout.setOnClickListener {
-            val intent = Intent(this, WorkoutActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
-        }
-
-        navMacro.setOnClickListener {
-            val intent = Intent(this, MacroActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
+        findViewById<ImageView>(R.id.nav_icon_dashboard).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, DashboardActivity::class.java)); overridePendingTransition(0, 0)
         }
     }
 }

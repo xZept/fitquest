@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.*
+import android.view.animation.AnimationUtils
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -29,10 +30,13 @@ import com.example.fitquest.utils.ExerciseRepository.prioritizeByGoal
 class WorkoutActivity : AppCompatActivity() {
 
     private val exerciseVideos by lazy { ExerciseRepository.loadExerciseVideos(this) }
+    private lateinit var pressAnim: android.view.animation.Animation
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout)
+
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         hideSystemNavigation()
         setupNavigationBar()
@@ -71,6 +75,7 @@ class WorkoutActivity : AppCompatActivity() {
 
         // Tips
         displayTips()
+        setupNavigationBar()
     }
 
     private fun displayTips() {
@@ -121,18 +126,21 @@ class WorkoutActivity : AppCompatActivity() {
 
     private fun setupNavigationBar() {
         findViewById<ImageView>(R.id.nav_icon_dashboard).setOnClickListener {
+            it.startAnimation(pressAnim)
             startActivity(Intent(this, DashboardActivity::class.java)); overridePendingTransition(0, 0)
         }
         findViewById<ImageView>(R.id.nav_icon_shop).setOnClickListener {
+            it.startAnimation(pressAnim)
             startActivity(Intent(this, ShopActivity::class.java)); overridePendingTransition(0, 0)
         }
         findViewById<ImageView>(R.id.nav_icon_profile).setOnClickListener {
+            it.startAnimation(pressAnim)
             startActivity(Intent(this, ProfileActivity::class.java)); overridePendingTransition(0, 0)
         }
         findViewById<ImageView>(R.id.nav_icon_macro).setOnClickListener {
+            it.startAnimation(pressAnim)
             startActivity(Intent(this, MacroActivity::class.java)); overridePendingTransition(0, 0)
         }
-        // nav_icon_workout: no-op (already here)
     }
 
     private fun setupStartButton() {

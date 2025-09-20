@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -32,9 +33,13 @@ class MacroActivity : AppCompatActivity() {
         val dietType: String
     )
 
+    private lateinit var pressAnim: android.view.animation.Animation
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_macro)
+
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         // hides the system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -51,42 +56,6 @@ class MacroActivity : AppCompatActivity() {
 
             @Suppress("DEPRECATION")
             window.navigationBarColor = Color.TRANSPARENT
-        }
-
-        // Find the nav icons
-        val navDashboard = findViewById<ImageView>(R.id.nav_icon_dashboard)
-        val navShop = findViewById<ImageView>(R.id.nav_icon_shop)
-        val navProfile = findViewById<ImageView>(R.id.nav_icon_profile)
-        val navWorkout = findViewById<ImageView>(R.id.nav_icon_workout)
-        val navMacro = findViewById<ImageView>(R.id.nav_icon_macro)
-
-        // Set click listeners
-        navDashboard.setOnClickListener {
-            val intent = Intent(this, DashboardActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
-        }
-
-        navShop.setOnClickListener {
-            val intent = Intent(this, ShopActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
-        }
-
-        navProfile.setOnClickListener {
-            val intent = Intent(this, ProfileActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
-        }
-
-        navWorkout.setOnClickListener {
-            val intent = Intent(this, WorkoutActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
-        }
-
-        navMacro.setOnClickListener {
-            // Already here
         }
 
         // ✅ Get extras (coming from Workout/Dashboard)
@@ -147,8 +116,26 @@ class MacroActivity : AppCompatActivity() {
             macroTipText.text = "No macro tips available for your plan yet."
             Log.d("MacroDebug", "No macro tips found for Goal='$userGoal', Condition='$userCondition'")
         }
+        setupNavigationBar()
+    }
 
-
+    private fun setupNavigationBar() {
+        findViewById<ImageView>(R.id.nav_icon_workout).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, WorkoutActivity::class.java)); overridePendingTransition(0, 0)
+        }
+        findViewById<ImageView>(R.id.nav_icon_shop).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, ShopActivity::class.java)); overridePendingTransition(0, 0)
+        }
+        findViewById<ImageView>(R.id.nav_icon_profile).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, ProfileActivity::class.java)); overridePendingTransition(0, 0)
+        }
+        findViewById<ImageView>(R.id.nav_icon_dashboard).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, DashboardActivity::class.java)); overridePendingTransition(0, 0)
+        }
     }
 
     // Adds a meal row into the container

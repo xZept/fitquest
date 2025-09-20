@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.animation.AnimationUtils
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -15,14 +16,16 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type
 import com.example.fitquest.utils.TipsLoader
 
-
 class DashboardActivity : AppCompatActivity() {
 
     private lateinit var dashboardTip: TextView
+    private lateinit var pressAnim: android.view.animation.Animation
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dashboard)
+
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         // hides the system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -40,43 +43,6 @@ class DashboardActivity : AppCompatActivity() {
             @Suppress("DEPRECATION")
             window.navigationBarColor = Color.TRANSPARENT
         }
-
-        // Find the nav icons
-        val navDashboard = findViewById<ImageView>(R.id.nav_icon_dashboard)
-        val navShop = findViewById<ImageView>(R.id.nav_icon_shop)
-        val navProfile = findViewById<ImageView>(R.id.nav_icon_profile)
-        val navWorkout = findViewById<ImageView>(R.id.nav_icon_workout)
-        val navMacro = findViewById<ImageView>(R.id.nav_icon_macro)
-
-        // Set click listeners
-        navDashboard.setOnClickListener {
-            // You're already on dashboard, optionally do nothing
-        }
-
-        navShop.setOnClickListener {
-            val intent = Intent(this, ShopActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
-        }
-
-        navProfile.setOnClickListener {
-            val intent = Intent(this, ProfileActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
-        }
-
-        navWorkout.setOnClickListener {
-            val intent = Intent(this, WorkoutActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
-        }
-
-        navMacro.setOnClickListener {
-            val intent = Intent(this, MacroActivity::class.java)
-            startActivity(intent)
-            overridePendingTransition(0, 0)
-        }
-
 
         val mainLayout = findViewById<View>(R.id.dashboard_root)
 
@@ -103,5 +69,26 @@ class DashboardActivity : AppCompatActivity() {
         } else {
             dashboardTip.text = "Stay strong and keep going!"
         }
+        setupNavigationBar()
     }
+
+    private fun setupNavigationBar() {
+        findViewById<ImageView>(R.id.nav_icon_workout).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, WorkoutActivity::class.java)); overridePendingTransition(0, 0)
+        }
+        findViewById<ImageView>(R.id.nav_icon_shop).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, ShopActivity::class.java)); overridePendingTransition(0, 0)
+        }
+        findViewById<ImageView>(R.id.nav_icon_profile).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, ProfileActivity::class.java)); overridePendingTransition(0, 0)
+        }
+        findViewById<ImageView>(R.id.nav_icon_macro).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, MacroActivity::class.java)); overridePendingTransition(0, 0)
+        }
+    }
+
 }

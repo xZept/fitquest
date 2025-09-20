@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:anim/decelerate_interpolator">
+
+    <!-- Go down -->
+    <translate
+        android:fromYDelta="0"
+        android:toYDelta="4dp"
+        android:duration="60"/>
+
+    <!-- Go back up -->
+    <translate
+        android:startOffset="0"
+        android:fromYDelta="4dp"
+        android:toYDelta="0"
+        android:duration="60"/>
+</set>
