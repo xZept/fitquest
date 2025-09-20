@@ -14,6 +14,7 @@ import android.util.Patterns
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.animation.AnimationUtils
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -32,11 +33,15 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var male: ImageView
     private lateinit var female: ImageView
 
+    private lateinit var pressAnim: android.view.animation.Animation
+
     override fun onCreate(savedInstanceState: Bundle?) {
         repository = FitquestRepository(this)
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_register)
+
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         // Initialize sex options
         male = findViewById(R.id.iv_male)
@@ -189,6 +194,7 @@ class RegisterActivity : AppCompatActivity() {
         }
 
         registerButton.setOnClickListener {
+            it.startAnimation(pressAnim)
             val firstName = firstNameEditText.text.toString().trim()
             val lastName = lastNameEditText.text.toString().trim()
             val birthday = birthdayEditText.text.toString().trim()

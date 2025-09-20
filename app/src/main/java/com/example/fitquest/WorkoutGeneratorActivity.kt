@@ -12,6 +12,7 @@ import android.text.InputFilter
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.animation.AnimationUtils
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import java.io.BufferedReader
@@ -21,7 +22,7 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
 
     private lateinit var explanationContainer: LinearLayout
     private lateinit var explanationText: TextView
-
+    private lateinit var pressAnim: android.view.animation.Animation
     private val hideHandler = Handler(Looper.getMainLooper())
     private val hideRunnable = Runnable {
         explanationContainer.visibility = View.GONE
@@ -31,6 +32,7 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout_generator)
 
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         setupInputFocusEffects()
 
@@ -95,6 +97,7 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
 
         // Submit button
         btnSubmit.setOnClickListener {
+            it.startAnimation(pressAnim)
             val height = inputHeight.text.toString().trim().toFloatOrNull()
             val weight = inputWeight.text.toString().trim().toFloatOrNull()
             val goal = spinnerGoal.selectedItem?.toString() ?: ""

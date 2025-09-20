@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.animation.AnimationUtils
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -27,6 +28,7 @@ import kotlinx.coroutines.launch
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var repository: FitquestRepository
+    private lateinit var pressAnim: android.view.animation.Animation
 
     // Instance for dataStore
     val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_prefs")
@@ -42,6 +44,8 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
+
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         // Initialize repository
         repository = FitquestRepository(this)
@@ -77,6 +81,7 @@ class LoginActivity : AppCompatActivity() {
         }
 
         btnLogin.setOnClickListener {
+            it.startAnimation(pressAnim)
             val username = edtUsername.text.toString().trim()
             val password = edtPassword.text.toString().trim()
 

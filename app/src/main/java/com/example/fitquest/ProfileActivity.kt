@@ -146,6 +146,7 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         btnSave.setOnClickListener {
+            it.startAnimation(pressAnim)
             lifecycleScope.launch {
                 val userIdInt = this@ProfileActivity.userId.toInt()
 
