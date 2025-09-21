@@ -1,8 +1,13 @@
 package com.example.fitquest
 
 import android.content.Intent
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.animation.AnimationUtils
 import android.widget.EditText
 import android.widget.ImageButton
@@ -23,6 +28,22 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
+
+        // Hide system navigation (match other screens)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            window.insetsController?.apply {
+                systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                hide(WindowInsets.Type.navigationBars())
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = Color.TRANSPARENT
+        }
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
         repository = FitquestRepository(this)
@@ -48,8 +69,7 @@ class LoginActivity : AppCompatActivity() {
 
         edtPassword.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
-                btnLogin.performClick()
-                true
+                btnLogin.performClick(); true
             } else false
         }
 
@@ -68,10 +88,8 @@ class LoginActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 val userId = repository.authenticateUser(username, password)
                 if (userId != null) {
-                    // Persist session
                     DataStoreManager.saveUserId(applicationContext, userId)
                     Log.d("FitquestDB", "Login successful. Saved user ID $userId to DataStore.")
-
                     Toast.makeText(this@LoginActivity, "Login Successful!", Toast.LENGTH_SHORT).show()
                     startActivity(
                         Intent(this@LoginActivity, DashboardActivity::class.java).apply {

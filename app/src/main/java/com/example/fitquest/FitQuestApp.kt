@@ -30,10 +30,5 @@ class FitQuestApp : Application() {
         // background reaches the top of the screen
         WindowCompat.setDecorFitsSystemWindows(activity.window, false)
 
-        // hides only the status bar
-        val controller = WindowInsetsControllerCompat(activity.window, activity.window.decorView)
-        controller.hide(WindowInsetsCompat.Type.statusBars())
-        controller.systemBarsBehavior =
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
 }
