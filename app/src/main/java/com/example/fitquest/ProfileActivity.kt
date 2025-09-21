@@ -60,7 +60,7 @@ class ProfileActivity : AppCompatActivity() {
             showSettingsDialog()
         }
 
-        // Spinners: use custom item layouts so they’re visible
+        // Spinners (custom item layouts so they’re visible)
         val activityOptions = resources.getStringArray(R.array.activity_levels)
         val goalOptions = resources.getStringArray(R.array.fitness_goals)
 
@@ -95,6 +95,9 @@ class ProfileActivity : AppCompatActivity() {
                 }
             } else {
                 Toast.makeText(this@ProfileActivity, "No user found", Toast.LENGTH_SHORT).show()
+                // Optional: kick back to login if somehow opened while logged out
+                startActivity(Intent(this@ProfileActivity, LoginActivity::class.java))
+                finish()
             }
         }
 
@@ -211,6 +214,18 @@ class ProfileActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("Settings")
             .setView(scroll)
+            .setNeutralButton("Log out") { _, _ ->
+                // Clear session and return to Login
+                lifecycleScope.launch {
+                    DataStoreManager.clearUserId(this@ProfileActivity)
+                    startActivity(
+                        Intent(this@ProfileActivity, LoginActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        }
+                    )
+                    finishAffinity()
+                }
+            }
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Save") { _, _ ->
                 val rest = if (rb5.isChecked) 300 else 180
