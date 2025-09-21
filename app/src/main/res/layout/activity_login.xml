@@ -62,7 +62,10 @@
             android:padding="12dp"
             android:textColor="@android:color/white"
             android:textColorHint="@android:color/white"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="12dp"
+            android:imeOptions="actionNext"
+            android:singleLine="true"/>
+
 
         <!-- Password -->
         <EditText
@@ -75,7 +78,10 @@
             android:padding="12dp"
             android:textColor="@android:color/white"
             android:textColorHint="@android:color/white"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="16dp"
+            android:imeOptions="actionDone"
+            android:singleLine="true"/>
+
 
         <!-- Login Button -->
         <ImageButton

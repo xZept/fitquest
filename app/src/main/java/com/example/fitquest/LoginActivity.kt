@@ -80,6 +80,16 @@ class LoginActivity : AppCompatActivity() {
             insets
         }
 
+        edtPassword.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+                btnLogin.performClick()
+                true
+            } else {
+                false
+            }
+        }
+
+
         btnLogin.setOnClickListener {
             it.startAnimation(pressAnim)
             val username = edtUsername.text.toString().trim()
