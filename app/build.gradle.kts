@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.fitquest"
-        minSdk = 24
+        minSdk = 27
         // FIX: Target SDK should match compile SDK
         targetSdk = 34
         versionCode = 1

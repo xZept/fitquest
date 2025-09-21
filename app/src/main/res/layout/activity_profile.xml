@@ -18,19 +18,35 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center_horizontal"
-            android:spacing="12dp">
+            android:gravity="center_horizontal">
 
-            <!-- Profile Header -->
-            <TextView
-                android:id="@+id/tv_profile_title"
-                android:layout_width="wrap_content"
+            <!-- Header + settings -->
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Your Profile"
-                android:textSize="24sp"
-                android:textStyle="bold"
-                android:textColor="#111827"
-                android:layout_marginBottom="24dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:id="@+id/tv_profile_title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Your Profile"
+                    android:textSize="24sp"
+                    android:textStyle="bold"
+                    android:textColor="#111827" />
+
+                <ImageButton
+                    android:id="@+id/btn_settings"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Settings"
+                    android:src="@drawable/ic_settings" />
+            </LinearLayout>
 
             <!-- Card: User Info -->
             <androidx.cardview.widget.CardView
@@ -38,6 +54,7 @@
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="6dp"
+                app:cardBackgroundColor="#FFFFFF"
                 android:layout_marginBottom="16dp">
 
                 <LinearLayout
@@ -64,6 +81,15 @@
                         android:textColor="#374151"
                         android:layout_marginBottom="8dp" />
 
+                    <TextView
+                        android:id="@+id/tv_sex"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Sex: —"
+                        android:textSize="16sp"
+                        android:textColor="#374151"
+                        android:layout_marginBottom="8dp" />
+
                     <EditText
                         android:id="@+id/et_height"
                         android:layout_width="match_parent"
@@ -72,6 +98,8 @@
                         android:inputType="number"
                         android:textSize="16sp"
                         android:background="@android:drawable/edit_text"
+                        android:textColor="#111827"
+                        android:textColorHint="#9CA3AF"
                         android:padding="8dp"
                         android:layout_marginBottom="8dp"/>
 
@@ -83,17 +111,20 @@
                         android:inputType="numberDecimal"
                         android:textSize="16sp"
                         android:background="@android:drawable/edit_text"
+                        android:textColor="#111827"
+                        android:textColorHint="#9CA3AF"
                         android:padding="8dp" />
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Card: Activity + Goal -->
+            <!-- Card: Activity + Goal (editable with Spinners) -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="6dp"
+                app:cardBackgroundColor="#FFFFFF"
                 android:layout_marginBottom="16dp">
 
                 <LinearLayout
@@ -103,57 +134,59 @@
                     android:padding="16dp">
 
                     <TextView
-                        android:id="@+id/tv_activity_level"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Activity Level: Moderate"
+                        android:text="Activity Level"
                         android:textSize="16sp"
-                        android:textColor="#374151"
-                        android:layout_marginBottom="4dp" />
-
-                    <TextView
-                        android:id="@+id/tv_fitness_goal"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Goal: Build Muscle"
-                        android:textSize="16sp"
-                        android:textColor="#374151" />
-
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
-
-            <!-- Card: Equipment Selection -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="6dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Available Equipment"
-                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:textColor="#111827"
-                        android:layout_marginBottom="12dp" />
+                        android:layout_marginBottom="6dp" />
 
-                    <com.google.android.material.chip.ChipGroup
-                        android:id="@+id/chipGroup_equipment"
+                    <Spinner
+                        android:id="@+id/sp_activity_level"
                         android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_spinner"
+                        android:popupBackground="@drawable/bg_spinner_popup"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:spinnerMode="dropdown"
+                        android:dropDownVerticalOffset="8dp"
+                        android:dropDownWidth="match_parent"
+                        android:layout_marginBottom="12dp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        app:singleSelection="false"
-                        app:chipSpacing="8dp"
-                        app:singleLine="false"
-                        android:paddingBottom="8dp" />
+                        android:text="Fitness Goal"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#111827"
+                        android:layout_marginBottom="6dp" />
+
+                    <Spinner
+                        android:id="@+id/sp_fitness_goal"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_spinner"
+                        android:popupBackground="@drawable/bg_spinner_popup"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:spinnerMode="dropdown"
+                        android:dropDownVerticalOffset="8dp"
+                        android:dropDownWidth="match_parent"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
+
+            <!-- Hint -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Manage rest timer and equipment in Settings (top right)."
+                android:textColor="#6B7280"
+                android:textSize="14sp"
+                android:layout_marginBottom="8dp"
+                android:gravity="center"/>
 
             <!-- Save Button -->
             <Button
@@ -163,7 +196,7 @@
                 android:text="Save Profile"
                 android:backgroundTint="#10B981"
                 android:textColor="#FFFFFF"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="12dp"
                 android:padding="12dp"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -171,7 +204,7 @@
         </LinearLayout>
     </ScrollView>
 
-    <!--Navigation-->
+    <!-- Bottom nav (unchanged) -->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
@@ -183,13 +216,11 @@
         android:padding="8dp"
         android:weightSum="5">
 
-        <!-- dashboard icon -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_dashboard"
                 android:layout_width="64dp"
@@ -199,13 +230,11 @@
                 android:contentDescription="Dashboard" />
         </FrameLayout>
 
-        <!-- shop icon -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_shop"
                 android:layout_width="64dp"
@@ -215,13 +244,11 @@
                 android:contentDescription="Workout" />
         </FrameLayout>
 
-        <!-- profile icon -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_profile"
                 android:layout_width="64dp"
@@ -231,13 +258,11 @@
                 android:contentDescription="Macros" />
         </FrameLayout>
 
-        <!-- workout icon-->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_workout"
                 android:layout_width="64dp"
@@ -247,13 +272,11 @@
                 android:contentDescription="Profile" />
         </FrameLayout>
 
-        <!-- macro icon-->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_macro"
                 android:layout_width="64dp"

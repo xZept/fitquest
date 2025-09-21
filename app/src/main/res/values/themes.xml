@@ -1,12 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- Base app theme -->
     <style name="Theme.FitQuest" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Use AppCompat-compatible theme to prevent crash -->
+        <!-- Your font -->
         <item name="android:fontFamily">@font/medodica_regular</item>
+
+        <!-- Optional brand colors -->
         <item name="colorPrimary">#6200EE</item>
         <item name="colorPrimaryDark">#3700B3</item>
         <item name="colorAccent">#03DAC5</item>
+
+        <!-- Transparent system bars so content can draw behind them -->
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+
     </style>
+
+    <!-- Fullscreen child theme used by the whole app (set in Manifest) -->
+    <style name="Theme.FitQuest.Fullscreen" parent="Theme.FitQuest">
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <!-- Legacy hint for older devices -->
+        <item name="android:windowFullscreen">true</item>
+    </style>
+
 </resources>

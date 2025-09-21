@@ -2,60 +2,33 @@ package com.example.fitquest
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
-import android.view.View
-import android.view.WindowInsets
-import android.view.WindowInsetsController
-import android.view.animation.AnimationUtils
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.database.User
 import com.example.fitquest.database.UserProfile
 import com.example.fitquest.datastore.DataStoreManager
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 class ProfileActivity : AppCompatActivity() {
 
     private var userId: Int = -1
     private lateinit var tvName: TextView
     private lateinit var tvAge: TextView
-    private lateinit var tvActivityLevel: TextView
-    private lateinit var tvFitnessGoal: TextView
+    private lateinit var tvSex: TextView
+    private lateinit var spActivityLevel: Spinner
+    private lateinit var spFitnessGoal: Spinner
     private lateinit var etHeight: EditText
     private lateinit var etWeight: EditText
-    private lateinit var chipGroupEquipment: ChipGroup
     private lateinit var btnSave: Button
     private lateinit var db: AppDatabase
     private var loggedInUser: User? = null
-
-    private lateinit var equipmentList: Array<String>
-
-    // Extension property for DataStore
-    val Context.dataStore by preferencesDataStore("user_prefs")
-
-    // Key for storing userId
-    val USER_ID_KEY = intPreferencesKey("LOGGED_IN_USER_ID")
-
-    // Get userId as Flow<Long>
-    fun getUserId(context: Context): Flow<Int> {
-        return context.dataStore.data.map { prefs ->
-            prefs[USER_ID_KEY] ?: -1
-        }
-    }
 
     private lateinit var pressAnim: android.view.animation.Animation
 
@@ -63,23 +36,7 @@ class ProfileActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
 
-        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
-
-        // Hide system navigation
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false)
-            window.insetsController?.apply {
-                systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                hide(WindowInsets.Type.navigationBars())
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility =
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            @Suppress("DEPRECATION")
-            window.navigationBarColor = Color.TRANSPARENT
-        }
+        pressAnim = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.press)
 
         // Build database
         db = Room.databaseBuilder(
@@ -87,106 +44,183 @@ class ProfileActivity : AppCompatActivity() {
             AppDatabase::class.java, "fitquestDB"
         ).build()
 
-        // Initialize UI elements
+        // Initialize UI
         tvName = findViewById(R.id.tv_name)
         tvAge = findViewById(R.id.tv_age)
-        tvActivityLevel = findViewById(R.id.tv_activity_level)
-        tvFitnessGoal = findViewById(R.id.tv_fitness_goal)
+        tvSex = findViewById(R.id.tv_sex)
+        spActivityLevel = findViewById(R.id.sp_activity_level)
+        spFitnessGoal = findViewById(R.id.sp_fitness_goal)
         etHeight = findViewById(R.id.et_height)
         etWeight = findViewById(R.id.et_weight)
-        chipGroupEquipment = findViewById(R.id.chipGroup_equipment)
         btnSave = findViewById(R.id.btn_save_profile)
 
-        // Load equipment list
-        equipmentList = resources.getStringArray(R.array.equipment_list)
-        equipmentList.forEach { equipment ->
-            val chip = Chip(this).apply {
-                text = equipment
-                isCheckable = true
-            }
-            chipGroupEquipment.addView(chip)
+        // Settings button (top-right gear)
+        findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
+            it.startAnimation(pressAnim)
+            showSettingsDialog()
         }
 
+        // Spinners: use custom item layouts so they’re visible
+        val activityOptions = resources.getStringArray(R.array.activity_levels)
+        val goalOptions = resources.getStringArray(R.array.fitness_goals)
+
+        spActivityLevel.adapter = ArrayAdapter(
+            this, R.layout.item_spinner_text, activityOptions
+        ).apply { setDropDownViewResource(R.layout.item_spinner_dropdown) }
+
+        spFitnessGoal.adapter = ArrayAdapter(
+            this, R.layout.item_spinner_text, goalOptions
+        ).apply { setDropDownViewResource(R.layout.item_spinner_dropdown) }
+
+        // Load user + profile
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@ProfileActivity).first()
-            Log.d("FitquestDB", "User ID from DataStore: $userId")
-
             if (userId != -1) {
-                loggedInUser = db.userDAO().getUserById(userId.toInt())
-                Log.d("FitquestDB", "ProfileActivity: Found user data: $loggedInUser")
-
+                loggedInUser = db.userDAO().getUserById(userId)
                 loggedInUser?.let { user ->
-                    val profile = db.userProfileDAO().getProfileByUserId(userId.toInt())
-                    Log.d("FitquestDB", "User: $user")
-                    Log.d("FitquestDB", "Profile: $profile")
-
+                    val profile = db.userProfileDAO().getProfileByUserId(userId)
                     runOnUiThread {
                         tvName.text = "${user.firstName} ${user.lastName}"
                         tvAge.text = "Age: ${user.age}"
+                        // If your entity uses `gender`, change to user.gender
+                        tvSex.text = "Sex: ${user.sex}"
 
                         profile?.let {
-                            tvActivityLevel.text = "Activity Level: ${it.activityLevel}"
-                            tvFitnessGoal.text = "Goal: ${it.goal}"
                             etHeight.setText(it.height.toString())
                             etWeight.setText(it.weight.toString())
-
-                            val savedEquipments = it.equipment?.split(",") ?: emptyList()
-                            for (i in 0 until chipGroupEquipment.childCount) {
-                                val chip = chipGroupEquipment.getChildAt(i) as Chip
-                                if (savedEquipments.contains(chip.text.toString())) {
-                                    chip.isChecked = true
-                                }
-                            }
+                            setSpinnerToValue(spActivityLevel, it.activityLevel)
+                            setSpinnerToValue(spFitnessGoal, it.goal)
                         }
                     }
                 }
             } else {
-                Log.d("FitquestDB", "ProfileActivity: No valid user ID found in DataStore.")
+                Toast.makeText(this@ProfileActivity, "No user found", Toast.LENGTH_SHORT).show()
             }
         }
 
+        // Save profile (height, weight, activity, goal)
         btnSave.setOnClickListener {
             it.startAnimation(pressAnim)
             lifecycleScope.launch {
-                val userIdInt = this@ProfileActivity.userId.toInt()
+                val existing = db.userProfileDAO().getProfileByUserId(userId)
 
-                // Collect selected equipment
-                val selectedEquipments = mutableListOf<String>()
-                for (i in 0 until chipGroupEquipment.childCount) {
-                    val chip = chipGroupEquipment.getChildAt(i) as Chip
-                    if (chip.isChecked) {
-                        selectedEquipments.add(chip.text.toString())
-                    }
-                }
-                val newEquipmentPrefs = selectedEquipments.joinToString(",")
+                val newHeight = etHeight.text.toString().toIntOrNull() ?: existing?.height ?: 0
+                val newWeight = etWeight.text.toString().toIntOrNull() ?: existing?.weight ?: 0
+                val newActivity = spActivityLevel.selectedItem?.toString()
+                    ?: existing?.activityLevel ?: "Lightly Active"
+                val newGoal = spFitnessGoal.selectedItem?.toString()
+                    ?: existing?.goal ?: "Build Muscle"
 
-                // Load existing profile (if any)
-                val existingProfile = db.userProfileDAO().getProfileByUserId(userIdInt)
-                val newHeight = etHeight.text.toString().toIntOrNull() ?: existingProfile?.height ?: 0
-                val newWeight = etWeight.text.toString().toIntOrNull() ?: existingProfile?.weight ?: 0
-
-                val updatedProfile = UserProfile(
-                    profileId = existingProfile?.profileId ?: 0,
-                    userId = userIdInt,
-                    height = newHeight,
-                    weight = newWeight,
-                    activityLevel = tvActivityLevel.text.toString(),
-                    goal = tvFitnessGoal.text.toString(),
-                    equipment = newEquipmentPrefs
-                )
-
-                if (existingProfile == null) {
-                    db.userProfileDAO().insert(updatedProfile)
+                val updated = if (existing == null) {
+                    UserProfile(
+                        profileId = 0,
+                        userId = userId,
+                        height = newHeight,
+                        weight = newWeight,
+                        activityLevel = newActivity,
+                        goal = newGoal,
+                        equipment = null // managed in Settings
+                    )
                 } else {
-                    db.userProfileDAO().update(updatedProfile)
+                    existing.copy(
+                        height = newHeight,
+                        weight = newWeight,
+                        activityLevel = newActivity,
+                        goal = newGoal
+                    )
                 }
+
+                if (existing == null) db.userProfileDAO().insert(updated)
+                else db.userProfileDAO().update(updated)
 
                 runOnUiThread {
                     Toast.makeText(this@ProfileActivity, "Profile updated!", Toast.LENGTH_SHORT).show()
                 }
             }
         }
+
         setupNavigationBar()
+    }
+
+    private fun setSpinnerToValue(spinner: Spinner, value: String?) {
+        if (value.isNullOrBlank()) return
+        val adapter = spinner.adapter ?: return
+        for (i in 0 until adapter.count) {
+            val itemText = adapter.getItem(i)?.toString() ?: continue
+            if (itemText.equals(value, ignoreCase = true)) {
+                spinner.setSelection(i)
+                return
+            }
+        }
+    }
+
+    private fun showSettingsDialog() {
+        if (userId == -1) {
+            Toast.makeText(this, "No user loaded", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val store = SettingsStore(this)
+
+        val pad = (16 * resources.displayMetrics.density).roundToInt()
+        val scroll = ScrollView(this)
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, pad, pad, pad)
+        }
+        scroll.addView(root)
+
+        // Rest timer
+        root.addView(TextView(this).apply {
+            text = "Rest Timer"
+            textSize = 16f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        })
+        val group = RadioGroup(this).apply { orientation = RadioGroup.HORIZONTAL }
+        val rb3 = RadioButton(this).apply { text = "3 min" }
+        val rb5 = RadioButton(this).apply { text = "5 min" }
+        group.addView(rb3); group.addView(rb5)
+        root.addView(group)
+        when (store.getRestTimerSec(userId)) { 300 -> rb5.isChecked = true; else -> rb3.isChecked = true }
+
+        // Equipment
+        root.addView(TextView(this).apply {
+            text = "Available Equipment"
+            textSize = 16f
+            setPadding(0, pad, 0, (8 * resources.displayMetrics.density).roundToInt())
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        })
+
+        val equipment = listOf(
+            1L to "Dumbbells",
+            2L to "Bench",
+            3L to "Pull-up Bar",
+            4L to "Barbell",
+            5L to "Kettlebell"
+        )
+        val selected = store.getEquipmentIds(userId)
+        val checks = mutableListOf<CheckBox>()
+        equipment.forEach { (id, name) ->
+            val cb = CheckBox(this).apply {
+                text = name
+                isChecked = id in selected
+            }
+            checks += cb
+            root.addView(cb)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Settings")
+            .setView(scroll)
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Save") { _, _ ->
+                val rest = if (rb5.isChecked) 300 else 180
+                store.setRestTimerSec(userId, rest)
+                val chosen = mutableSetOf<Long>()
+                equipment.forEachIndexed { i, (id, _) -> if (checks[i].isChecked) chosen += id }
+                store.setEquipmentIds(userId, chosen)
+                Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show()
+            }
+            .show()
     }
 
     private fun setupNavigationBar() {
@@ -206,5 +240,20 @@ class ProfileActivity : AppCompatActivity() {
             it.startAnimation(pressAnim)
             startActivity(Intent(this, DashboardActivity::class.java)); overridePendingTransition(0, 0)
         }
+    }
+}
+
+/** Minimal per-user settings storage (replace with Room later). */
+private class SettingsStore(context: Context) {
+    private val prefs = context.getSharedPreferences("fitquest_settings", Context.MODE_PRIVATE)
+    fun getRestTimerSec(userId: Int): Int = prefs.getInt("rest_$userId", 180)
+    fun setRestTimerSec(userId: Int, seconds: Int) {
+        prefs.edit().putInt("rest_$userId", seconds).apply()
+    }
+    fun getEquipmentIds(userId: Int): MutableSet<Long> =
+        prefs.getStringSet("equip_$userId", emptySet())!!
+            .mapNotNull { it.toLongOrNull() }.toMutableSet()
+    fun setEquipmentIds(userId: Int, ids: Set<Long>) {
+        prefs.edit().putStringSet("equip_$userId", ids.map { it.toString() }.toSet()).apply()
     }
 }
