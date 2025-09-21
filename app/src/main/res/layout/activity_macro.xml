@@ -11,12 +11,14 @@
         android:id="@+id/macroTip"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:padding="16dp"
+        android:textStyle="italic"
         android:text="Loading macro tip..."
-        android:textSize="16sp"
-        android:padding="12dp"
-        android:textColor="@android:color/black"
-        android:background="@drawable/user_input_bg"
-        android:layout_marginTop="16dp"/>
+        android:gravity="center"
+        android:textColor="@android:color/white"
+        android:background="@drawable/tip_macro"
+        android:layout_marginTop="25dp"/>
 
 
     <!-- Meal Plan Section -->

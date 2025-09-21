@@ -21,13 +21,14 @@
         android:id="@+id/dashboardTip"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="25dp"
         android:padding="16dp"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textStyle="italic"
         android:text="Tip of the Day will appear here"
         android:gravity="center"
-        android:background="@color/brown"
-        android:layout_margin="12dp"/>
+        android:textColor="@android:color/white"
+        android:background="@drawable/tip_general"/>
 
 
     <!-- Fixed Bottom Navigation Bar -->

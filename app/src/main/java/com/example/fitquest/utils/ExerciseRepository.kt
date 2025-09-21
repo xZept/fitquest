@@ -128,9 +128,9 @@ object ExerciseRepository {
 
     // Convert condition string to list and check against exercise.restrictedFor
     private val conditionKeywords = mapOf(
-        "wrist" to listOf("wrist", "carpal tunnel", "forearm"),
-        "shoulder" to listOf("shoulder", "rotator cuff", "labral tear", "impingement"),
-        "elbow" to listOf("elbow", "tendinitis"),
+        "strength" to listOf("wrist", "carpal tunnel", "forearm"),
+        "beginner friendly" to listOf("shoulder", "rotator cuff", "labral tear", "impingement"),
+        "low impact" to listOf("elbow", "tendinitis"),
         "knee" to listOf("knee", "patellar", "acl"),
         "back" to listOf("back", "spine", "disc"),
         "neck" to listOf("neck"),
@@ -138,6 +138,8 @@ object ExerciseRepository {
         "heart" to listOf("heart", "cardiac", "hypertension"),
         "diabetes" to listOf("diabetes")
     )
+
+
 
     fun isSafeForUser(ex: Exercise, userConditions: List<String>): Boolean {
         val restrictions = ex.restrictedFor.map { it.lowercase() }
