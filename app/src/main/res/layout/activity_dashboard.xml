@@ -31,7 +31,7 @@
         android:background="@drawable/tip_general"/>
 
 
-    <!-- Fixed Bottom Navigation Bar -->
+    <!-- Bottom nav -->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
@@ -43,29 +43,11 @@
         android:padding="8dp"
         android:weightSum="5">
 
-        <!-- dashboard icon -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
-            <ImageView
-                android:id="@+id/nav_icon_dashboard"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_gravity="center"
-                android:src="@drawable/navigation_dashboard"
-                android:contentDescription="Dashboard" />
-        </FrameLayout>
-
-        <!-- shop icon -->
-        <FrameLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_shop"
                 android:layout_width="64dp"
@@ -75,29 +57,39 @@
                 android:contentDescription="Workout" />
         </FrameLayout>
 
-        <!-- profile icon -->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
-                android:id="@+id/nav_icon_profile"
+                android:id="@+id/nav_icon_macro"
                 android:layout_width="64dp"
                 android:layout_height="64dp"
                 android:layout_gravity="center"
-                android:src="@drawable/navigation_user"
-                android:contentDescription="Macros" />
+                android:src="@drawable/navigation_macro"
+                android:contentDescription="Shop" />
         </FrameLayout>
 
-        <!-- workout icon-->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
+            <ImageView
+                android:id="@+id/nav_icon_dashboard"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:src="@drawable/navigation_dashboard"
+                android:contentDescription="Dashboard" />
+        </FrameLayout>
 
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center">
             <ImageView
                 android:id="@+id/nav_icon_workout"
                 android:layout_width="64dp"
@@ -107,21 +99,18 @@
                 android:contentDescription="Profile" />
         </FrameLayout>
 
-        <!-- macro icon-->
         <FrameLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
-                android:id="@+id/nav_icon_macro"
+                android:id="@+id/nav_icon_profile"
                 android:layout_width="64dp"
                 android:layout_height="64dp"
                 android:layout_gravity="center"
-                android:src="@drawable/navigation_macro"
-                android:contentDescription="Shop" />
+                android:src="@drawable/navigation_user"
+                android:contentDescription="Macros" />
         </FrameLayout>
     </LinearLayout>
-
 </RelativeLayout>

@@ -24,6 +24,9 @@ import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import android.content.res.ColorStateList
+import android.widget.ImageButton
+
+
 
 class ProfileActivity : AppCompatActivity() {
 
@@ -35,7 +38,7 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var spFitnessGoal: Spinner
     private lateinit var etHeight: EditText
     private lateinit var etWeight: EditText
-    private lateinit var btnSave: Button
+    private lateinit var btnSave: ImageButton
     private lateinit var db: AppDatabase
     private var loggedInUser: User? = null
 

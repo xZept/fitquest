@@ -281,17 +281,12 @@ class ExerciseActivity : AppCompatActivity() {
         val tvName = dialog.findViewById<TextView>(R.id.timer_exercise_name)
         val tvTimer = dialog.findViewById<TextView>(R.id.timer_text)
         val btnSkip = dialog.findViewById<Button>(R.id.btn_skip_timer)
-        val animationView = dialog.findViewById<ImageView>(R.id.timer_animation)
 
         // Always show "Rest" instead of the exercise name
         tvName.text = "Rest"
         tvTimer.text = "04:00"
 
-        // Load fantasy/pixel style GIF into ImageView
-        Glide.with(this)
-            .asGif()
-            .load(R.drawable.rest_timer_animation) // put your GIF in res/drawable/
-            .into(animationView)
+
 
         val totalTime = 4 * 60 * 1000L
         var countDownTimer: CountDownTimer? = object : CountDownTimer(totalTime, 1000L) {
