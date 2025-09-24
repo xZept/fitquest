@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 import android.content.res.ColorStateList
 import android.graphics.drawable.AnimationDrawable
 import android.widget.ImageButton
-
+import androidx.core.widget.addTextChangedListener
 
 
 class ProfileActivity : AppCompatActivity() {
@@ -45,9 +45,12 @@ class ProfileActivity : AppCompatActivity() {
 
     // at top-level fields
     private lateinit var spriteView: ImageView
+    private lateinit var ladySpriteView: ImageView
     private var iconAnim: AnimationDrawable? = null
+    private var ladyAnim: AnimationDrawable? = null
 
     private lateinit var pressAnim: android.view.animation.Animation
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,6 +94,24 @@ class ProfileActivity : AppCompatActivity() {
             showSettingsDialog()
         }
 
+        // Keep typing sane (you can tweak lengths to taste)
+        etHeight.filters = arrayOf(android.text.InputFilter.LengthFilter(3)) // up to 3 digits
+        etWeight.filters = arrayOf(android.text.InputFilter.LengthFilter(6)) // e.g., "300.0"
+
+        // Numeric-only keyboards
+        etHeight.keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789")
+        etWeight.keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789.")
+
+        // Validate when user leaves the field
+        etHeight.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) validateHeight() }
+        etWeight.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) validateWeight() }
+
+        // Clear error as soon as input becomes valid
+        etHeight.addTextChangedListener { validateHeight() }
+        etWeight.addTextChangedListener { validateWeight() }
+
+
+
         val activityOptions = resources.getStringArray(R.array.activity_levels)
         val goalOptions = resources.getStringArray(R.array.fitness_goals)
 
@@ -104,6 +125,13 @@ class ProfileActivity : AppCompatActivity() {
 
         // Default sprite while loading (optional)
         setSpriteForSex(null)
+
+        ladySpriteView = findViewById(R.id.iv_lady_sprite)
+
+        // set the animation-list drawable and start
+        ladySpriteView.setImageResource(R.drawable.lady_helper_sprite)   // your animation-list XML
+        ladyAnim = ladySpriteView.drawable as? AnimationDrawable
+        ladySpriteView.post { ladyAnim?.start() }                 // start after layout
 
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@ProfileActivity).first()
@@ -136,6 +164,13 @@ class ProfileActivity : AppCompatActivity() {
 
         btnSave.setOnClickListener {
             it.startAnimation(pressAnim)
+
+            //input validation for height and weight
+            if (!validateHeightWeight()) {
+                Toast.makeText(this, "Please fix height/weight.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             lifecycleScope.launch {
                 val existing = db.userProfileDAO().getProfileByUserId(userId)
 
@@ -220,6 +255,48 @@ class ProfileActivity : AppCompatActivity() {
             Color.parseColor("#9CA3AF")  // unchecked
         )
         return ColorStateList(states, colors)
+    }
+
+    // --- VALIDATION CONSTANTS ---
+    private val MIN_HEIGHT_CM = 120
+    private val MAX_HEIGHT_CM = 230
+    private val MIN_WEIGHT_KG = 30.0
+    private val MAX_WEIGHT_KG = 300.0
+
+    private fun validateHeight(): Boolean {
+        val h = etHeight.text.toString().trim().toIntOrNull()
+        return when {
+            h == null -> {
+                etHeight.error = "Enter height in cm"
+                false
+            }
+            h < MIN_HEIGHT_CM || h > MAX_HEIGHT_CM -> {
+                etHeight.error = "Height must be $MIN_HEIGHT_CM–$MAX_HEIGHT_CM cm"
+                false
+            }
+            else -> { etHeight.error = null; true }
+        }
+    }
+
+    private fun validateWeight(): Boolean {
+        val w = etWeight.text.toString().trim().toDoubleOrNull()
+        return when {
+            w == null -> {
+                etWeight.error = "Enter weight in kg"
+                false
+            }
+            w < MIN_WEIGHT_KG || w > MAX_WEIGHT_KG -> {
+                etWeight.error = "Weight must be ${MIN_WEIGHT_KG.toInt()}–${MAX_WEIGHT_KG.toInt()} kg"
+                false
+            }
+            else -> { etWeight.error = null; true }
+        }
+    }
+
+    private fun validateHeightWeight(): Boolean {
+        val okH = validateHeight()
+        val okW = validateWeight()
+        return okH && okW
     }
 
     /** Settings dialog with typed timer + equipment + logout */

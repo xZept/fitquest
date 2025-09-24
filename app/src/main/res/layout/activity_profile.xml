@@ -8,8 +8,6 @@
     android:background="@drawable/bg_profile"
     tools:context=".ProfileActivity">
 
-    <!-- Save Button -->
-
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -289,19 +287,19 @@
                     </LinearLayout>
                 </LinearLayout>
             </FrameLayout>
-
-
-            <!-- Hint -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:gravity="center"
-                android:text="Manage rest timer and equipment in Settings (top right)."
-                android:textColor="#6B7280"
-                android:textSize="14sp" />
         </LinearLayout>
     </ScrollView>
+
+    <ImageView
+        android:id="@+id/iv_lady_sprite"
+        android:layout_width="wrap_content"
+        android:layout_height="300dp"
+        android:layout_above="@id/btn_save_profile"
+        android:adjustViewBounds="true"
+        android:layout_marginBottom="2dp"
+        android:contentDescription="@null"
+        android:layout_centerHorizontal="true"
+        android:src="@drawable/lady_helper_sprite" />
 
     <ImageButton
         android:id="@+id/btn_save_profile"
