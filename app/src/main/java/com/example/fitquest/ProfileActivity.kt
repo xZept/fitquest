@@ -24,6 +24,7 @@ import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import android.content.res.ColorStateList
+import android.graphics.drawable.AnimationDrawable
 import android.widget.ImageButton
 
 
@@ -41,6 +42,10 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var btnSave: ImageButton
     private lateinit var db: AppDatabase
     private var loggedInUser: User? = null
+
+    // at top-level fields
+    private lateinit var spriteView: ImageView
+    private var iconAnim: AnimationDrawable? = null
 
     private lateinit var pressAnim: android.view.animation.Animation
 
@@ -71,6 +76,7 @@ class ProfileActivity : AppCompatActivity() {
             AppDatabase::class.java, "fitquestDB"
         ).build()
 
+        spriteView = findViewById(R.id.iv_profile_photo)
         tvName = findViewById(R.id.tv_name)
         tvAge = findViewById(R.id.tv_age)
         tvSex = findViewById(R.id.tv_sex)
@@ -96,6 +102,9 @@ class ProfileActivity : AppCompatActivity() {
             this, R.layout.item_spinner_text, goalOptions
         ).apply { setDropDownViewResource(R.layout.item_spinner_dropdown) }
 
+        // Default sprite while loading (optional)
+        setSpriteForSex(null)
+
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@ProfileActivity).first()
             if (userId != -1) {
@@ -106,6 +115,10 @@ class ProfileActivity : AppCompatActivity() {
                         tvName.text = "${user.firstName} ${user.lastName}"
                         tvAge.text = "Age: ${user.age}"
                         tvSex.text = "Sex: ${user.sex}" // or user.gender
+
+                        // switch sprite now that we know the user's sex
+                        setSpriteForSex(user.sex)
+
                         profile?.let {
                             etHeight.setText(it.height.toString())
                             etWeight.setText(it.weight.toString())
@@ -162,6 +175,28 @@ class ProfileActivity : AppCompatActivity() {
         }
 
         setupNavigationBar()
+    }
+
+    private fun setSpriteForSex(sexRaw: String?) {
+        val resId = when (sexRaw?.trim()?.lowercase()) {
+            "female", "f", "woman", "girl" -> R.drawable.user_icon_female_sprite
+            "male", "m", "man", "boy"      -> R.drawable.user_icon_male_sprite
+            else                           -> R.drawable.user_icon_male_sprite // fallback
+        }
+        iconAnim?.stop()
+        spriteView.setImageResource(resId)
+        iconAnim = spriteView.drawable as? AnimationDrawable
+        spriteView.post { iconAnim?.start() } // start after laid out to avoid flicker
+    }
+
+    override fun onResume() {
+        super.onResume()
+        iconAnim?.start()
+    }
+
+    override fun onPause() {
+        iconAnim?.stop()
+        super.onPause()
     }
 
     private fun setSpinnerToValue(spinner: Spinner, value: String?) {

@@ -3,6 +3,8 @@
     android:id="@+id/tv"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:textColor="#111827"
+    android:textColor="@color/white"
+    android:singleLine="true"
+    android:ellipsize="end"
     android:textSize="16sp"
     android:padding="4dp" />
