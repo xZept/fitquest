@@ -4,9 +4,10 @@
     android:id="@+id/shop_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#E3F2FD"
+    android:background="@drawable/bg_workout"
     tools:context=".ShopActivity">
 
+    <!-- Header -->
     <LinearLayout
         android:id="@+id/header_bar"
         android:layout_width="match_parent"
@@ -26,7 +27,7 @@
             android:contentDescription="Shop" />
     </LinearLayout>
 
-    <!-- Add shop UI here -->
+    <!-- Fixed Bottom Navigation -->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
@@ -43,6 +44,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
+
             <ImageView
                 android:id="@+id/nav_icon_shop"
                 android:layout_width="64dp"
@@ -57,6 +59,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
+
             <ImageView
                 android:id="@+id/nav_icon_macro"
                 android:layout_width="64dp"
@@ -71,6 +74,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
+
             <ImageView
                 android:id="@+id/nav_icon_dashboard"
                 android:layout_width="64dp"
@@ -85,6 +89,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
+
             <ImageView
                 android:id="@+id/nav_icon_workout"
                 android:layout_width="64dp"
@@ -99,6 +104,7 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
+
             <ImageView
                 android:id="@+id/nav_icon_profile"
                 android:layout_width="64dp"
@@ -108,4 +114,58 @@
                 android:contentDescription="Macros" />
         </FrameLayout>
     </LinearLayout>
+
+    <!-- Middle container fills between header and bottom nav -->
+    <LinearLayout
+        android:id="@+id/middle_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/header_bar"
+        android:layout_above="@id/bottom_nav"
+        android:orientation="vertical"
+        android:weightSum="2">
+
+        <!-- Upper half (Animation area) -->
+        <FrameLayout
+            android:id="@+id/upper_anim_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:foregroundGravity="center">
+
+            <!-- Placeholder view for your animation.
+                 Replace with your sprite view,  LottieAnimationView, or VideoView as needed. -->
+            <ImageView
+                android:id="@+id/anim_placeholder"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:contentDescription="Shop Animation"
+                 />
+            <!--android:src="@drawable/your_anim_preview"-->
+        </FrameLayout>
+
+        <!-- Divider (the visual 'partition') -->
+        <View
+            android:id="@+id/mid_divider"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:background="#1F000000" />
+
+        <!-- Lower half (Items list/grid) -->
+        <FrameLayout
+            android:id="@+id/lower_items_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <!-- Swap to RecyclerView or GridView; this is a flexible placeholder -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/shop_items_recycler"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="12dp"/>
+            <!--tools:listitem="@layout/item_shop_card" -->
+    </FrameLayout>
+</LinearLayout>
+
 </RelativeLayout>

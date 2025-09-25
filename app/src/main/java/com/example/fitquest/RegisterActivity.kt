@@ -25,6 +25,7 @@ import com.example.fitquest.database.UserProfile
 import com.example.fitquest.repository.FitquestRepository
 import kotlinx.coroutines.launch
 import java.util.*
+import kotlin.math.roundToInt
 
 class RegisterActivity : AppCompatActivity() {
     private lateinit var repository: FitquestRepository
@@ -104,6 +105,36 @@ class RegisterActivity : AppCompatActivity() {
         val spinnerActivityLevel = findViewById<Spinner>(R.id.spinner_activity_levels)
         val spinnerGoal = findViewById<Spinner>(R.id.spinner_fitness_goals)
         val registerButton = findViewById<ImageButton>(R.id.btn_register)
+
+
+        // Constrain inputs
+        heightEditText.applyNumericConstraints(MIN_HEIGHT_CM, MAX_HEIGHT_CM, maxDecimals = 1)
+        weightEditText.applyNumericConstraints(MIN_WEIGHT_KG, MAX_WEIGHT_KG, maxDecimals = 1)
+
+        // Disable register when invalid
+        fun formIsValid(): Boolean {
+            val h = heightEditText.text.toString().toFloatOrNull()
+            val w = weightEditText.text.toString().toFloatOrNull()
+            return h != null && w != null && isHeightValid(h) && isWeightValid(w)
+        }
+
+        fun updateRegisterEnabled() {
+            registerButton.isEnabled = formIsValid()
+            registerButton.alpha = if (registerButton.isEnabled) 1f else 0.6f
+        }
+
+        heightEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { updateRegisterEnabled() }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+        weightEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { updateRegisterEnabled() }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+        updateRegisterEnabled()
+
 
         // Set up spinners
         ArrayAdapter.createFromResource(
@@ -204,8 +235,8 @@ class RegisterActivity : AppCompatActivity() {
             val email = emailEditText.text.toString().trim()
             val password = passwordEditText.text.toString().trim()
             val confirmPassword = confirmPasswordEditText.text.toString()
-            val height = heightEditText.text.toString().toIntOrNull() ?: 0
-            val weight = weightEditText.text.toString().toIntOrNull() ?: 0
+            val heightVal = heightEditText.text.toString().toFloatOrNull()
+            val weightVal = weightEditText.text.toString().toFloatOrNull()
             val activityLevel = spinnerActivityLevel.selectedItem.toString()
             val goal = spinnerGoal.selectedItem.toString()
 
@@ -213,6 +244,15 @@ class RegisterActivity : AppCompatActivity() {
                 firstName.isEmpty() || lastName.isEmpty() || birthday.isEmpty() || username.isEmpty() ||
                         email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() || selectedSex == null || age == 0 -> {
                     Toast.makeText(this, "Please fill out all fields.", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                heightVal == null || !isHeightValid(heightVal) -> {
+                    Toast.makeText(this, "Enter realistic height (${MIN_HEIGHT_CM.toInt()}–${MAX_HEIGHT_CM.toInt()} cm).", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+
+                weightVal == null || !isWeightValid(weightVal) -> {
+                    Toast.makeText(this, "Enter realistic weight (${MIN_WEIGHT_KG.toInt()}–${MAX_WEIGHT_KG.toInt()} kg).", Toast.LENGTH_SHORT).show()
                     return@setOnClickListener
                 }
 
@@ -252,8 +292,8 @@ class RegisterActivity : AppCompatActivity() {
                         Log.d("FitquestDB", "Inserted user id: $newUserId")
                         val newUserProfile = UserProfile(
                             userId = newUserId.toInt(),
-                            height = height,
-                            weight = weight,
+                            height = heightVal.roundToInt(),
+                            weight = weightVal.roundToInt(),
                             activityLevel = activityLevel,
                             goal = goal
                         )
@@ -305,4 +345,56 @@ class RegisterActivity : AppCompatActivity() {
             }
         }
     }
+
+    private companion object {
+        const val MIN_HEIGHT_CM = 120f
+        const val MAX_HEIGHT_CM = 250f
+        const val MIN_WEIGHT_KG = 30f
+        const val MAX_WEIGHT_KG = 300f
+    }
+
+    private fun isHeightValid(v: Float): Boolean = v in MIN_HEIGHT_CM..MAX_HEIGHT_CM
+    private fun isWeightValid(v: Float): Boolean = v in MIN_WEIGHT_KG..MAX_WEIGHT_KG
+
+    /** Limits to given range and decimal places while typing */
+    private fun EditText.applyNumericConstraints(min: Float, max: Float, maxDecimals: Int) {
+        // Filter: only digits and a single dot
+        val digits = "0123456789."
+        this.filters = arrayOf(InputFilter { src, _, _, dest, dstart, dend ->
+            // block multiple dots
+            if (src.contains('.')) {
+                if (dest.contains('.')) return@InputFilter ""
+                // prevent starting with '.' -> prefix with 0
+                if (dstart == 0 && (dest.isEmpty() || dest.toString() == "")) return@InputFilter "0."
+            }
+            // block non-allowed chars
+            if (src.any { it !in digits }) return@InputFilter ""
+
+            // enforce decimal places
+            val newTxt = (dest.substring(0, dstart) + src + dest.substring(dend))
+            val dotIdx = newTxt.indexOf('.')
+            if (dotIdx >= 0 && newTxt.length - dotIdx - 1 > maxDecimals) return@InputFilter ""
+            // allow tentative empty/partial states
+            return@InputFilter src
+        })
+
+        // Real-time range clamp + error
+        this.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val v = s?.toString()?.toFloatOrNull()
+                error = when {
+                    s.isNullOrBlank() -> null
+                    v == null -> "Invalid number"
+                    v < min -> "Too low (min ${min.toInt()})"
+                    v > max -> "Too high (max ${max.toInt()})"
+                    else -> null
+                }
+            }
+        })
+    }
+
+
+
 }
