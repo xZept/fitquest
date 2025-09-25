@@ -2,6 +2,8 @@ package com.example.fitquest
 
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -14,18 +16,42 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type
+import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import com.example.fitquest.utils.TipsLoader
 
 class DashboardActivity : AppCompatActivity() {
 
     private lateinit var dashboardTip: TextView
     private lateinit var pressAnim: android.view.animation.Animation
+    private var bgAnim: SpriteSheetDrawable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dashboard)
 
+        // Attach animated sprite-sheet as the background
+        val bgView = findViewById<ImageView>(R.id.dashboard_bg)
+        val opts = BitmapFactory.Options().apply {
+            inScaled = false // important because we use pixel math on the sheet
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        val sheet = BitmapFactory.decodeResource(resources, R.drawable.bg_dashboard_spritesheet, opts)
+
+        bgAnim = SpriteSheetDrawable(
+            sheet = sheet,
+            rows = 1,
+            cols = 12,           // <-- change if your sheet differs
+            fps = 12,            // 12–24 is a good range
+            loop = true,
+            scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
+        )
+
+        // Use as the ImageView's drawable or background
+        bgView.setImageDrawable(bgAnim)
+
+        // ...your existing code below (pressAnim, insets, tips, nav setup, etc.)
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
+        // (rest of your onCreate unchanged)
 
         // hides the system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -70,6 +96,19 @@ class DashboardActivity : AppCompatActivity() {
             dashboardTip.text = "Stay strong and keep going!"
         }
         setupNavigationBar()
+
+
+
+    }
+
+    override fun onStart() {
+        super.onStart()
+        bgAnim?.start()
+    }
+
+    override fun onStop() {
+        bgAnim?.stop()
+        super.onStop()
     }
 
     private fun setupNavigationBar() {

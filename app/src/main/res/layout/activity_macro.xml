@@ -7,6 +7,25 @@
     android:background="@drawable/wooden_flanks_bg"
     tools:context=".MacroActivity">
 
+    <LinearLayout
+        android:id="@+id/header_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="0dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp">
+
+        <ImageView
+            android:id="@+id/img_profile_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/title_page_macro"
+            android:contentDescription="Macro" />
+    </LinearLayout>
+
     <TextView
         android:id="@+id/macroTip"
         android:layout_width="match_parent"
@@ -15,10 +34,10 @@
         android:padding="16dp"
         android:textStyle="italic"
         android:text="Loading macro tip..."
+        android:layout_below="@id/header_bar"
         android:gravity="center"
         android:textColor="@android:color/white"
-        android:background="@drawable/tip_macro"
-        android:layout_marginTop="25dp"/>
+        android:background="@drawable/tip_macro"/>
 
 
     <!-- Meal Plan Section -->

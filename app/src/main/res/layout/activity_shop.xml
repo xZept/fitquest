@@ -7,15 +7,24 @@
     android:background="#E3F2FD"
     tools:context=".ShopActivity">
 
-    <TextView
-        android:id="@+id/tv_shop_title"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:id="@+id/header_bar"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Shop"
-        android:textSize="24sp"
-        android:textColor="#000"
-        android:layout_marginTop="32dp"
-        android:layout_centerHorizontal="true"/>
+        android:layout_alignParentTop="true"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="0dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp">
+
+        <ImageView
+            android:id="@+id/img_profile_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/title_page_shop"
+            android:contentDescription="Shop" />
+    </LinearLayout>
 
     <!-- Add shop UI here -->
     <LinearLayout

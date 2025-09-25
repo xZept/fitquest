@@ -11,25 +11,51 @@
         android:id="@+id/dashboard_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:src="@drawable/dashboard_bg"
         android:scaleType="centerCrop"
         android:contentDescription="Dashboard Background"
         android:alpha="1.0" />
+
+    <LinearLayout
+        android:id="@+id/header_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="0dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp">
+
+        <ImageView
+            android:id="@+id/img_profile_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/title_page_dashboard"
+            android:contentDescription="dashboard" />
+    </LinearLayout>
 
     <!-- Dashboard Content  -->
     <TextView
         android:id="@+id/dashboardTip"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="25dp"
         android:padding="16dp"
         android:textSize="14sp"
         android:textStyle="italic"
         android:text="Tip of the Day will appear here"
+        android:layout_below="@id/header_bar"
         android:gravity="center"
         android:textColor="@android:color/white"
         android:background="@drawable/tip_general"/>
 
+    <ImageButton
+        android:id="@+id/btn_quick_action"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_above="@id/bottom_nav"
+        android:background="@drawable/button_take_quest"
+        android:layout_marginBottom="8dp" />
 
     <!-- Bottom nav -->
     <LinearLayout
