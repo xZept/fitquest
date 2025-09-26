@@ -37,6 +37,14 @@
         <activity android:name=".MacroActivity" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".ShopActivity" />
+        <activity
+            android:name=".QuestGeneratorActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".QuestPreviewActivity"
+            android:exported="false" />
+
 
     </application>
 

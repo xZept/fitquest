@@ -14,26 +14,29 @@
     </string-array>
 
     <string-array name="equipment_choices">
-        <item>Gym Equipment</item>
-        <item>My Equipment</item>
-        <item>Body Weight</item>
+        <item>Any</item>
+        <item>Dumbbell</item>
+        <item>Barbell</item>
+        <item>Bench</item>
+        <item>Kettlebell</item>
+        <item>Pull-up Bar</item>
+        <item>Resistance Band</item>
+        <item>Cable</item>
     </string-array>
 
-    <string-array name="equipment_list">
-        <item>Bodyweight</item>
-        <item>Cardio Equipment</item>
-        <item>Machine</item>
-        <item>Battle Ropes</item>
-        <item>Kettlebell</item>
-        <item>Barbell</item>
-        <item>Dumbbell</item>
-        <item>Bench</item>
-        <item>Barbell Plate</item>
-        <item>Cable</item>
-        <item>Resistance Band</item>
-        <item>Bar</item>
-        <item>Ab Wheel</item>
-        <item>Plate</item>
+    <string-array name="splits">
+        <item>Push</item>
+        <item>Pull</item>
+        <item>Legs</item>
+        <item>Upper</item>
+        <item>Lower</item>
+        <item>Full Body</item>
+    </string-array>
+
+    <string-array name="focuses">
+        <item>General</item>
+        <item>Hypertrophy</item>
+        <item>Strength</item>
     </string-array>
 
 </resources>

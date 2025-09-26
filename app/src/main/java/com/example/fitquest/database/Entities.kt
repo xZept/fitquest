@@ -25,8 +25,8 @@ data class User(
             parentColumns = ["userId"],          // PK in parent
             childColumns = ["userId"],           // FK in child
             onDelete = ForeignKey.CASCADE
-        )
-    ])
+        )], indices = [androidx.room.Index("userId")]
+)
 data class UserProfile(
     @PrimaryKey(autoGenerate = true) val profileId: Int = 0,
     @ColumnInfo(name = "userId") val userId: Int,
@@ -36,4 +36,3 @@ data class UserProfile(
     @ColumnInfo(name = "goal") val goal: String? = null,
     @ColumnInfo(name = "equipment") val equipment: String? = null
 )
-

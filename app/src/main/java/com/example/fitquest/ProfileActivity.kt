@@ -2,7 +2,9 @@ package com.example.fitquest
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.AnimationDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -13,22 +15,30 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.widget.CompoundButtonCompat
+import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.database.User
 import com.example.fitquest.database.UserProfile
+import com.example.fitquest.database.UserSettings
 import com.example.fitquest.datastore.DataStoreManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputLayout
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import android.content.res.ColorStateList
-import android.graphics.drawable.AnimationDrawable
-import android.widget.ImageButton
-import androidx.core.widget.addTextChangedListener
+import kotlinx.coroutines.withContext
 
-
+/**
+ * Merged ProfileActivity
+ * - Keeps the repo UI/UX (sprites, animations, input validation, ImageButton save)
+ * - Replaces SharedPreferences SettingsStore with Room-backed UserSettings
+ * - Loads equipment choices from CSV in /assets (canonicalized), not hardcoded
+ * - Adds fallbackToDestructiveMigration() for development safety
+ *
+ * NOTE: AppDatabase must expose userSettingsDao() and include UserSettings entity.
+ */
 class ProfileActivity : AppCompatActivity() {
 
     private var userId: Int = -1
@@ -43,7 +53,7 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var db: AppDatabase
     private var loggedInUser: User? = null
 
-    // at top-level fields
+    // sprites/animations from repo version
     private lateinit var spriteView: ImageView
     private lateinit var ladySpriteView: ImageView
     private var iconAnim: AnimationDrawable? = null
@@ -51,33 +61,28 @@ class ProfileActivity : AppCompatActivity() {
 
     private lateinit var pressAnim: android.view.animation.Animation
 
+    // --- VALIDATION CONSTANTS (repo) ---
+    private val MIN_HEIGHT_CM = 120
+    private val MAX_HEIGHT_CM = 230
+    private val MIN_WEIGHT_KG = 30.0
+    private val MAX_WEIGHT_KG = 300.0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
 
-        // Hide system navigation (match other screens)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false)
-            window.insetsController?.apply {
-                systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                hide(WindowInsets.Type.navigationBars())
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility =
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-            @Suppress("DEPRECATION")
-            window.navigationBarColor = Color.TRANSPARENT
-        }
+        enterImmersive()
 
         pressAnim = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.press)
 
         db = Room.databaseBuilder(
             applicationContext,
-            AppDatabase::class.java, "fitquestDB"
-        ).build()
+            AppDatabase::class.java,
+            "fitquestDB"
+        )
+            // dev-safe while schemas are moving fast
+            .fallbackToDestructiveMigration()
+            .build()
 
         spriteView = findViewById(R.id.iv_profile_photo)
         tvName = findViewById(R.id.tv_name)
@@ -94,44 +99,32 @@ class ProfileActivity : AppCompatActivity() {
             showSettingsDialog()
         }
 
-        // Keep typing sane (you can tweak lengths to taste)
-        etHeight.filters = arrayOf(android.text.InputFilter.LengthFilter(3)) // up to 3 digits
-        etWeight.filters = arrayOf(android.text.InputFilter.LengthFilter(6)) // e.g., "300.0"
-
-        // Numeric-only keyboards
+        // input constraints & live validation (repo)
+        etHeight.filters = arrayOf(android.text.InputFilter.LengthFilter(3))
+        etWeight.filters = arrayOf(android.text.InputFilter.LengthFilter(6))
         etHeight.keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789")
         etWeight.keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789.")
-
-        // Validate when user leaves the field
         etHeight.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) validateHeight() }
         etWeight.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) validateWeight() }
-
-        // Clear error as soon as input becomes valid
         etHeight.addTextChangedListener { validateHeight() }
         etWeight.addTextChangedListener { validateWeight() }
 
-
-
         val activityOptions = resources.getStringArray(R.array.activity_levels)
         val goalOptions = resources.getStringArray(R.array.fitness_goals)
-
         spActivityLevel.adapter = ArrayAdapter(
             this, R.layout.item_spinner_text, activityOptions
         ).apply { setDropDownViewResource(R.layout.item_spinner_dropdown) }
-
         spFitnessGoal.adapter = ArrayAdapter(
             this, R.layout.item_spinner_text, goalOptions
         ).apply { setDropDownViewResource(R.layout.item_spinner_dropdown) }
 
-        // Default sprite while loading (optional)
+        // Default sprite while loading
         setSpriteForSex(null)
 
         ladySpriteView = findViewById(R.id.iv_lady_sprite)
-
-        // set the animation-list drawable and start
-        ladySpriteView.setImageResource(R.drawable.lady_helper_sprite)   // your animation-list XML
+        ladySpriteView.setImageResource(R.drawable.lady_helper_sprite)
         ladyAnim = ladySpriteView.drawable as? AnimationDrawable
-        ladySpriteView.post { ladyAnim?.start() }                 // start after layout
+        ladySpriteView.post { ladyAnim?.start() }
 
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@ProfileActivity).first()
@@ -139,14 +132,11 @@ class ProfileActivity : AppCompatActivity() {
                 loggedInUser = db.userDAO().getUserById(userId)
                 loggedInUser?.let { user ->
                     val profile = db.userProfileDAO().getProfileByUserId(userId)
-                    runOnUiThread {
+                    withContext(Dispatchers.Main) {
                         tvName.text = "${user.firstName} ${user.lastName}"
                         tvAge.text = "Age: ${user.age}"
-                        tvSex.text = "Sex: ${user.sex}" // or user.gender
-
-                        // switch sprite now that we know the user's sex
+                        tvSex.text = "Sex: ${user.sex}"
                         setSpriteForSex(user.sex)
-
                         profile?.let {
                             etHeight.setText(it.height.toString())
                             etWeight.setText(it.weight.toString())
@@ -156,16 +146,18 @@ class ProfileActivity : AppCompatActivity() {
                     }
                 }
             } else {
-                Toast.makeText(this@ProfileActivity, "No user found", Toast.LENGTH_SHORT).show()
-                startActivity(Intent(this@ProfileActivity, LoginActivity::class.java))
-                finish()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ProfileActivity, "No user found", Toast.LENGTH_SHORT).show()
+                    startActivity(Intent(this@ProfileActivity, LoginActivity::class.java))
+                    finish()
+                }
             }
         }
 
         btnSave.setOnClickListener {
             it.startAnimation(pressAnim)
 
-            //input validation for height and weight
+            // validate height/weight before saving
             if (!validateHeightWeight()) {
                 Toast.makeText(this, "Please fix height/weight.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -173,7 +165,6 @@ class ProfileActivity : AppCompatActivity() {
 
             lifecycleScope.launch {
                 val existing = db.userProfileDAO().getProfileByUserId(userId)
-
                 val newHeight = etHeight.text.toString().toIntOrNull() ?: existing?.height ?: 0
                 val newWeight = etWeight.text.toString().toIntOrNull() ?: existing?.weight ?: 0
                 val newActivity = spActivityLevel.selectedItem?.toString()
@@ -189,7 +180,7 @@ class ProfileActivity : AppCompatActivity() {
                         weight = newWeight,
                         activityLevel = newActivity,
                         goal = newGoal,
-                        equipment = null // managed in Settings
+                        equipment = null // managed in Settings via UserSettings
                     )
                 } else {
                     existing.copy(
@@ -203,7 +194,7 @@ class ProfileActivity : AppCompatActivity() {
                 if (existing == null) db.userProfileDAO().insert(updated)
                 else db.userProfileDAO().update(updated)
 
-                runOnUiThread {
+                withContext(Dispatchers.Main) {
                     Toast.makeText(this@ProfileActivity, "Profile updated!", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -212,16 +203,18 @@ class ProfileActivity : AppCompatActivity() {
         setupNavigationBar()
     }
 
+    // ---------- Repo sprite helpers ----------
+
     private fun setSpriteForSex(sexRaw: String?) {
         val resId = when (sexRaw?.trim()?.lowercase()) {
             "female", "f", "woman", "girl" -> R.drawable.user_icon_female_sprite
             "male", "m", "man", "boy"      -> R.drawable.user_icon_male_sprite
-            else                           -> R.drawable.user_icon_male_sprite // fallback
+            else                                 -> R.drawable.user_icon_male_sprite
         }
         iconAnim?.stop()
         spriteView.setImageResource(resId)
         iconAnim = spriteView.drawable as? AnimationDrawable
-        spriteView.post { iconAnim?.start() } // start after laid out to avoid flicker
+        spriteView.post { iconAnim?.start() }
     }
 
     override fun onResume() {
@@ -234,14 +227,42 @@ class ProfileActivity : AppCompatActivity() {
         super.onPause()
     }
 
+    // ---------- Validation (repo) ----------
+
+    private fun validateHeight(): Boolean {
+        val h = etHeight.text.toString().trim().toIntOrNull()
+        return when {
+            h == null -> { etHeight.error = "Enter height in cm"; false }
+            h < MIN_HEIGHT_CM || h > MAX_HEIGHT_CM -> {
+                etHeight.error = "Height must be $MIN_HEIGHT_CM–$MAX_HEIGHT_CM cm"; false
+            }
+            else -> { etHeight.error = null; true }
+        }
+    }
+
+    private fun validateWeight(): Boolean {
+        val w = etWeight.text.toString().trim().toDoubleOrNull()
+        return when {
+            w == null -> { etWeight.error = "Enter weight in kg"; false }
+            w < MIN_WEIGHT_KG || w > MAX_WEIGHT_KG -> {
+                etWeight.error = "Weight must be ${MIN_WEIGHT_KG.toInt()}–${MAX_WEIGHT_KG.toInt()} kg"; false
+            }
+            else -> { etWeight.error = null; true }
+        }
+    }
+
+    private fun validateHeightWeight(): Boolean {
+        val okH = validateHeight()
+        val okW = validateWeight()
+        return okH && okW
+    }
+
     private fun setSpinnerToValue(spinner: Spinner, value: String?) {
         if (value.isNullOrBlank()) return
         val adapter = spinner.adapter ?: return
         for (i in 0 until adapter.count) {
             val itemText = adapter.getItem(i)?.toString() ?: continue
-            if (itemText.equals(value, ignoreCase = true)) {
-                spinner.setSelection(i); return
-            }
+            if (itemText.equals(value, ignoreCase = true)) { spinner.setSelection(i); return }
         }
     }
 
@@ -257,55 +278,16 @@ class ProfileActivity : AppCompatActivity() {
         return ColorStateList(states, colors)
     }
 
-    // --- VALIDATION CONSTANTS ---
-    private val MIN_HEIGHT_CM = 120
-    private val MAX_HEIGHT_CM = 230
-    private val MIN_WEIGHT_KG = 30.0
-    private val MAX_WEIGHT_KG = 300.0
+    // ---------- Settings dialog (Room-backed) ----------
 
-    private fun validateHeight(): Boolean {
-        val h = etHeight.text.toString().trim().toIntOrNull()
-        return when {
-            h == null -> {
-                etHeight.error = "Enter height in cm"
-                false
-            }
-            h < MIN_HEIGHT_CM || h > MAX_HEIGHT_CM -> {
-                etHeight.error = "Height must be $MIN_HEIGHT_CM–$MAX_HEIGHT_CM cm"
-                false
-            }
-            else -> { etHeight.error = null; true }
-        }
-    }
-
-    private fun validateWeight(): Boolean {
-        val w = etWeight.text.toString().trim().toDoubleOrNull()
-        return when {
-            w == null -> {
-                etWeight.error = "Enter weight in kg"
-                false
-            }
-            w < MIN_WEIGHT_KG || w > MAX_WEIGHT_KG -> {
-                etWeight.error = "Weight must be ${MIN_WEIGHT_KG.toInt()}–${MAX_WEIGHT_KG.toInt()} kg"
-                false
-            }
-            else -> { etWeight.error = null; true }
-        }
-    }
-
-    private fun validateHeightWeight(): Boolean {
-        val okH = validateHeight()
-        val okW = validateWeight()
-        return okH && okW
-    }
-
-    /** Settings dialog with typed timer + equipment + logout */
     private fun showSettingsDialog() {
         if (userId == -1) {
             Toast.makeText(this, "No user loaded", Toast.LENGTH_SHORT).show()
             return
         }
-        val store = SettingsStore(this)
+
+        // exit immersive while dialog is shown (touch alignment)
+        exitImmersive()
 
         val view = layoutInflater.inflate(R.layout.dialog_settings, null)
         val tilTimer = view.findViewById<TextInputLayout>(R.id.til_timer)
@@ -316,27 +298,37 @@ class ProfileActivity : AppCompatActivity() {
             ContextCompat.getColorStateList(this, R.color.hint_label)!!
         )
 
-        val currentSec = store.getRestTimerSec(userId)
-        etTimer.setText(formatDuration(currentSec))
-
-        val equipment = listOf(
-            1L to "Dumbbells",
-            2L to "Bench",
-            3L to "Pull-up Bar",
-            4L to "Barbell",
-            5L to "Kettlebell"
-        )
-        val selected = store.getEquipmentIds(userId)
         val checks = mutableListOf<CheckBox>()
-        equipment.forEach { (id, name) ->
-            val cb = CheckBox(this).apply {
-                text = name
-                setTextColor(0xFF111827.toInt())
-                isChecked = id in selected
-                CompoundButtonCompat.setButtonTintList(this, checkboxTint())
+
+        // preload timer
+        lifecycleScope.launch {
+            val existing = db.userSettingsDao().getByUserId(userId)
+            withContext(Dispatchers.Main) { etTimer.setText(formatDuration(existing?.restTimerSec ?: 180)) }
+        }
+
+        // build equipment list from CSV (canonicalized)
+        lifecycleScope.launch {
+            val canonNames = loadEquipmentNamesFromCsv()
+            val existing = db.userSettingsDao().getByUserId(userId)
+            val selectedCanon = existing?.equipmentCsv
+                ?.split('|')
+                ?.filter { it.isNotBlank() }
+                ?.toSet() ?: emptySet()
+
+            withContext(Dispatchers.Main) {
+                canonNames.forEach { canon ->
+                    val label = displayLabel(canon)
+                    val cb = CheckBox(this@ProfileActivity).apply {
+                        text = label
+                        tag = canon
+                        setTextColor(0xFF111827.toInt())
+                        isChecked = canon in selectedCanon
+                        CompoundButtonCompat.setButtonTintList(this, checkboxTint())
+                    }
+                    checks += cb
+                    eqContainer.addView(cb)
+                }
             }
-            checks += cb
-            eqContainer.addView(cb)
         }
 
         val dialog = MaterialAlertDialogBuilder(this)
@@ -374,17 +366,26 @@ class ProfileActivity : AppCompatActivity() {
                     Toast.makeText(this, "Please enter 15s to 20m (e.g., 180 or 3:00).", Toast.LENGTH_LONG).show()
                     return@setOnClickListener
                 }
-                store.setRestTimerSec(userId, seconds)
 
-                val chosen = mutableSetOf<Long>()
-                equipment.forEachIndexed { i, (id, _) -> if (checks[i].isChecked) chosen += id }
-                store.setEquipmentIds(userId, chosen)
+                val chosenCanon = checks.filter { it.isChecked }.map { it.tag as String }
 
-                Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show()
-                dialog.dismiss()
+                lifecycleScope.launch {
+                    db.userSettingsDao().upsert(
+                        UserSettings(
+                            userId = userId,
+                            restTimerSec = seconds,
+                            equipmentCsv = chosenCanon.joinToString("|")
+                        )
+                    )
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@ProfileActivity, "Settings saved", Toast.LENGTH_SHORT).show()
+                        dialog.dismiss()
+                    }
+                }
             }
         }
 
+        dialog.setOnDismissListener { enterImmersive() }
         dialog.show()
     }
 
@@ -427,19 +428,86 @@ class ProfileActivity : AppCompatActivity() {
             text.toIntOrNull()
         }
     }
-}
 
-/** Minimal per-user settings storage (replace with Room later). */
-private class SettingsStore(context: Context) {
-    private val prefs = context.getSharedPreferences("fitquest_settings", Context.MODE_PRIVATE)
-    fun getRestTimerSec(userId: Int): Int = prefs.getInt("rest_$userId", 180)
-    fun setRestTimerSec(userId: Int, seconds: Int) {
-        prefs.edit().putInt("rest_$userId", seconds).apply()
+    /** Normalize raw equipment name to a canonical (lowercase, singular) key. */
+    private fun canonicalizeEquipment(raw: String): String {
+        val s = raw.trim()
+            .replace('_', ' ')
+            .replace(Regex("\\s+"), " ")
+            .lowercase()
+        return when (s) {
+            // plurals → singular
+            "dumbbells" -> "dumbbell"
+            "kettlebells" -> "kettlebell"
+            "resistance bands" -> "resistance band"
+            "bands" -> "band"
+            "battle rope" -> "battle ropes"
+            // common typos / aliases
+            "barbel" -> "barbell"
+            else -> s
+        }
     }
-    fun getEquipmentIds(userId: Int): MutableSet<Long> =
-        prefs.getStringSet("equip_$userId", emptySet())!!
-            .mapNotNull { it.toLongOrNull() }.toMutableSet()
-    fun setEquipmentIds(userId: Int, ids: Set<Long>) {
-        prefs.edit().putStringSet("equip_$userId", ids.map { it.toString() }.toSet()).apply()
+
+    /** Turn a canonical key into a nice label for UI. */
+    private fun displayLabel(canon: String): String = when (canon) {
+        "trx" -> "TRX"
+        else -> canon.split(' ').joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }
+    }
+
+    /** Load DISTINCT canonical equipment names from CSV in /assets. */
+    private suspend fun loadEquipmentNamesFromCsv(): List<String> = withContext(Dispatchers.IO) {
+        val path = "exercises.csv"
+        runCatching {
+            assets.open(path).bufferedReader().use { br ->
+                val splitter = ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".toRegex()
+                val header = br.readLine() ?: return@use emptyList<String>()
+                val cols = header.split(splitter).map { it.trim().trim('\"').lowercase() }
+                val eqIdx = when {
+                    "equipment" in cols -> cols.indexOf("equipment")
+                    "required_equipment" in cols -> cols.indexOf("required_equipment")
+                    else -> return@use emptyList<String>()
+                }
+                br.lineSequence()
+                    .map { it.split(splitter) }
+                    .mapNotNull { row -> row.getOrNull(eqIdx)?.trim()?.trim('\"') }
+                    .filter { it.isNotBlank() }
+                    .flatMap { cell -> cell.split('|', '/', ';').map { it.trim() } }
+                    .map { canonicalizeEquipment(it) }
+                    .filterNot { it == "bodyweight" }
+                    .toSet()
+                    .toList()
+                    .sorted()
+            }
+        }.getOrElse {
+            listOf("bench","barbell","dumbbell","kettlebell","pull-up bar","resistance band","cable")
+        }
+    }
+
+    /** Enter immersive (hide system bars). */
+    private fun enterImmersive() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(false)
+            window.insetsController?.apply {
+                systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                hide(WindowInsets.Type.systemBars())
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility =
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = Color.TRANSPARENT
+        }
+    }
+
+    /** Exit immersive so dialogs layout/touch correctly. */
+    private fun exitImmersive() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.setDecorFitsSystemWindows(true)
+            window.insetsController?.show(WindowInsets.Type.systemBars())
+        } else {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+        }
     }
 }

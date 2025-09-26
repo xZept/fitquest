@@ -10,7 +10,7 @@ import kotlin.random.Random
 object ExerciseRepository {
 
     // Load exercises (matches your CSV header)
-    fun loadExercises(context: Context, assetName: String = "exercise_dataset.csv"): List<Exercise> {
+    fun loadExercises(context: Context, assetName: String = "exercises.csv"): List<Exercise> {
         val list = mutableListOf<Exercise>()
         val input = context.assets.open(assetName)
         input.bufferedReader().use { br ->

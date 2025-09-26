@@ -1,0 +1,288 @@
+exercise_id (PK),exercise_name,equipment,movement_pattern,primary_mover,complexity,type,focus,split
+1,Walking Lunges,Bodyweight,Locomotion,Quads,1,anaerobic,General,legs
+2,High Knees,Bodyweight,Locomotion,Quads,1,aerobic,General,legs
+3,Elliptical Stride,Cardio Equipment,Locomotion,Glutes,1,aerobic,General,legs
+4,Stationary Bike,Cardio Equipment,Locomotion,Quads,1,aerobic,General,legs
+5,Threadmill Run,Cardio Equipment,Locomotion,Quads,1,aerobic,General,legs
+6,Farmer's Carry,Dumbbell,Locomotion,Forearms,1,functional,General,legs
+7,Medicine Ball Rotational Throw,Medicine Ball,Rotate,Back,2,functional,General,upper
+8,Cable Chop,Cable,Rotate,Obliques,2,functional,General,upper
+9,Russian Twist,Kettlebell,Rotate,Obliques,1,functional,General,upper
+10,Seated Bar Twist,Bar,Rotate,Obliques,1,functional,General,upper
+11,Battle Rope Alternating Waves,Battle Ropes,Anti-Rotate,Shoulders,1,aerobic,General,upper
+12,Pallof Press,Resistance Band,Anti-Rotate,Core,1,functional,General,upper
+13,Bird Dog,Bodyweight,Anti-Rotate,Core,1,functional,General,upper
+14,Plank,Bodyweight,Anti-Rotate,Core,1,functional,General,upper
+15,Ab Wheel Rollout,Ab Wheel,Anti-Rotate,Core,3,functional,General,upper
+16,Dumbbell Deadbug Press,Dumbbell,Anti-Rotate,Core,2,functional,General,upper
+17,Machine Overhead Press,Machine,Vertical Push,Shoulders,1,anaerobic,Hypertrophy,push
+18,Standing Overhead Press,Barbell,Vertical Push,Shoulders,2,anaerobic,Strength,push
+19,Dumbbell Overhead Press,Dumbbell,Vertical Push,Shoulders,2,anaerobic,Hypertrophy,push
+20,Pike Push-up,Bodyweight,Vertical Push,Shoulders,3,anaerobic,Hypertrophy,push
+21,Smith Machine Overhead Press,Machine,Vertical Push,Shoulders,1,anaerobic,Hypertrophy,push
+22,Kettlebell Overhead Press,Kettlebell,Vertical Push,Shoulders,1,anaerobic,Hypertrophy,push
+23,Dip,Bodyweight,Vertical Push,Chest,3,anaerobic,Hypertrophy,push
+24,Resistance Band Overhead Press,Resistance Band,Vertical Push,Shoulders,1,anaerobic,Hypertrophy,push
+25,Machine Chest Press,Machine,Horizontal Push,Chest,1,anaerobic,Hypertrophy,push
+26,Smith Machine Bench Press,Machine,Horizontal Push,Chest,1,anaerobic,Hypertrophy,push
+27,Incline Smith Machine Bench Press,Machine,Horizontal Push,Chest,1,anaerobic,Hypertrophy,push
+28,Dumbbell Bench Press,Dumbbell,Horizontal Push,Chest,2,anaerobic,Hypertrophy,push
+29,Incline Dumbbell Bench Press,Dumbbell,Horizontal Push,Chest,2,anaerobic,Hypertrophy,push
+30,Barbell Bench Press,Barbell,Horizontal Push,Chest,2,anaerobic,Strength,push
+31,Incline Barbell Bench Press,Barbell,Horizontal Push,Chest,2,anaerobic,Hypertrophy,push
+32,Kettlebell Bench Press,Kettlebell,Horizontal Push,Chest,2,anaerobic,Hypertrophy,push
+33,Push-up,Bodyweight,Horizontal Push,Chest,2,anaerobic,Hypertrophy,push
+34,Decline Push-up,Bodyweight,Horizontal Push,Chest,3,anaerobic,Hypertrophy,push
+35,Diamond Push-up,Bodyweight,Horizontal Push,Triceps,3,anaerobic,Hypertrophy,push
+36,Knee Push-up,Bodyweight,Horizontal Push,Chest,1,anaerobic,Hypertrophy,push
+37,Resistance Band Chest Press,Resistance Band,Horizontal Push,Chest,1,anaerobic,Hypertrophy,push
+38,Pull-up,Bodyweight,Vertical Pull,Back,3,anaerobic,Hypertrophy,pull
+39,Chin-up,Bodyweight,Vertical Pull,Back,2,anaerobic,Hypertrophy,pull
+40,Lat Pulldown,Bodyweight,Vertical Pull,Back,1,anaerobic,Hypertrophy,pull
+41,Band-assisted Pull-up,Bodyweight,Vertical Pull,Back,1,anaerobic,Hypertrophy,pull
+42,Reverse Shrug,Machine,Vertical Pull,Traps,1,anaerobic,Hypertrophy,pull
+43,Resistance Band Lat Pulldown,Machine,Vertical Pull,Back,1,anaerobic,Hypertrophy,pull
+44,Cable Row,Machine,Horizontal Pull,Back,1,anaerobic,Hypertrophy,pull
+45,Machine Row,Machine,Horizontal Pull,Back,1,anaerobic,Hypertrophy,pull
+46,Smith Machine Row,Machine,Horizontal Pull,Back,1,anaerobic,Hypertrophy,pull
+47,Bent-Over Barbell Row,Barbell,Horizontal Pull,Back,2,anaerobic,Strength,pull
+48,Bent-Over Dumbbell Row,Dumbbell,Horizontal Pull,Back,1,anaerobic,Hypertrophy,pull
+49,Single-Arm Bent-Over Dumbbell Row,Dumbbell,Horizontal Pull,Back,1,anaerobic,Hypertrophy,pull
+50,Pendlay Row,Barbell,Horizontal Pull,Back,2,anaerobic,Strength,pull
+51,Resistance Band Row,Resistance Band,Horizontal Pull,Back,1,anaerobic,Hypertrophy,pull
+52,T-Bar Row,Machine,Horizontal Pull,Back,1,anaerobic,Hypertrophy,pull
+53,Barbell Squat,Barbell,Squat,Quads,2,anaerobic,Strength,legs
+54,Dumbbell Squat,Dumbbell,Squat,Quads,1,anaerobic,Hypertrophy,legs
+55,Smith Machine Squat,Machine,Squat,Quads,1,anaerobic,Hypertrophy,legs
+56,Leg Press,Machine,Squat,Quads,1,anaerobic,Hypertrophy,legs
+57,Pistol Squat,Bodyweight,Squat,Quads,3,anaerobic,Hypertrophy,legs
+58,Bodyweight Squat,Bodyweight,Squat,Quads,1,anaerobic,Hypertrophy,legs
+59,Resistance Band Squat,Bodyweight,Squat,Quads,1,anaerobic,Hypertrophy,legs
+60,Kettlebell Squat,Bodyweight,Squat,Quads,1,anaerobic,Hypertrophy,legs
+61,Romanian Deadlift,Barbell,Hinge,Hamstrings,1,anaerobic,Hypertrophy,legs
+62,Sumo Deadlift,Barbell,Hinge,Hamstrings,2,anaerobic,Strength,legs
+63,Conventional Deadlift,Barbell,Hinge,Hamstrings,1,anaerobic,Hypertrophy,legs
+64,Stiff Legged Deadlift,Barbell,Hinge,Hamstrings,1,anaerobic,Strength,legs
+65,Dumbbell Romanian Deadlift,Dumbbell,Hinge,Hamstrings,1,anaerobic,Strength,legs
+66,Dumbbell Stiff Legged Deadlift,Dumbbell,Hinge,Hamstrings,1,anaerobic,Strength,legs
+67,Resistance Band Deadlift,Dumbbell,Hinge,Hamstrings,1,anaerobic,Strength,legs
+68,Kettlebell Deadlift,Dumbbell,Hinge,Hamstrings,1,anaerobic,Strength,legs
+69,Barbell Bench Press,barbell,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+70,Dumbbell Bench Press,dumbbell,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+71,Incline Barbell Bench Press,barbell,horizontal push,Chest,3,anaerobic,Hypertrophy,push
+72,Incline Dumbbell Press,dumbbell,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+73,Decline Barbell Bench Press,barbell,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+74,Push-Up,bodyweight,horizontal push,Chest,1,functional,general,push
+75,Close-Grip Bench Press,barbell,horizontal push,Triceps,3,anaerobic,strength,push
+76,Overhead Press,barbell,vertical push,Shoulders,3,anaerobic,strength,push
+77,Seated Dumbbell Shoulder Press,dumbbell,vertical push,Shoulders,2,anaerobic,Hypertrophy,push
+78,Arnold Press,dumbbell,vertical push,Shoulders,3,anaerobic,Hypertrophy,push
+79,Machine Chest Press,machine,horizontal push,Chest,1,anaerobic,Hypertrophy,push
+80,Cable Chest Fly,cable,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+81,Dips,bodyweight,vertical push,Shoulders,2,functional,general,push
+82,Pike Push-Up,bodyweight,vertical push,Shoulders,2,functional,general,push
+83,Z Press,barbell,vertical push,Shoulders,3,anaerobic,strength,push
+84,Landmine Press,landmine,vertical push,Shoulders,2,functional,general,push
+85,Incline Dumbbell Fly,dumbbell,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+86,TRX Push-Up,TRX,horizontal push,Chest,2,functional,general,push
+87,Svend Press,plate,horizontal push,Chest,1,functional,general,push
+88,Floor Press (Dumbbell),dumbbell,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+89,Barbell Bent-Over Row,barbell,horizontal pull,Back,3,anaerobic,strength,pull
+90,Pendlay Row,barbell,horizontal pull,Back,3,anaerobic,strength,pull
+91,Dumbbell Row,dumbbell,horizontal pull,Back,2,anaerobic,Hypertrophy,pull
+92,Kroc Row,dumbbell,horizontal pull,Back,3,anaerobic,Hypertrophy,pull
+93,Seated Cable Row,cable,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+94,Chest-Supported Row (Machine),machine,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+95,T-Bar Row,machine,horizontal pull,Back,2,anaerobic,Hypertrophy,pull
+96,Face Pull,cable,horizontal pull,Back,1,functional,general,pull
+97,Rear Delt Fly (Dumbbell),dumbbell,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+98,Rear Delt Fly (Cable),cable,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+99,Inverted Row,bodyweight,horizontal pull,Back,1,functional,general,pull
+100,TRX Row,TRX,horizontal pull,Back,1,functional,general,pull
+101,Seal Row,barbell,horizontal pull,Back,2,anaerobic,Hypertrophy,pull
+102,Meadows Row,landmine,horizontal pull,Back,3,anaerobic,Hypertrophy,pull
+103,Band Pull-Apart,band,horizontal pull,Back,1,functional,general,pull
+104,One-Arm Cable Row,cable,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+105,Yates Row,barbell,horizontal pull,Back,2,anaerobic,Hypertrophy,pull
+106,Machine High Row,machine,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+107,Gorilla Row,kettlebell,horizontal pull,Back,2,functional,general,pull
+108,Chest-Supported Row (Dumbbell),dumbbell,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+109,Back Squat,barbell,squat,Quads,3,anaerobic,strength,legs
+110,Front Squat,barbell,squat,Quads,3,anaerobic,strength,legs
+111,Goblet Squat,dumbbell,squat,Quads,1,functional,general,legs
+112,Zercher Squat,barbell,squat,Quads,3,anaerobic,strength,legs
+113,Hack Squat,machine,squat,Quads,1,anaerobic,Hypertrophy,legs
+114,Smith Machine Squat,machine,squat,Quads,1,anaerobic,Hypertrophy,legs
+115,Box Squat,barbell,squat,Quads,2,anaerobic,strength,legs
+116,Bulgarian Split Squat,dumbbell,squat,Quads,2,anaerobic,Hypertrophy,legs
+117,Split Squat,dumbbell,squat,Quads,1,functional,general,legs
+118,Leg Press,machine,squat,Quads,1,anaerobic,Hypertrophy,legs
+119,Conventional Deadlift,barbell,hinge,Hamstrings,3,anaerobic,strength,legs
+120,Romanian Deadlift,barbell,hinge,Hamstrings,2,anaerobic,Hypertrophy,legs
+121,Stiff-Leg Deadlift,barbell,hinge,Hamstrings,3,anaerobic,Hypertrophy,legs
+122,Trap Bar Deadlift,trap bar,hinge,Hamstrings,2,anaerobic,strength,legs
+123,Good Morning,barbell,hinge,Hamstrings,3,anaerobic,strength,legs
+124,Hip Thrust,barbell,hinge,Glutes,2,anaerobic,Hypertrophy,legs
+125,Glute Bridge,bodyweight,hinge,Glutes,1,functional,general,legs
+126,Kettlebell Swing,kettlebell,hinge,Hamstrings,2,functional,general,legs
+127,Cable Pull-Through,cable,hinge,Hamstrings,1,functional,general,legs
+128,Back Extension,machine,hinge,Hamstrings,1,functional,general,legs
+129,Walking Lunge,dumbbell,locomotion,Quads,2,functional,general,legs
+130,Barbell Walking Lunge,barbell,locomotion,Quads,3,anaerobic,Hypertrophy,legs
+131,Step-Up,dumbbell,locomotion,Quads,1,functional,general,legs
+132,Sled Push,sled,locomotion,Quads,1,functional,general,legs
+133,Sled Drag,sled,locomotion,Glutes,1,functional,general,legs
+134,Farmer's Carry,dumbbell,locomotion,Forearms,1,functional,general,legs
+135,Kettlebell Farmer's Carry,kettlebell,locomotion,Forearms,1,functional,general,legs
+136,Bear Crawl,bodyweight,locomotion,Quads,1,functional,general,legs
+137,High Knees,bodyweight,locomotion,Quads,1,aerobic,general,legs
+138,Butt Kicks,bodyweight,locomotion,Hamstrings,1,aerobic,general,legs
+139,Cable Woodchop,cable,rotate,Obliques,1,functional,general,upper
+140,Low-to-High Cable Chop,cable,rotate,Obliques,2,functional,general,upper
+141,High-to-Low Cable Chop,cable,rotate,Obliques,2,functional,general,upper
+142,Landmine Rotation,landmine,rotate,Obliques,2,functional,general,upper
+143,Russian Twist,medicine ball,rotate,Obliques,1,functional,general,upper
+144,Med Ball Rotational Throw,medicine ball,rotate,Back,2,functional,strength,upper
+145,Standing Oblique Crunch,cable,rotate,Obliques,1,functional,general,upper
+146,Rotational Kettlebell Swing,kettlebell,rotate,Hamstrings,2,functional,general,upper
+147,Standing Barbell Twist,barbell,rotate,Obliques,1,functional,general,upper
+148,Thread-the-Needle Side Plank,bodyweight,rotate,Core,1,functional,general,upper
+149,Pallof Press,cable,anti rotate,Core,1,functional,general,upper
+150,Pallof Press (Band),band,anti rotate,Core,1,functional,general,upper
+151,Tall-Kneeling Pallof Press,cable,anti rotate,Core,1,functional,general,upper
+152,Half-Kneeling Anti-Rotation Press,cable,anti rotate,Obliques,1,functional,general,upper
+153,Dead Bug w/ Anti-Rotation Band,band,anti rotate,Obliques,1,functional,general,upper
+154,Renegade Row,dumbbell,anti rotate,Back,2,functional,general,upper
+155,Plank,bodyweight,anti rotate,Core,1,functional,general,upper
+156,Side Plank,bodyweight,anti rotate,Core,1,functional,general,upper
+157,Bird Dog,bodyweight,anti rotate,Core,1,functional,general,upper
+158,Suitcase Carry,dumbbell,anti rotate,Core,1,functional,general,upper
+159,Hack Squat (Narrow Grip/Stance),machine,squat,Back,1,anaerobic,Hypertrophy,legs
+160,Hack Squat (Deficit/Elevated),machine,squat,Quads,2,anaerobic,Hypertrophy,legs
+161,Bear Crawl (Neutral Grip),bodyweight,locomotion,Quads,1,functional,general,legs
+162,Zercher Squat (Deficit/Elevated),barbell,squat,Quads,3,anaerobic,strength,legs
+163,Side Plank (Tempo 3-1-3),bodyweight,anti rotate,Core,2,functional,general,upper
+164,Barbell Bent-Over Row (Tempo 3-1-3),barbell,horizontal pull,Back,3,anaerobic,strength,pull
+165,Pendlay Row (Neutral Grip),barbell,horizontal pull,Back,3,anaerobic,strength,pull
+166,Pendlay Row (Deficit/Elevated),barbell,horizontal pull,Back,3,anaerobic,strength,pull
+167,Push-Up (Tempo 3-1-3),bodyweight,horizontal push,Chest,2,functional,general,push
+168,Push-Up (Unilateral),bodyweight,horizontal push,Chest,1,functional,general,push
+169,High-to-Low Cable Chop (Narrow Grip/Stance),cable,rotate,Back,2,functional,general,upper
+170,Arnold Press (Narrow Grip/Stance),dumbbell,vertical push,Shoulders,3,anaerobic,Hypertrophy,push
+171,Med Ball Rotational Throw (Neutral Grip),medicine ball,rotate,Back,2,functional,strength,upper
+172,Incline Dumbbell Press (Paused),dumbbell,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+173,Dumbbell Row (Wide Grip/Stance),dumbbell,horizontal pull,Back,2,anaerobic,Hypertrophy,pull
+174,Dumbbell Row (Paused),dumbbell,horizontal pull,Back,2,anaerobic,Hypertrophy,pull
+175,Box Squat (Wide Grip/Stance),barbell,squat,Quads,2,anaerobic,strength,legs
+176,Pallof Press (Wide Grip/Stance),cable,anti rotate,Core,1,functional,general,upper
+177,Pallof Press (Tempo 3-1-3),cable,anti rotate,Core,2,functional,general,upper
+178,High Knees (Unilateral),bodyweight,locomotion,Quads,1,aerobic,general,legs
+179,Incline Dumbbell Fly (Narrow Grip/Stance),dumbbell,horizontal push,Back,2,anaerobic,Hypertrophy,push
+180,Suitcase Carry (Deficit/Elevated),dumbbell,anti rotate,Core,2,functional,general,upper
+181,Thread-the-Needle Side Plank (Wide Grip/Stance),bodyweight,rotate,Core,1,functional,general,upper
+182,Thread-the-Needle Side Plank (Paused),bodyweight,rotate,Core,1,functional,general,upper
+183,Svend Press (Narrow Grip/Stance),plate,horizontal push,Back,1,functional,general,push
+184,Svend Press (Deficit/Elevated),plate,horizontal push,Chest,2,functional,general,push
+185,Kroc Row (Wide Grip/Stance),dumbbell,horizontal pull,Back,3,anaerobic,Hypertrophy,pull
+186,Good Morning (Wide Grip/Stance),barbell,hinge,Hamstrings,3,anaerobic,strength,legs
+187,Dips (Wide Grip/Stance),bodyweight,vertical push,Shoulders,2,functional,general,push
+188,Step-Up (Tempo 3-1-3),dumbbell,locomotion,Quads,2,functional,general,legs
+189,Step-Up (Narrow Grip/Stance),dumbbell,locomotion,Back,1,functional,general,legs
+190,Rotational Kettlebell Swing (Neutral Grip),kettlebell,rotate,Hamstrings,2,functional,general,upper
+191,Sled Push (Neutral Grip),sled,locomotion,Quads,1,functional,general,legs
+192,Split Squat (Wide Grip/Stance),dumbbell,squat,Quads,1,functional,general,legs
+193,Split Squat (Unilateral),dumbbell,squat,Quads,1,functional,general,legs
+194,Rear Delt Fly (Dumbbell) (Paused),dumbbell,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+195,Rear Delt Fly (Dumbbell) (Unilateral),dumbbell,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+196,Butt Kicks (Tempo 3-1-3),bodyweight,locomotion,Hamstrings,2,aerobic,general,legs
+197,Half-Kneeling Anti-Rotation Press (Neutral Grip),cable,anti rotate,Obliques,1,functional,general,upper
+198,Half-Kneeling Anti-Rotation Press (Unilateral),cable,anti rotate,Obliques,1,functional,general,upper
+199,Sled Drag (Neutral Grip),sled,locomotion,Glutes,1,functional,general,legs
+200,Goblet Squat (Paused),dumbbell,squat,Quads,1,functional,general,legs
+201,Goblet Squat (Tempo 3-1-3),dumbbell,squat,Quads,2,functional,general,legs
+202,Overhead Press (Narrow Grip/Stance),barbell,vertical push,Shoulders,3,anaerobic,strength,push
+203,Overhead Press (Deficit/Elevated),barbell,vertical push,Shoulders,3,anaerobic,strength,push
+204,Front Squat (Tempo 3-1-3),barbell,squat,Quads,3,anaerobic,strength,legs
+205,Front Squat (Deficit/Elevated),barbell,squat,Quads,3,anaerobic,strength,legs
+206,Conventional Deadlift (Narrow Grip/Stance),barbell,hinge,Back,3,anaerobic,strength,legs
+207,Band Pull-Apart (Deficit/Elevated),band,horizontal pull,Back,2,functional,general,pull
+208,Back Squat (Wide Grip/Stance),barbell,squat,Quads,3,anaerobic,strength,legs
+209,Machine Chest Press (Unilateral),machine,horizontal push,Chest,1,anaerobic,Hypertrophy,push
+210,Dead Bug w/ Anti-Rotation Band (Deficit/Elevated),band,anti rotate,Obliques,2,functional,general,upper
+211,Kettlebell Swing (Tempo 3-1-3),kettlebell,hinge,Hamstrings,3,functional,general,legs
+212,Kettlebell Swing (Deficit/Elevated),kettlebell,hinge,Hamstrings,3,functional,general,legs
+213,TRX Push-Up (Neutral Grip),TRX,horizontal push,Chest,2,functional,general,push
+214,Walking Lunge (Wide Grip/Stance),dumbbell,locomotion,Quads,2,functional,general,legs
+215,Walking Lunge (Tempo 3-1-3),dumbbell,locomotion,Quads,3,functional,general,legs
+216,Dumbbell Bench Press (Paused),dumbbell,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+217,Dumbbell Bench Press (Deficit/Elevated),dumbbell,horizontal push,Chest,3,anaerobic,Hypertrophy,push
+218,Smith Machine Squat (Paused),machine,squat,Quads,1,anaerobic,Hypertrophy,legs
+219,Smith Machine Squat (Tempo 3-1-3),machine,squat,Quads,2,anaerobic,Hypertrophy,legs
+220,Pike Push-Up (Wide Grip/Stance),bodyweight,vertical push,Shoulders,2,functional,general,push
+221,One-Arm Cable Row (Narrow Grip/Stance),cable,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+222,Plank (Unilateral),bodyweight,anti rotate,Core,1,functional,general,upper
+223,Plank (Tempo 3-1-3),bodyweight,anti rotate,Core,2,functional,general,upper
+224,Stiff-Leg Deadlift (Unilateral),barbell,hinge,Hamstrings,3,anaerobic,Hypertrophy,legs
+225,Pallof Press (Band) (Unilateral),band,anti rotate,Core,1,functional,general,upper
+226,Pallof Press (Band) (Neutral Grip),band,anti rotate,Core,1,functional,general,upper
+227,Face Pull (Neutral Grip),cable,horizontal pull,Back,1,functional,general,pull
+228,TRX Row (Neutral Grip),TRX,horizontal pull,Back,1,functional,general,pull
+229,TRX Row (Narrow Grip/Stance),TRX,horizontal pull,Back,1,functional,general,pull
+230,Rear Delt Fly (Cable) (Unilateral),cable,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+231,Chest-Supported Row (Dumbbell) (Narrow Grip/Stance),dumbbell,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+232,Chest-Supported Row (Dumbbell) (Wide Grip/Stance),dumbbell,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+233,Decline Barbell Bench Press (Unilateral),barbell,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+234,Standing Barbell Twist (Deficit/Elevated),barbell,rotate,Obliques,2,functional,general,upper
+235,Low-to-High Cable Chop (Tempo 3-1-3),cable,rotate,Obliques,3,functional,general,upper
+236,Low-to-High Cable Chop (Narrow Grip/Stance),cable,rotate,Back,2,functional,general,upper
+237,T-Bar Row (Wide Grip/Stance),machine,horizontal pull,Back,2,anaerobic,Hypertrophy,pull
+238,Kettlebell Farmer's Carry (Paused),kettlebell,locomotion,Forearms,1,functional,general,legs
+239,Kettlebell Farmer's Carry (Narrow Grip/Stance),kettlebell,locomotion,Back,1,functional,general,legs
+240,Bird Dog (Paused),bodyweight,anti rotate,Core,1,functional,general,upper
+241,Bird Dog (Neutral Grip),bodyweight,anti rotate,Core,1,functional,general,upper
+242,Chest-Supported Row (Machine) (Paused),machine,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+243,Chest-Supported Row (Machine) (Narrow Grip/Stance),machine,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+244,Close-Grip Bench Press (Paused),barbell,horizontal push,Triceps,3,anaerobic,strength,push
+245,Z Press (Tempo 3-1-3),barbell,vertical push,Shoulders,3,anaerobic,strength,push
+246,Z Press (Unilateral),barbell,vertical push,Shoulders,3,anaerobic,strength,push
+247,Seated Dumbbell Shoulder Press (Wide Grip/Stance),dumbbell,vertical push,Shoulders,2,anaerobic,Hypertrophy,push
+248,Seated Dumbbell Shoulder Press (Paused),dumbbell,vertical push,Shoulders,2,anaerobic,Hypertrophy,push
+249,Incline Barbell Bench Press (Wide Grip/Stance),barbell,horizontal push,Chest,3,anaerobic,Hypertrophy,push
+250,Yates Row (Wide Grip/Stance),barbell,horizontal pull,Back,2,anaerobic,Hypertrophy,pull
+251,Yates Row (Paused),barbell,horizontal pull,Back,2,anaerobic,Hypertrophy,pull
+252,Seal Row (Deficit/Elevated),barbell,horizontal pull,Back,3,anaerobic,Hypertrophy,pull
+253,Inverted Row (Tempo 3-1-3),bodyweight,horizontal pull,Back,2,functional,general,pull
+254,Machine High Row (Wide Grip/Stance),machine,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+255,Trap Bar Deadlift (Neutral Grip),trap bar,hinge,Hamstrings,2,anaerobic,strength,legs
+256,Tall-Kneeling Pallof Press (Tempo 3-1-3),cable,anti rotate,Core,2,functional,general,upper
+257,Leg Press (Unilateral),machine,squat,Quads,1,anaerobic,Hypertrophy,legs
+258,Leg Press (Wide Grip/Stance),machine,squat,Quads,1,anaerobic,Hypertrophy,legs
+259,Renegade Row (Paused),dumbbell,anti rotate,Back,2,functional,general,upper
+260,Bulgarian Split Squat (Narrow Grip/Stance),dumbbell,squat,Back,2,anaerobic,Hypertrophy,legs
+261,Glute Bridge (Unilateral),bodyweight,hinge,Glutes,1,functional,general,legs
+262,Glute Bridge (Paused),bodyweight,hinge,Glutes,1,functional,general,legs
+263,Cable Pull-Through (Wide Grip/Stance),cable,hinge,Hamstrings,1,functional,general,legs
+264,Back Extension (Wide Grip/Stance),machine,hinge,Hamstrings,1,functional,general,legs
+265,Back Extension (Unilateral),machine,hinge,Hamstrings,1,functional,general,legs
+266,Barbell Bench Press (Neutral Grip),barbell,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+267,Barbell Walking Lunge (Unilateral),barbell,locomotion,Quads,3,anaerobic,Hypertrophy,legs
+268,Barbell Walking Lunge (Wide Grip/Stance),barbell,locomotion,Quads,3,anaerobic,Hypertrophy,legs
+269,Landmine Press (Tempo 3-1-3),landmine,vertical push,Shoulders,3,functional,general,push
+270,Farmer's Carry (Neutral Grip),dumbbell,locomotion,Forearms,1,functional,general,legs
+271,Farmer's Carry (Tempo 3-1-3),dumbbell,locomotion,Forearms,2,functional,general,legs
+272,Cable Chest Fly (Deficit/Elevated),cable,horizontal push,Chest,3,anaerobic,Hypertrophy,push
+273,Romanian Deadlift (Paused),barbell,hinge,Hamstrings,2,anaerobic,Hypertrophy,legs
+274,Hip Thrust (Paused),barbell,hinge,Glutes,2,anaerobic,Hypertrophy,legs
+275,Hip Thrust (Unilateral),barbell,hinge,Glutes,2,anaerobic,Hypertrophy,legs
+276,Floor Press (Dumbbell) (Unilateral),dumbbell,horizontal push,Chest,2,anaerobic,Hypertrophy,push
+277,Seated Cable Row (Neutral Grip),cable,horizontal pull,Back,1,anaerobic,Hypertrophy,pull
+278,Standing Oblique Crunch (Unilateral),cable,rotate,Obliques,1,functional,general,upper
+279,Standing Oblique Crunch (Tempo 3-1-3),cable,rotate,Obliques,2,functional,general,upper
+280,Meadows Row (Neutral Grip),landmine,horizontal pull,Back,3,anaerobic,Hypertrophy,pull
+281,Meadows Row (Wide Grip/Stance),landmine,horizontal pull,Back,3,anaerobic,Hypertrophy,pull
+282,Landmine Rotation (Paused),landmine,rotate,Obliques,2,functional,general,upper
+283,Cable Woodchop (Neutral Grip),cable,rotate,Obliques,1,functional,general,upper
+284,Cable Woodchop (Unilateral),cable,rotate,Obliques,1,functional,general,upper
+285,Gorilla Row (Wide Grip/Stance),kettlebell,horizontal pull,Back,2,functional,general,pull
+286,Russian Twist (Deficit/Elevated),medicine ball,rotate,Obliques,2,functional,general,upper
+287,Russian Twist (Unilateral),medicine ball,rotate,Obliques,1,functional,general,upper

@@ -1,6 +1,5 @@
 package com.example.fitquest
 
-
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -11,6 +10,7 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.animation.AnimationUtils
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -29,31 +29,26 @@ class DashboardActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dashboard)
 
-        // Attach animated sprite-sheet as the background
+        // Animated spritesheet background (repo)
         val bgView = findViewById<ImageView>(R.id.dashboard_bg)
         val opts = BitmapFactory.Options().apply {
-            inScaled = false // important because we use pixel math on the sheet
+            inScaled = false
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
         val sheet = BitmapFactory.decodeResource(resources, R.drawable.bg_dashboard_spritesheet, opts)
-
         bgAnim = SpriteSheetDrawable(
             sheet = sheet,
             rows = 1,
-            cols = 12,           // <-- change if your sheet differs
-            fps = 12,            // 12–24 is a good range
+            cols = 12,
+            fps = 12,
             loop = true,
             scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
         )
-
-        // Use as the ImageView's drawable or background
         bgView.setImageDrawable(bgAnim)
 
-        // ...your existing code below (pressAnim, insets, tips, nav setup, etc.)
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
-        // (rest of your onCreate unchanged)
 
-        // hides the system navigation
+        // Hide system navigation (repo)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
             window.insetsController?.apply {
@@ -63,42 +58,39 @@ class DashboardActivity : AppCompatActivity() {
         } else {
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility =
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
             @Suppress("DEPRECATION")
             window.navigationBarColor = Color.TRANSPARENT
         }
 
-        val mainLayout = findViewById<View>(R.id.dashboard_root)
-
-        ViewCompat.setOnApplyWindowInsetsListener(mainLayout) { view, insets ->
-            val systemInsets = insets.getInsets(Type.systemBars())
-            view.setPadding(0, 0, 0, systemInsets.bottom)
+        val root = findViewById<View>(R.id.dashboard_root)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
+            val sys = insets.getInsets(Type.systemBars())
+            v.setPadding(0, 0, 0, sys.bottom)
             insets
         }
 
         dashboardTip = findViewById(R.id.dashboardTip)
 
-        // Load all tips
+        // Tip of the day (repo)
         val tips = TipsLoader.loadTips(this)
+        val general = tips.filter { it.category == "general" }
+        dashboardTip.text =
+            if (general.isNotEmpty()) {
+                val dayIndex = (System.currentTimeMillis() / 86_400_000).toInt()
+                general[dayIndex % general.size].tip
+            } else {
+                "Stay strong and keep going!"
+            }
 
-        // Filter only general tips
-        val generalTips = tips.filter { it.category == "general" }
-
-        if (generalTips.isNotEmpty()) {
-            // Rotate by day (using day of year as index)
-            val dayIndex = (System.currentTimeMillis() / (1000 * 60 * 60 * 24)).toInt()
-            val tipOfDay = generalTips[dayIndex % generalTips.size]
-
-            dashboardTip.text = tipOfDay.tip
-        } else {
-            dashboardTip.text = "Stay strong and keep going!"
+        // >>> Wire the existing repo button to your local generator flow
+        findViewById<ImageButton>(R.id.btn_quick_action).setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, QuestGeneratorActivity::class.java))
+            overridePendingTransition(0, 0)
         }
+
         setupNavigationBar()
-
-
-
     }
 
     override fun onStart() {
@@ -129,5 +121,4 @@ class DashboardActivity : AppCompatActivity() {
             startActivity(Intent(this, MacroActivity::class.java)); overridePendingTransition(0, 0)
         }
     }
-
 }
