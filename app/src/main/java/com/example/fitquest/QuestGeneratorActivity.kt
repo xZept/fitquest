@@ -228,7 +228,9 @@ class QuestGeneratorActivity : AppCompatActivity() {
             }
             withContext(Dispatchers.Main) {
                 previewLauncher.launch(intent)
+                overridePendingTransition(0, 0)
             }
+
         }
     }
 
