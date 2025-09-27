@@ -23,6 +23,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.fitquest.database.ActiveQuest
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import com.example.fitquest.ui.widgets.SpriteSheetDrawable
+
 
 class QuestGeneratorActivity : AppCompatActivity() {
 
@@ -36,6 +40,9 @@ class QuestGeneratorActivity : AppCompatActivity() {
     private var lastFocus = ""
     private var lastInitialNames: List<String> = emptyList()
     private var lastAddableNames: List<String> = emptyList()
+    private var bgSprite: SpriteSheetDrawable? = null
+    private var bgBitmap: Bitmap? = null
+
 
     private val previewLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -89,6 +96,30 @@ class QuestGeneratorActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_quest_generator)
 
+        val root = findViewById<View>(R.id.root)
+
+        val opts = BitmapFactory.Options().apply {
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+
+        bgBitmap = BitmapFactory.decodeResource(resources, R.drawable.bg_dashboard_spritesheet, opts)
+
+        val rows = 1
+        val cols = 12
+        val fps  = 12
+
+        bgSprite = SpriteSheetDrawable(
+            sheet = requireNotNull(bgBitmap),
+            rows = rows,
+            cols = cols,
+            fps = fps,
+            loop = true,
+            scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP // fills screen nicely
+        )
+
+        root.background = bgSprite
+
+
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
         hideSystemBars()
 
@@ -108,15 +139,36 @@ class QuestGeneratorActivity : AppCompatActivity() {
         spFocus.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, focuses)
             .apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
 
-        findViewById<Button>(R.id.btn_generate).setOnClickListener {
+        findViewById<ImageButton>(R.id.btn_generate).setOnClickListener {
             it.startAnimation(pressAnim)
             generateAndOpenPreview()
         }
-        findViewById<Button?>(R.id.btn_cancel)?.setOnClickListener {
+        findViewById<ImageButton?>(R.id.btn_cancel)?.setOnClickListener {
             it.startAnimation(pressAnim)
             finish()
+            overridePendingTransition(0, 0)
         }
     }
+
+    override fun onStart() {
+        super.onStart()
+        bgSprite?.start()
+    }
+
+    override fun onStop() {
+        bgSprite?.stop()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        bgSprite?.stop()
+        // Optional: if you’re certain this bitmap isn’t reused elsewhere:
+        // bgBitmap?.recycle()
+        bgBitmap = null
+        bgSprite = null
+        super.onDestroy()
+    }
+
 
     /** Build one structured plan and go straight to preview (no Basic/Advanced dialog). */
     private fun generateAndOpenPreview() {

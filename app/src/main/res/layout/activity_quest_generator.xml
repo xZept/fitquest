@@ -5,44 +5,100 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="16dp"
-    android:background="@drawable/workout_bg">
+    android:background="@drawable/bg_dashboard">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Split"
-        android:textColor="#111827" />
 
-    <Spinner
-        android:id="@+id/sp_split"
+    <LinearLayout
+        android:id="@+id/content_container"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="20dp"
+        android:orientation="vertical">
+
+        <!-- Split block with image background -->
+        <FrameLayout
+            android:id="@+id/split_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            android:background="@drawable/container_split"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <Spinner
+                    android:id="@+id/sp_split"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"/>
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Focus block with image background -->
+        <FrameLayout
+            android:id="@+id/focus_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/container_focus"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <Spinner
+                    android:id="@+id/sp_focus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"/>
+            </LinearLayout>
+        </FrameLayout>
+
+    </LinearLayout>
+
+
+    <!-- Actions row -->
+    <LinearLayout
+        android:id="@+id/actions_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp" />
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="98dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Focus"
-        android:textColor="#111827" />
+        <ImageButton
+            android:id="@+id/btn_cancel"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:contentDescription="Cancel"
+            android:scaleType="centerInside"
+            android:adjustViewBounds="true"
+            android:background="@drawable/button_cancel"
+            android:padding="0dp" />
 
-    <Spinner
-        android:id="@+id/sp_focus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp" />
+        <Space
+            android:layout_width="8dp"
+            android:layout_height="1dp" />
 
-    <!-- One clear "Generate" button -->
-    <Button
-        android:id="@+id/btn_generate"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Generate Quests" />
+        <ImageButton
+            android:id="@+id/btn_generate"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:contentDescription="Forge quest"
+            android:scaleType="centerInside"
+            android:adjustViewBounds="true"
+            android:background="@drawable/button_forge_quest"
+            android:padding="0dp" />
 
-    <!-- Optional cancel/back -->
-    <Button
-        android:id="@+id/btn_cancel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Cancel"
-        android:layout_marginTop="8dp" />
+    </LinearLayout>
+
 </LinearLayout>
