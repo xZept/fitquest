@@ -17,13 +17,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
-import com.example.fitquest.database.WorkoutSessionEntity
+import com.example.fitquest.database.WorkoutSession
 
 class DiaryActivity : AppCompatActivity() {
 
     private lateinit var db: AppDatabase
     private lateinit var listView: ListView
-    private val items = mutableListOf<WorkoutSessionEntity>()
+    private val items = mutableListOf<WorkoutSession>()
     private val sdf = SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault())
 
     override fun onCreate(savedInstanceState: Bundle?) {

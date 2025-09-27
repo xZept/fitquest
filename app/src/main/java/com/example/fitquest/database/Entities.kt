@@ -44,7 +44,7 @@ data class UserProfile(
 )
 
 // ----- User Settings -----
-@Entity(tableName = "user_settings", indices = [Index("userId")])
+@Entity(tableName = "userSettings", indices = [Index("userId")])
 data class UserSettings(
     @PrimaryKey val userId: Int,
     val restTimerSec: Int = 180,
@@ -53,7 +53,7 @@ data class UserSettings(
 
 // ----- User Wallet -----
 @Entity(
-    tableName = "user_wallet",
+    tableName = "userWallet",
     indices = [Index(value = ["userId"], unique = true)]
 )
 data class UserWallet(
@@ -63,7 +63,7 @@ data class UserWallet(
 )
 
 // ----- Active Quest -----
-@Entity(tableName = "active_quests")
+@Entity(tableName = "activeQuests")
 @TypeConverters(Converters::class)
 
 data class ActiveQuest(
@@ -77,8 +77,8 @@ data class ActiveQuest(
 )
 
 // ----- Workout Session -----
-@Entity(tableName = "workout_sessions")
-data class WorkoutSessionEntity(
+@Entity(tableName = "workoutSession")
+data class WorkoutSession(
     @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val userId: Int,
     val title: String,
@@ -91,10 +91,10 @@ data class WorkoutSessionEntity(
 
 // ----- Workout Set Log -----
 @Entity(
-    tableName = "workout_set_logs",
+    tableName = "workoutSetLog",
     foreignKeys = [
         ForeignKey(
-            entity = WorkoutSessionEntity::class,
+            entity = WorkoutSession::class,
             parentColumns = ["id"],
             childColumns = ["sessionId"],
             onDelete = ForeignKey.CASCADE
@@ -102,7 +102,7 @@ data class WorkoutSessionEntity(
     ],
     indices = [Index("sessionId")]
 )
-data class WorkoutSetLogEntity(
+data class WorkoutSetLog(
     @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val sessionId: Long,
     val exerciseName: String,

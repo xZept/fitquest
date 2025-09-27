@@ -114,7 +114,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             startedAtMs = System.currentTimeMillis()
             sessionRowId = withContext(Dispatchers.IO) {
                 db.workoutSessionDao().insert(
-                    WorkoutSessionEntity(
+                    WorkoutSession(
                         userId = userId,
                         title = questTitle,
                         startedAt = startedAtMs,
@@ -288,7 +288,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
                     val ex = items[exerciseIndex]
                     val setNum = setIndex + 1
                     db.workoutSetLogDao().insert(
-                        WorkoutSetLogEntity(
+                        WorkoutSetLog(
                             sessionId = sessionRowId,
                             exerciseName = ex.name,
                             setNumber = setNum,
@@ -308,7 +308,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
                     val ex = items[exerciseIndex]
                     val setNum = setIndex + 1
                     db.workoutSetLogDao().insert(
-                        WorkoutSetLogEntity(
+                        WorkoutSetLog(
                             sessionId = sessionRowId,
                             exerciseName = ex.name,
                             setNumber = setNum,
