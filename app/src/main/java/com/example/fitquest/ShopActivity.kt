@@ -1,6 +1,8 @@
 package com.example.fitquest
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -9,11 +11,13 @@ import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.animation.AnimationUtils
 import android.widget.ImageView
+import android.widget.RelativeLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.datastore.DataStoreManager
+import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -25,6 +29,10 @@ class ShopActivity : AppCompatActivity() {
     private lateinit var db: AppDatabase
     private var userId: Int = -1
     private var tvCoins: TextView? = null
+
+    // Animated background bits
+    private var bgBitmap: Bitmap? = null
+    private var bgDrawable: SpriteSheetDrawable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,7 +66,61 @@ class ShopActivity : AppCompatActivity() {
             }
         }
 
+        // Apply animated background
+        applyAnimatedBackground()
+
+        lifecycleScope.launch {
+            userId = DataStoreManager.getUserId(this@ShopActivity).first()
+            if (userId != -1) {
+                withContext(Dispatchers.IO) { db.userWalletDao().ensure(userId) }
+                refreshCoins()
+            }
+        }
+
         setupNavigationBar()
+    }
+
+    private fun applyAnimatedBackground() {
+        val opts = BitmapFactory.Options().apply {
+            inScaled = false                 // keep exact frame size (avoid density scaling)
+            inPreferredConfig = Bitmap.Config.RGB_565 // lighter memory; switch to ARGB_8888 if needed
+            inDither = true
+        }
+
+        bgBitmap = BitmapFactory.decodeResource(
+            resources,
+            R.drawable.bg_shop_spritesheet, // put PNG in drawable-nodpi ideally
+            opts
+        )
+
+        val drawable = SpriteSheetDrawable(
+            sheet = requireNotNull(bgBitmap) { "bg_workout_spritesheet failed to decode" },
+            rows = 1,
+            cols = 12,
+            fps  = 12,
+            loop = true,
+            scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
+        )
+
+        findViewById<RelativeLayout>(R.id.shop_layout).background = drawable
+        bgDrawable = drawable
+    }
+
+    override fun onStart() {
+        super.onStart()
+        bgDrawable?.start()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        bgDrawable?.stop()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Free the bitmap to avoid leaks when the Activity is finished
+        bgBitmap?.recycle()
+        bgBitmap = null
     }
 
     override fun onResume() {

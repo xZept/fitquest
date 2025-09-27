@@ -4,7 +4,7 @@
     android:id="@+id/shop_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_workout"
+    android:background="@drawable/bg_shop"
     tools:context=".ShopActivity">
 
     <!-- Header -->
@@ -136,9 +136,9 @@
         android:layout_below="@id/header_bar"
         android:layout_above="@id/bottom_nav"
         android:orientation="vertical"
-        android:weightSum="2">
+        android:weightSum="3">   <!-- was 2 -->
 
-        <!-- Upper half (Animation area) -->
+        <!-- Upper area: now 1/3 -->
         <FrameLayout
             android:id="@+id/upper_anim_container"
             android:layout_width="match_parent"
@@ -153,19 +153,18 @@
                 android:contentDescription="Shop Animation" />
         </FrameLayout>
 
-        <!-- Divider (the visual 'partition') -->
         <View
             android:id="@+id/mid_divider"
             android:layout_width="match_parent"
             android:layout_height="2dp"
             android:background="#1F000000" />
 
-        <!-- Lower half (Items list/grid) -->
+        <!-- Lower area: now 2/3 -->
         <FrameLayout
             android:id="@+id/lower_items_container"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
+            android:layout_weight="2">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/shop_items_recycler"
@@ -174,5 +173,6 @@
                 android:padding="12dp"/>
         </FrameLayout>
     </LinearLayout>
+
 
 </RelativeLayout>
