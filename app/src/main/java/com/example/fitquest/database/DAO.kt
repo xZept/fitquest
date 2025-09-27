@@ -128,5 +128,22 @@ interface WorkoutSetLogDao {
     suspend fun deleteForSession(sessionId: Long)
 }
 
+@Dao
+interface FoodDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertFood(food: Food): Long
+
+    @Query("SELECT foodId FROM food WHERE normalizedName = :n LIMIT 1")
+    suspend fun findIdByNormalizedName(n: String): Long?
+
+    @Transaction
+    suspend fun upsert(food: Food): Long {
+        val id = insertFood(food)
+        if (id != -1L) return id
+        return findIdByNormalizedName(food.normalizedName)
+            ?: error("Duplicate but no existing id for ${food.normalizedName}")
+    }
+}
+
 
 

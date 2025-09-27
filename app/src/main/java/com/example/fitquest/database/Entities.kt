@@ -6,7 +6,9 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
+import com.example.fitquest.models.Food
 import com.example.fitquest.models.QuestExercise
+import java.time.Instant
 
 // ----- User -----
 
@@ -114,6 +116,43 @@ data class WorkoutSetLog(
     val loggedAt: Long
 )
 
+@Entity (tableName = "food")
+data class Food (
+    @PrimaryKey(autoGenerate = true) val foodId: Long = 0L,
+    val foodName: String,
+    val normalizedName: String,
+    val category: String? = null,
+    val locale: String? = null,
+    val source: String? = null,
+    val sourceRef: String? = null,
+    val kcalPer100g: Double,
+    val carbPer100g: Double,
+    val proteinPer100g: Double,
+    val fatPer100g: Double,
+    val ediblePortionPercent: Double? = 100.0,
+    val lastUpdated: Instant = Instant.now()
+)
+
+
+
+@Entity (
+    tableName = "portion",
+    foreignKeys = [ForeignKey(
+        entity = Food::class,
+        parentColumns = ["foodId"],
+        childColumns = ["foodId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index("foodId"), Index(value=["foodId", "measurementType", "quantity"], unique = true)]
+)
+data class Portion(
+    @PrimaryKey(autoGenerate = true) val portionId: Long = 0L,
+    val foodId: Int,
+    val measurementType: Food.MeasurementType,
+    val quantity: Double,
+    val gramWeight: Double,
+    val isApproximate: Boolean = false
+)
 
 
 
