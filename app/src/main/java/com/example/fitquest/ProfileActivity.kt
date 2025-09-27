@@ -21,7 +21,6 @@ import androidx.room.Room
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.database.User
 import com.example.fitquest.database.UserProfile
-import com.example.fitquest.database.UserSettings
 import com.example.fitquest.datastore.DataStoreManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputLayout
@@ -29,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.fitquest.database.UserSettings
 
 /**
  * Merged ProfileActivity

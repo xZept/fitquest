@@ -9,12 +9,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
 import com.example.fitquest.database.AppDatabase
-import com.example.fitquest.database.WorkoutSetLogEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.fitquest.database.WorkoutSetLogEntity
 
 class SessionDetailActivity : AppCompatActivity() {
 
