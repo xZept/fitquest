@@ -27,6 +27,24 @@
             android:contentDescription="Shop" />
     </LinearLayout>
 
+    <!-- Coins badge (top-right) -->
+    <TextView
+        android:id="@+id/tv_coins_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@id/header_bar"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="12dp"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp"
+        android:text="0"
+        android:textStyle="bold"
+        android:textColor="@android:color/white"
+        android:background="@drawable/bg_coins_badge" />
+
     <!-- Fixed Bottom Navigation -->
     <LinearLayout
         android:id="@+id/bottom_nav"
@@ -44,7 +62,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_shop"
                 android:layout_width="64dp"
@@ -59,7 +76,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_macro"
                 android:layout_width="64dp"
@@ -74,7 +90,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_dashboard"
                 android:layout_width="64dp"
@@ -89,7 +104,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_workout"
                 android:layout_width="64dp"
@@ -104,7 +118,6 @@
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
-
             <ImageView
                 android:id="@+id/nav_icon_profile"
                 android:layout_width="64dp"
@@ -133,15 +146,11 @@
             android:layout_weight="1"
             android:foregroundGravity="center">
 
-            <!-- Placeholder view for your animation.
-                 Replace with your sprite view,  LottieAnimationView, or VideoView as needed. -->
             <ImageView
                 android:id="@+id/anim_placeholder"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:contentDescription="Shop Animation"
-                 />
-            <!--android:src="@drawable/your_anim_preview"-->
+                android:contentDescription="Shop Animation" />
         </FrameLayout>
 
         <!-- Divider (the visual 'partition') -->
@@ -158,14 +167,12 @@
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <!-- Swap to RecyclerView or GridView; this is a flexible placeholder -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/shop_items_recycler"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:padding="12dp"/>
-            <!--tools:listitem="@layout/item_shop_card" -->
-    </FrameLayout>
-</LinearLayout>
+        </FrameLayout>
+    </LinearLayout>
 
 </RelativeLayout>

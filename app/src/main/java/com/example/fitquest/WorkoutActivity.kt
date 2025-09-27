@@ -54,9 +54,7 @@ class WorkoutActivity : AppCompatActivity() {
         hideSystemNavigation()
         setupNavigationBar()
 
-        db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "fitquestDB")
-            .fallbackToDestructiveMigration()
-            .build()
+        db = AppDatabase.getInstance(applicationContext)
 
         // Render saved quest if one exists; otherwise show overlay
         lifecycleScope.launch { renderFromState() }
@@ -111,6 +109,7 @@ class WorkoutActivity : AppCompatActivity() {
         val splitKey = "${userSplitDays}_days"
 
         val tips: List<Tips> = TipsLoader.loadTips(this)
+
         val workoutTips = TipsHelper.getWorkoutTips(tips, userGoal, splitKey, userCondition)
         findViewById<TextView>(R.id.workoutTip).text =
             workoutTips.randomOrNull()?.tip ?: "No workout tips available for your plan yet."
@@ -160,16 +159,9 @@ class WorkoutActivity : AppCompatActivity() {
 
         btnStart.setOnClickListener {
             it.startAnimation(pressAnim)
-            // Launch the workout process. For now we open ExerciseActivity with today's plan.
-            val intent = Intent(this, ExerciseActivity::class.java).apply {
-                putStringArrayListExtra(
-                    "EXERCISES",
-                    ArrayList(items.sortedBy { q -> q.order }.map { q -> q.name })
-                )
-                putExtra("DAY_NAME", dayTitle ?: "Your Quest")
-                // You can add flags like "SESSION_MODE" later if needed.
-            }
-            startActivity(intent)
+            // >>> START SESSION HERE <<<
+            startActivity(Intent(this, WorkoutSessionActivity::class.java))
+            // If you ever want to pass extras (e.g., resume flags), add putExtra here.
         }
     }
 
@@ -258,6 +250,7 @@ class WorkoutActivity : AppCompatActivity() {
         }
 
         card.setOnClickListener {
+            // (Optional) tap card to inspect the list in ExerciseActivity
             val intent = Intent(this, ExerciseActivity::class.java).apply {
                 putStringArrayListExtra("EXERCISES", ArrayList(items.map { it.name }))
                 putExtra("DAY_NAME", dayName)

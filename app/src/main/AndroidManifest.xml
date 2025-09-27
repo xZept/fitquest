@@ -37,13 +37,11 @@
         <activity android:name=".MacroActivity" />
         <activity android:name=".ProfileActivity" />
         <activity android:name=".ShopActivity" />
-        <activity
-            android:name=".QuestGeneratorActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".QuestPreviewActivity"
-            android:exported="false" />
+        <activity android:name=".QuestGeneratorActivity" />
+        <activity android:name=".QuestPreviewActivity" />
+        <activity android:name=".WorkoutSessionActivity" />
+        <activity android:name=".DiaryActivity" />
+        <activity android:name=".SessionDetailActivity" />
 
 
     </application>

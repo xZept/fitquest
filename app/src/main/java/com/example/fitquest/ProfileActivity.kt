@@ -75,14 +75,7 @@ class ProfileActivity : AppCompatActivity() {
 
         pressAnim = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.press)
 
-        db = Room.databaseBuilder(
-            applicationContext,
-            AppDatabase::class.java,
-            "fitquestDB"
-        )
-            // dev-safe while schemas are moving fast
-            .fallbackToDestructiveMigration()
-            .build()
+        db = AppDatabase.getInstance(applicationContext)
 
         spriteView = findViewById(R.id.iv_profile_photo)
         tvName = findViewById(R.id.tv_name)
@@ -93,6 +86,13 @@ class ProfileActivity : AppCompatActivity() {
         etHeight = findViewById(R.id.et_height)
         etWeight = findViewById(R.id.et_weight)
         btnSave = findViewById(R.id.btn_save_profile)
+
+        // NEW: open diary from Profile
+        findViewById<Button>(R.id.btn_diary)?.setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, DiaryActivity::class.java))
+            overridePendingTransition(0, 0)
+        }
 
         findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
             it.startAnimation(pressAnim)

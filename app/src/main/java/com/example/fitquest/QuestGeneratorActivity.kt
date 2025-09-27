@@ -92,9 +92,7 @@ class QuestGeneratorActivity : AppCompatActivity() {
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
         hideSystemBars()
 
-        db = Room.databaseBuilder(applicationContext, AppDatabase::class.java, "fitquestDB")
-            .fallbackToDestructiveMigration()
-            .build()
+        db = AppDatabase.getInstance(applicationContext)
 
         spSplit = findViewById(R.id.sp_split)
         spFocus = findViewById(R.id.sp_focus)
