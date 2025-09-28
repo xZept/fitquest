@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Locale
 import kotlin.math.roundToInt
 
 class WorkoutSessionActivity : AppCompatActivity() {
@@ -40,6 +41,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     // Session state
     private var questTitle: String = "Your Quest"
+    private lateinit var activeQuest: ActiveQuest
     private var items: List<QuestExercise> = emptyList()
     private var exerciseIndex = 0
     private var setIndex = 0
@@ -88,11 +90,12 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@WorkoutSessionActivity).first()
-            val active = withContext(Dispatchers.IO) { db.activeQuestDao().getActiveForUser(userId) }
-            if (active == null) {
+            val loaded = withContext(Dispatchers.IO) { db.activeQuestDao().getActiveForUser(userId) }
+            if (loaded == null) {
                 Toast.makeText(this@WorkoutSessionActivity, "No active quest.", Toast.LENGTH_SHORT).show()
                 finish(); return@launch
             }
+            activeQuest = loaded
 
             // ensure wallet row exists
             withContext(Dispatchers.IO) { db.userWalletDao().ensure(userId) }
@@ -102,8 +105,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 db.userSettingsDao().getByUserId(userId)?.restTimerSec ?: 180
             }
 
-            questTitle = listOfNotNull(active.split, active.modifier).joinToString(" • ").ifBlank { "Your Quest" }
-            items = active.exercises.sortedBy { it.order }
+            questTitle = listOfNotNull(activeQuest.split, activeQuest.modifier).joinToString(" • ").ifBlank { "Your Quest" }
+            items = activeQuest.exercises.sortedBy { it.order }
 
             totalSets = items.sumOf { it.sets }.coerceAtLeast(1)
             setsDone = 0
@@ -153,6 +156,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private fun wireButtons() {
         btnComplete.setOnClickListener {
             btnComplete.isEnabled = false
+            // Play attack, THEN open log dialog (cleanest UX)
             playAttackThen {
                 promptLogThenCompleteSet()
             }
@@ -363,18 +367,28 @@ class WorkoutSessionActivity : AppCompatActivity() {
             val ended = System.currentTimeMillis()
             val coins = if (success) coinsEarned else 0
 
-            db.workoutSessionDao().finishSession(
-                sessionId = sessionRowId,
-                endedAt = ended,
-                completedSets = setsDone,
-                coinsEarned = coins
-            )
-
-            // credit wallet if success
-            if (success && userId != -1) {
-                db.userWalletDao().ensure(userId)
-                db.userWalletDao().add(userId, coins)
+            if (success) {
+                // update + award coins
+                db.workoutSessionDao().finishSession(
+                    sessionId = sessionRowId,
+                    endedAt = ended,
+                    completedSets = setsDone,
+                    coinsEarned = coins
+                )
+                if (userId != -1) {
+                    db.userWalletDao().ensure(userId)
+                    db.userWalletDao().add(userId, coins)
+                }
+                // remember quest variant
+                recordQuestToHistory(activeQuest)
+            } else {
+                // ABANDON: purge logs + remove the session row entirely
+                db.workoutSetLogDao().deleteForSession(sessionRowId)
+                db.workoutSessionDao().deleteById(sessionRowId)
             }
+
+            // Clear active quest no matter what
+            db.activeQuestDao().clearForUser(userId)
 
             withContext(Dispatchers.Main) {
                 if (success) {
@@ -392,6 +406,36 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+
+    /* -------- Quest History helpers -------- */
+
+    private fun questKeyOf(q: ActiveQuest): String {
+        // Stable key: split|modifier|hash(exercise list)
+        val json = q.exercises.joinToString("|") {
+            // Include name + sets + reps + order so equivalent quests dedupe
+            "${it.name}:${it.sets}:${it.repsMin}-${it.repsMax}:${it.order}"
+        }
+        val hash = json.hashCode()
+        return "${q.split}|${q.modifier}|$hash"
+    }
+
+    private suspend fun recordQuestToHistory(q: ActiveQuest) {
+        val key = questKeyOf(q)
+        val title = listOfNotNull(q.split, q.modifier).joinToString(" • ").ifBlank { "Your Quest" }
+        val row = QuestHistory(
+            userId = q.userId,
+            key = key,
+            title = title,
+            split = q.split,
+            modifier = q.modifier,
+            exercises = q.exercises
+        )
+        val dao = db.questHistoryDao()
+        val inserted = dao.insertIgnore(row)
+        if (inserted == -1L) dao.touch(q.userId, key) // present → bump lastUsedAt
+        dao.pruneUnpinned(q.userId)
     }
 
     /* -------- HP animation -------- */
@@ -426,7 +470,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private fun showIdle() { /* TODO: idle sprite */ }
 
     private fun playAttackThen(onDone: () -> Unit) {
-        // TODO: attack sprite
+        // TODO: attack sprite (play animation clip here)
         ivAvatar.postDelayed({
             onDone()
             showIdle()
@@ -495,7 +539,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private fun format(sec: Int): String {
         val m = sec / 60
         val s = sec % 60
-        return String.format("%d:%02d", m, s)
+        return String.format(Locale.getDefault(), "%d:%02d", m, s)
     }
 
     private fun hideSystemBars() {

@@ -79,7 +79,7 @@ class QuestGeneratorActivity : AppCompatActivity() {
                 ActiveQuest(
                     userId = uid,
                     split = split,
-                    modifier = focus, // DB field name is 'modifier'
+                    modifier = focus,
                     exercises = finalList,
                     startedAt = null
                 )

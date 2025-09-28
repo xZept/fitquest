@@ -78,6 +78,25 @@ data class ActiveQuest(
     val startedAt: Long? = null
 )
 
+// ----- Quest History -----
+@Entity(
+    tableName = "questHistory",
+    indices = [Index(value = ["userId", "key"], unique = true)]
+)
+@TypeConverters(Converters::class) // you already use this for List<QuestExercise>
+data class QuestHistory(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val userId: Int,
+    val key: String,                  // split|modifier|hash(exercises)
+    val title: String,                // e.g., "Push • Strength"
+    val split: String,
+    val modifier: String,
+    val exercises: List<QuestExercise>,
+    val pinned: Boolean = false,
+    val createdAt: Long = System.currentTimeMillis(),
+    val lastUsedAt: Long = System.currentTimeMillis()
+)
+
 // ----- Workout Session -----
 @Entity(tableName = "workoutSession")
 data class WorkoutSession(
@@ -116,6 +135,7 @@ data class WorkoutSetLog(
     val loggedAt: Long
 )
 
+// ----- Food -----
 @Entity (tableName = "food")
 data class Food (
     @PrimaryKey(autoGenerate = true) val foodId: Long = 0L,
@@ -134,7 +154,7 @@ data class Food (
 )
 
 
-
+// ----- Portion -----
 @Entity (
     tableName = "portion",
     foreignKeys = [ForeignKey(
@@ -153,6 +173,8 @@ data class Portion(
     val gramWeight: Double,
     val isApproximate: Boolean = false
 )
+
+
 
 
 

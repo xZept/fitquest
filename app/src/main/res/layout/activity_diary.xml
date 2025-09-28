@@ -7,18 +7,22 @@
     android:layout_height="match_parent">
 
     <TextView
-        android:text="Workout Diary"
+        android:text="Diary"
         android:textSize="20sp"
         android:textStyle="bold"
         android:textColor="@android:color/white"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
-    <ListView
-        android:id="@+id/lv_sessions"
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"/>
+
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/pager"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:divider="@android:color/transparent"
-        android:dividerHeight="8dp"
         android:layout_weight="1"/>
 </LinearLayout>

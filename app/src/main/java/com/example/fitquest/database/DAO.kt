@@ -76,6 +76,43 @@ interface ActiveQuestDao {
     suspend fun clearForUser(uid: Int)
 }
 
+// ----- Quest History -----
+@Dao
+interface QuestHistoryDao {
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIgnore(row: QuestHistory): Long
+
+    @Query("UPDATE questHistory SET lastUsedAt = :ts WHERE userId = :userId AND 'key' = :questKey")
+    suspend fun touch(userId: Int, questKey: String, ts: Long = System.currentTimeMillis())
+
+    @Query("UPDATE questHistory SET pinned = :pinned WHERE id = :id")
+    suspend fun setPinned(id: Long, pinned: Boolean)
+
+    @Query("""
+        SELECT * FROM questHistory
+        WHERE userId = :userId
+        ORDER BY pinned DESC, lastUsedAt DESC
+    """)
+    suspend fun getAllOrdered(userId: Int): List<QuestHistory>
+
+    @Query("""
+        DELETE FROM questHistory
+        WHERE userId = :userId AND pinned = 0
+        AND id NOT IN (
+            SELECT id FROM questHistory
+            WHERE userId = :userId AND pinned = 0
+            ORDER BY lastUsedAt DESC
+            LIMIT 10
+        )
+    """)
+    suspend fun pruneUnpinned(userId: Int)
+
+    @Query("SELECT * FROM questHistory WHERE id = :id AND userId = :userId LIMIT 1")
+    suspend fun getById(userId: Int, id: Long): QuestHistory?
+}
+
+
 // ----- Workout Session -----
 @Dao
 interface WorkoutSessionDao {
@@ -110,6 +147,9 @@ interface WorkoutSessionDao {
 
     @Query("DELETE FROM workoutSession WHERE id = :sessionId")
     suspend fun deleteById(sessionId: Long)
+
+    @Query("SELECT * FROM workoutSession WHERE userId = :userId AND coinsEarned > 0 ORDER BY startedAt DESC")
+    suspend fun getCompletedByUser(userId: Int): List<WorkoutSession>
 }
 
 // ----- Workout Set Log -----
@@ -121,13 +161,18 @@ interface WorkoutSetLogDao {
     @Insert
     suspend fun insertAll(logs: List<WorkoutSetLog>): List<Long>
 
-    @Query("SELECT * FROM workoutSetLog WHERE sessionId = :sessionId ORDER BY setNumber ASC, id ASC")
+    @Query("""
+    SELECT * FROM workoutSetLog
+    WHERE sessionId = :sessionId
+    ORDER BY exerciseName COLLATE NOCASE ASC, setNumber ASC, id ASC
+""")
     suspend fun getForSession(sessionId: Long): List<WorkoutSetLog>
 
     @Query("DELETE FROM workoutSetLog WHERE sessionId = :sessionId")
     suspend fun deleteForSession(sessionId: Long)
 }
 
+// ----- Food -----
 @Dao
 interface FoodDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -144,6 +189,7 @@ interface FoodDao {
             ?: error("Duplicate but no existing id for ${food.normalizedName}")
     }
 }
+
 
 
 

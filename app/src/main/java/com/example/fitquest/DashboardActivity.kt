@@ -1,3 +1,4 @@
+// app/src/main/java/com/example/fitquest/DashboardActivity.kt
 package com.example.fitquest
 
 import android.content.Intent
@@ -13,11 +14,17 @@ import android.view.animation.AnimationUtils
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat.Type
+import androidx.lifecycle.lifecycleScope
+import com.example.fitquest.database.AppDatabase
+import com.example.fitquest.datastore.DataStoreManager
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import com.example.fitquest.utils.TipsLoader
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class DashboardActivity : AppCompatActivity() {
 
@@ -25,9 +32,15 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var pressAnim: android.view.animation.Animation
     private var bgAnim: SpriteSheetDrawable? = null
 
+    private lateinit var db: AppDatabase
+    private lateinit var quickAction: ImageButton
+    private var hasActiveQuest: Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dashboard)
+
+        db = AppDatabase.getInstance(applicationContext)
 
         // Animated spritesheet background (repo)
         val bgView = findViewById<ImageView>(R.id.dashboard_bg)
@@ -71,8 +84,6 @@ class DashboardActivity : AppCompatActivity() {
         }
 
         dashboardTip = findViewById(R.id.dashboardTip)
-
-        // Tip of the day (repo)
         val tips = TipsLoader.loadTips(this)
         val general = tips.filter { it.category == "general" }
         dashboardTip.text =
@@ -83,11 +94,23 @@ class DashboardActivity : AppCompatActivity() {
                 "Stay strong and keep going!"
             }
 
-        // >>> Wire the existing repo button to your local generator flow
-        findViewById<ImageButton>(R.id.btn_quick_action).setOnClickListener {
+        quickAction = findViewById(R.id.btn_quick_action)
+        quickAction.setOnClickListener {
             it.startAnimation(pressAnim)
-            startActivity(Intent(this, QuestGeneratorActivity::class.java))
-            overridePendingTransition(0, 0)
+            lifecycleScope.launch {
+                val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
+                val active = db.activeQuestDao().getActiveForUser(uid)
+                if (active != null) {
+                    Toast.makeText(
+                        this@DashboardActivity,
+                        "You already have an active quest. Finish or abandon it first.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@launch
+                }
+                startActivity(Intent(this@DashboardActivity, QuestGeneratorActivity::class.java))
+                overridePendingTransition(0, 0)
+            }
         }
 
         setupNavigationBar()
@@ -96,6 +119,16 @@ class DashboardActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         bgAnim?.start()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch {
+            val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
+            hasActiveQuest = db.activeQuestDao().getActiveForUser(uid) != null
+            quickAction.isEnabled = !hasActiveQuest
+            quickAction.alpha = if (hasActiveQuest) 0.5f else 1f
+        }
     }
 
     override fun onStop() {
