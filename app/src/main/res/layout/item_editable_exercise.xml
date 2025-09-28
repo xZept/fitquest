@@ -13,8 +13,7 @@
         android:layout_width="36dp"
         android:layout_height="36dp"
         android:padding="6dp"
-        android:src="@android:drawable/ic_menu_sort_by_size"
-        android:background="@android:color/transparent"
+        android:background="@drawable/icon_sort"
         android:contentDescription="Reorder" />
 
     <LinearLayout
@@ -42,7 +41,7 @@
         android:id="@+id/btn_delete"
         android:layout_width="36dp"
         android:layout_height="36dp"
-        android:src="@android:drawable/ic_delete"
-        android:background="@android:color/transparent"
+        android:layout_marginRight="5dp"
+        android:background="@drawable/icon_delete"
         android:contentDescription="Delete" />
 </LinearLayout>
