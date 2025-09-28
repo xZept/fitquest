@@ -13,11 +13,17 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import android.graphics.BitmapFactory
+import android.view.animation.AnimationUtils
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.RecyclerView
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
+import java.util.Collections
+import androidx.recyclerview.widget.LinearLayoutManager
 
-class QuestPreviewActivity : AppCompatActivity() {
 
-    private lateinit var listView: ListView
+class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
+
+    private lateinit var rv: RecyclerView
     private lateinit var btnAdd: ImageButton
     private lateinit var btnBack: ImageButton    // uses R.id.btn_cancel in the XML
     private lateinit var btnSave: ImageButton
@@ -34,6 +40,8 @@ class QuestPreviewActivity : AppCompatActivity() {
     private val addable = mutableListOf<String>()
 
     private var bgDrawable: SpriteSheetDrawable? = null
+    private lateinit var itemTouchHelper: ItemTouchHelper
+    private lateinit var pressAnim: android.view.animation.Animation
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,10 +55,12 @@ class QuestPreviewActivity : AppCompatActivity() {
         )
 
 
-        listView = findViewById(R.id.lv_exercises)
+        rv = findViewById(R.id.rv_exercises)
         btnAdd   = findViewById(R.id.btn_add)
         btnBack  = findViewById(R.id.btn_cancel) // treat as Back
         btnSave  = findViewById(R.id.btn_save)
+
+        rv.layoutManager = LinearLayoutManager(this)
 
         mode  = intent.getStringExtra("MODE") ?: "basic"
         split = intent.getStringExtra("SPLIT") ?: "Push"
@@ -66,18 +76,29 @@ class QuestPreviewActivity : AppCompatActivity() {
         addable.clear()
         addable.addAll(intent.getStringArrayListExtra("ADDABLE_NAMES")?.toList() ?: emptyList())
 
-        val adapter = EditAdapter(
+        val adapter = ExerciseAdapter(
             allowDelete = (mode == "advanced"),
-            data = items
-        )
-        listView.adapter = adapter
+            data = items,
+            dragStarter = this,
+            sets = schemeSets,
+            minReps = schemeMin,
+            maxReps = schemeMax
+        ) {
+            // onDataChanged: optional place to persist temp order
+        }
+        rv.adapter = adapter
 
+        val callback = SimpleItemTouchHelperCallback(adapter)
+        itemTouchHelper = ItemTouchHelper(callback)
+        itemTouchHelper.attachToRecyclerView(rv)
 
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         // Add button only for advanced
         if (mode == "advanced") {
             btnAdd.visibility = View.VISIBLE
             btnAdd.setOnClickListener {
+                it.startAnimation(pressAnim)
                 val choices = addable
                     .filter { candidate -> items.none { it.equals(candidate, ignoreCase = true) } }
                     .sorted()
@@ -103,13 +124,15 @@ class QuestPreviewActivity : AppCompatActivity() {
 
         // Back → tell generator to reopen the chooser
         btnBack.setOnClickListener {
+            it.startAnimation(pressAnim)
             setResult(RESULT_CANCELED, Intent().putExtra("BACK_TO_CHOICE", true))
             finish()
         }
 
         // Save → return final ordered names
         btnSave.setOnClickListener {
-            val out = items.distinctBy { it.trim().lowercase() }
+            it.startAnimation(pressAnim)
+            val out = adapter.currentItems().distinctBy { it.trim().lowercase() }
             val data = Intent().apply {
                 putStringArrayListExtra("RESULT_NAMES", ArrayList(out))
                 putExtra("SPLIT", split)
@@ -119,6 +142,7 @@ class QuestPreviewActivity : AppCompatActivity() {
             finish()
         }
     }
+
     override fun onResume() {
         super.onResume()
         bgDrawable?.start()
@@ -169,54 +193,115 @@ class QuestPreviewActivity : AppCompatActivity() {
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
 
+    override fun onStartDrag(viewHolder: RecyclerView.ViewHolder) {
+        itemTouchHelper.startDrag(viewHolder)
+        viewHolder.itemView.performHapticFeedback(android.view.HapticFeedbackConstants.DRAG_START)
+    }
 
-    private inner class EditAdapter(
+    private inner class ExerciseAdapter(
         private val allowDelete: Boolean,
-        private val data: MutableList<String>
-    ) : BaseAdapter() {
+        private val data: MutableList<String>,
+        private val dragStarter: StartDragListener,
+        private val sets: Int,
+        private val minReps: Int,
+        private val maxReps: Int,
+        private val onDataChanged: () -> Unit
+    ) : RecyclerView.Adapter<ExerciseAdapter.VH>(), ItemTouchHelperAdapter {
 
-        override fun getCount(): Int = data.size
-        override fun getItem(position: Int): String = data[position]
-        override fun getItemId(position: Int): Long = position.toLong()
+        inner class VH(v: View) : RecyclerView.ViewHolder(v) {
+            val tvName: TextView = v.findViewById(R.id.tv_name)
+            val tvDetail: TextView = v.findViewById(R.id.tv_detail)
+            val btnDel: ImageButton = v.findViewById(R.id.btn_delete)
+            val dragHandle: ImageView = v.findViewById(R.id.drag_handle)
+        }
 
-        override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-            val v = convertView ?: LayoutInflater.from(this@QuestPreviewActivity)
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+            val v = LayoutInflater.from(parent.context)
                 .inflate(R.layout.item_editable_exercise, parent, false)
+            return VH(v)
+        }
 
-            val tvName   = v.findViewById<TextView>(R.id.tv_name)
-            val tvDetail = v.findViewById<TextView>(R.id.tv_detail)
-            val btnUp    = v.findViewById<ImageButton>(R.id.btn_up)
-            val btnDown  = v.findViewById<ImageButton>(R.id.btn_down)
-            val btnDel   = v.findViewById<ImageButton>(R.id.btn_delete)
+        override fun onBindViewHolder(holder: VH, position: Int) {
+            holder.tvName.text = data[position]
+            holder.tvDetail.text = "$sets sets • $minReps–$maxReps reps"
 
-            tvName.text = data[position]
-            tvDetail.text = "$schemeSets sets • $schemeMin–$schemeMax reps"
-
-            btnUp.setOnClickListener {
-                if (position > 0) {
-                    data.add(position - 1, data.removeAt(position))
-                    notifyDataSetChanged()
-                }
-            }
-            btnDown.setOnClickListener {
-                if (position < data.lastIndex) {
-                    data.add(position + 1, data.removeAt(position))
-                    notifyDataSetChanged()
-                }
-            }
 
             if (allowDelete) {
-                btnDel.visibility = View.VISIBLE
-                btnDel.setOnClickListener {
-                    data.removeAt(position)
-                    notifyDataSetChanged()
+                holder.btnDel.visibility = View.VISIBLE
+                holder.btnDel.setOnClickListener {
+                    val pos = holder.bindingAdapterPosition
+                    data.removeAt(pos)
+                    notifyItemRemoved(pos)
+                    onDataChanged()
                 }
             } else {
-                btnDel.visibility = View.GONE
-                btnDel.setOnClickListener(null)
+                holder.btnDel.visibility = View.GONE
+                holder.btnDel.setOnClickListener(null)
             }
 
-            return v
+            holder.dragHandle.setOnTouchListener { _, event ->
+                if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+                    dragStarter.onStartDrag(holder)
+                }
+                false
+            }
         }
+
+        override fun getItemCount(): Int = data.size
+
+        override fun onItemMove(fromPosition: Int, toPosition: Int): Boolean {
+            if (fromPosition == toPosition) return false
+            Collections.swap(data, fromPosition, toPosition)
+            notifyItemMoved(fromPosition, toPosition)
+            onDataChanged()
+            return true
+        }
+
+        fun currentItems(): List<String> = data
     }
 }
+
+// ItemTouchHelper glue
+interface ItemTouchHelperAdapter {
+    fun onItemMove(fromPosition: Int, toPosition: Int): Boolean
+    fun onItemDismiss(position: Int) {} // not used, but handy if you add swipe later
+}
+
+class SimpleItemTouchHelperCallback(
+    private val adapter: ItemTouchHelperAdapter
+) : androidx.recyclerview.widget.ItemTouchHelper.Callback() {
+
+    override fun getMovementFlags(
+        recyclerView: androidx.recyclerview.widget.RecyclerView,
+        viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder
+    ): Int {
+        val dragFlags = androidx.recyclerview.widget.ItemTouchHelper.UP or androidx.recyclerview.widget.ItemTouchHelper.DOWN
+        val swipeFlags = 0 // disable swipe
+        return makeMovementFlags(dragFlags, swipeFlags)
+    }
+
+    override fun onMove(
+        recyclerView: androidx.recyclerview.widget.RecyclerView,
+        viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder,
+        target: androidx.recyclerview.widget.RecyclerView.ViewHolder
+    ): Boolean = adapter.onItemMove(viewHolder.bindingAdapterPosition, target.bindingAdapterPosition)
+
+    override fun onSwiped(viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder, direction: Int) { /* no-op */ }
+
+    override fun isLongPressDragEnabled(): Boolean = false // we'll start drag via handle
+    override fun isItemViewSwipeEnabled(): Boolean = false
+
+    // Optional: little visual feedback while dragging
+    override fun onSelectedChanged(viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder?, actionState: Int) {
+        super.onSelectedChanged(viewHolder, actionState)
+        if (actionState == androidx.recyclerview.widget.ItemTouchHelper.ACTION_STATE_DRAG) {
+            viewHolder?.itemView?.alpha = 0.85f
+        }
+    }
+    override fun clearView(recyclerView: androidx.recyclerview.widget.RecyclerView, viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder) {
+        super.clearView(recyclerView, viewHolder)
+        viewHolder.itemView.alpha = 1f
+    }
+}
+
+interface StartDragListener { fun onStartDrag(viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder) }
