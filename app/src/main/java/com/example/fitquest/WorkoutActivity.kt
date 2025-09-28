@@ -139,8 +139,8 @@ class WorkoutActivity : AppCompatActivity() {
         items: List<QuestExercise>
     ) {
         val bar = findViewById<LinearLayout>(R.id.quest_actions)
-        val btnCancel = findViewById<Button>(R.id.btn_cancel_quest)
-        val btnStart = findViewById<Button>(R.id.btn_start_quest)
+        val btnCancel = findViewById<ImageButton>(R.id.btn_cancel_quest)
+        val btnStart = findViewById<ImageButton>(R.id.btn_start_quest)
 
         bar.visibility = if (visible) View.VISIBLE else View.GONE
         if (!visible) return
@@ -188,45 +188,132 @@ class WorkoutActivity : AppCompatActivity() {
 
     /** Repo-styled card for *saved* quests using your QuestExercise model (no poster bg). */
     private fun buildDayCardFromQuest(dayName: String, items: List<QuestExercise>): View {
-        val card = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            val p = dp(8)
-            setPadding(p, p, p, p)
-            layoutParams = LinearLayout.LayoutParams(dp(340), ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                setMargins(dp(4), dp(8), dp(4), dp(8))
-            }
+        // Outer shell sizes itself to the PNG’s intrinsic size
+        val shell = FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { setMargins(dp(4), dp(8), dp(4), dp(8)) }
+            clipToPadding = false
+            clipChildren = false
         }
 
+        // Background image at ORIGINAL size (no stretch)
+        val bg = ImageView(this).apply {
+            setImageResource(R.drawable.container_split_plan)
+            adjustViewBounds = true
+            scaleType = ImageView.ScaleType.CENTER
+            imageTintList = null
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            )
+        }
+        shell.addView(bg)
+
+        // Content layer overlays the image and matches its measured size
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setPadding(dp(16), dp(12), dp(16), dp(12)) // keep text off the art edges
+        }
+
+        // Title (tap to open ExerciseActivity, not the whole card—so ScrollView keeps touch)
         val title = TextView(this).apply {
             text = dayName
             setTextColor(ContextCompat.getColor(this@WorkoutActivity, android.R.color.white))
-            textSize = 18f
-        }
-        card.addView(title)
+            textSize = 35f
 
+            // make it span the row so it can be centered
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, 25, 0, dp(0)) // optional spacing below title
+                gravity = Gravity.CENTER_HORIZONTAL // child alignment in LinearLayout (optional)
+            }
+
+            // center the text inside the TextView
+            gravity = Gravity.CENTER
+            textAlignment = View.TEXT_ALIGNMENT_CENTER
+        }
+
+        title.setOnClickListener {
+            val intent = Intent(this, ExerciseActivity::class.java).apply {
+                putStringArrayListExtra("EXERCISES", ArrayList(items.map { it.name }))
+                putExtra("DAY_NAME", dayName)
+            }
+            startActivity(intent)
+        }
+        content.addView(title)
+
+        // Vertical scroll area (fills remaining height under the title)
         val scrollArea = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(220)
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
             )
+            isFillViewport = true
+            isVerticalScrollBarEnabled = true
+            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
         }
-        val inner = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        // Ensure parent doesn’t intercept (restores scrolling)
+        scrollArea.setOnTouchListener { v, _ ->
+            v.parent?.requestDisallowInterceptTouchEvent(true)
+            false
+        }
+
+        val inner = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+        }
+
+        // Row background: use container_exercsise.png at ORIGINAL size
+        val rowBgDrawable = ContextCompat.getDrawable(this, R.drawable.container_exercise)!!
+        val rowW = rowBgDrawable.intrinsicWidth
+        val rowH = rowBgDrawable.intrinsicHeight
 
         items.sortedBy { it.order }.forEach { ex ->
+            // A row shell exactly the size of the PNG
+            val rowShell = FrameLayout(this).apply {
+                layoutParams = LinearLayout.LayoutParams(rowW, rowH).apply {
+                    setMargins(dp(8), dp(6), dp(8), dp(6))
+                    gravity = Gravity.CENTER_HORIZONTAL
+                }
+            }
+
+            // The PNG itself (fills the shell, but shell == intrinsic size ⇒ no stretch)
+            val rowBg = ImageView(this).apply {
+                setImageDrawable(rowBgDrawable)
+                adjustViewBounds = true
+                scaleType = ImageView.ScaleType.FIT_XY
+                layoutParams = FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+            rowShell.addView(rowBg)
+
+            // Foreground row content constrained to the PNG bounds
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
-                setBackgroundResource(R.drawable.item_container)
-                val p = dp(8)
-                setPadding(p, p, p, p)
-                layoutParams = LinearLayout.LayoutParams(
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply { setMargins(dp(8), dp(6), dp(8), dp(6)) }
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+                setPadding(dp(12), dp(8), dp(12), dp(8)) // adjust to your art’s safe area
             }
 
             val name = TextView(this).apply {
                 text = ex.name
                 setTextColor(ContextCompat.getColor(this@WorkoutActivity, android.R.color.white))
                 textSize = 16f
+                isSingleLine = true
+                ellipsize = android.text.TextUtils.TruncateAt.END
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             }
 
@@ -242,26 +329,22 @@ class WorkoutActivity : AppCompatActivity() {
                 text = detailText
                 setTextColor(ContextCompat.getColor(this@WorkoutActivity, android.R.color.darker_gray))
                 textSize = 14f
+                isSingleLine = true
+                ellipsize = android.text.TextUtils.TruncateAt.END
             }
 
             row.addView(name)
             row.addView(detail)
-            inner.addView(row)
-        }
-
-        card.setOnClickListener {
-            // (Optional) tap card to inspect the list in ExerciseActivity
-            val intent = Intent(this, ExerciseActivity::class.java).apply {
-                putStringArrayListExtra("EXERCISES", ArrayList(items.map { it.name }))
-                putExtra("DAY_NAME", dayName)
-            }
-            startActivity(intent)
+            rowShell.addView(row)
+            inner.addView(rowShell)
         }
 
         scrollArea.addView(inner)
-        card.addView(scrollArea)
-        return card
+        content.addView(scrollArea)
+        shell.addView(content)
+        return shell
     }
+
 
     /** Repo’s original card for intent-generated preview (kept; no poster bg). */
     private fun buildDayCard(dayName: String, exercises: List<Exercise>): View {

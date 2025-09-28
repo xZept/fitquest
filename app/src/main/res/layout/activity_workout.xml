@@ -71,28 +71,26 @@
         </LinearLayout>
     </HorizontalScrollView>
 
-    <!-- Workout cards lowered into the brick zone -->
-    <HorizontalScrollView
-        android:id="@+id/scroll_workouts"
+    <!-- Middle area between Tips and action bar, no special background here -->
+    <RelativeLayout
+        android:id="@+id/middle_area"
         android:layout_width="match_parent"
-        android:layout_height="260dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="2dp"
-        android:paddingLeft="28dp"
-        android:paddingRight="28dp"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/tipsScroll"
         android:layout_above="@id/quest_actions"
-        android:layout_marginTop="0dp"
-        android:layout_marginBottom="1dp"
-        android:fillViewport="true"
-        android:scrollbars="none">
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="8dp">
 
         <LinearLayout
             android:id="@+id/workout_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:layout_centerInParent="true"
+            android:layout_marginBottom="68dp"
             android:orientation="horizontal"
-            android:gravity="center" />
-    </HorizontalScrollView>
+            android:gravity="center"/>
+    </RelativeLayout>
 
     <!-- NEW: Action bar with Cancel / Start -->
     <LinearLayout
@@ -107,34 +105,29 @@
         android:orientation="horizontal"
         android:visibility="gone">
 
-        <Button
+        <ImageButton
             android:id="@+id/btn_cancel_quest"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Cancel Quest"
-            android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp"
-            android:background="@drawable/button_take_quest" />
+            android:background="@drawable/button_cancel_quest"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true" />
 
         <Space
             android:layout_width="12dp"
             android:layout_height="1dp" />
 
-        <Button
+        <ImageButton
             android:id="@+id/btn_start_quest"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Start Quest"
-            android:textAllCaps="false"
-            android:textColor="@android:color/white"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp"
-            android:background="@drawable/button_take_quest" />
+            android:background="@drawable/button_start_quest"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true" />
     </LinearLayout>
+
 
     <!-- Navigation -->
     <LinearLayout
