@@ -28,6 +28,17 @@
     </LinearLayout>
 
     <!-- Coins badge (top-right) -->
+    <ImageView
+        android:id="@+id/iv_coin_anim"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_alignTop="@id/tv_coins_badge"
+        android:layout_alignBottom="@id/tv_coins_badge"
+        android:layout_toStartOf="@id/tv_coins_badge"
+        android:layout_toLeftOf="@id/tv_coins_badge"
+        android:contentDescription="Coins" />
+
+
     <TextView
         android:id="@+id/tv_coins_badge"
         android:layout_width="wrap_content"
@@ -41,9 +52,9 @@
         android:paddingTop="6dp"
         android:paddingBottom="6dp"
         android:text="0"
+        android:textSize="20dp"
         android:textStyle="bold"
-        android:textColor="@android:color/white"
-        android:background="@drawable/bg_coins_badge" />
+        android:textColor="#ab8105"/>
 
     <!-- Fixed Bottom Navigation -->
     <LinearLayout

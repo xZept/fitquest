@@ -46,6 +46,11 @@ class ShopActivity : AppCompatActivity() {
     private var bgBitmap: Bitmap? = null
     private var bgDrawable: SpriteSheetDrawable? = null
 
+    // Coin sprite bits
+    private var coinBitmap: Bitmap? = null
+    private var coinDrawable: SpriteSheetDrawable? = null
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shop)
@@ -88,25 +93,33 @@ class ShopActivity : AppCompatActivity() {
 
         // Apply animated background
         applyAnimatedBackground()
+        applyCoinBadgeAnimation()
         setupNavigationBar()
     }
+
+
+
 
     override fun onStart() {
         super.onStart()
         bgDrawable?.start()
+        coinDrawable?.start()
     }
 
     override fun onStop() {
         super.onStop()
         bgDrawable?.stop()
+        coinDrawable?.stop()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Free the bitmap to avoid leaks when the Activity is finished
         bgBitmap?.recycle()
         bgBitmap = null
+        coinBitmap?.recycle()
+        coinBitmap = null
     }
+
 
     override fun onResume() {
         super.onResume()
@@ -170,6 +183,32 @@ class ShopActivity : AppCompatActivity() {
 
     /* ---------------- Background ---------------- */
 
+
+    private fun applyCoinBadgeAnimation() {
+        val opts = BitmapFactory.Options().apply {
+            inScaled = false                // exact frame math
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+            inDither = true
+        }
+
+        coinBitmap = BitmapFactory.decodeResource(
+            resources,
+            R.drawable.coin_spritesheet,
+            opts
+        )
+
+        val coin = SpriteSheetDrawable(
+            sheet = requireNotNull(coinBitmap) { "coin_spritesheet failed to decode" },
+            rows = 1,          // <-- adjust if your sheet has multiple rows
+            cols = 6,         // <-- set to your actual frame count
+            fps  = 12,         // <-- tweak for desired speed
+            loop = true,
+            scaleMode = SpriteSheetDrawable.ScaleMode.FIT_CENTER
+        )
+
+        findViewById<ImageView>(R.id.iv_coin_anim).setImageDrawable(coin)
+        coinDrawable = coin
+    }
     private fun applyAnimatedBackground() {
         val opts = BitmapFactory.Options().apply {
             inScaled = false
