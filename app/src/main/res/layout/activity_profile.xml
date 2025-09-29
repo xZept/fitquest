@@ -32,6 +32,17 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
 
+        <!-- Diary button (bottom-left, above nav). Kept simple to avoid disrupting UI -->
+        <ImageButton
+            android:id="@+id/btn_diary"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/icon_diary"
+            android:contentDescription="Open Diary"
+            android:padding="4dp" />
+
+
         <ImageButton
             android:id="@+id/btn_settings"
             android:layout_width="40dp"
@@ -317,21 +328,7 @@
         android:background="@drawable/button_save"
         android:contentDescription="Save Profile" />
 
-    <!-- Diary button (bottom-left, above nav). Kept simple to avoid disrupting UI -->
-    <Button
-        android:id="@+id/btn_diary"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_above="@id/bottom_nav"
-        android:layout_marginStart="16dp"
-        android:layout_marginBottom="8dp"
-        android:text="Diary"
-        android:textAllCaps="false"
-        android:textColor="@android:color/white"
-        android:background="@color/purple_200"
-        android:paddingLeft="16dp"
-        android:paddingRight="16dp" />
+
 
     <!-- Bottom nav -->
     <LinearLayout

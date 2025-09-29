@@ -88,7 +88,7 @@ class ProfileActivity : AppCompatActivity() {
         btnSave = findViewById(R.id.btn_save_profile)
 
         // NEW: open diary from Profile
-        findViewById<Button>(R.id.btn_diary)?.setOnClickListener {
+        findViewById<ImageButton>(R.id.btn_diary)?.setOnClickListener {
             it.startAnimation(pressAnim)
             startActivity(Intent(this, DiaryActivity::class.java))
             overridePendingTransition(0, 0)
