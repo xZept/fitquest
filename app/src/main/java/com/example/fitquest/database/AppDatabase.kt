@@ -6,7 +6,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-@Database(entities = [User::class, UserProfile::class, UserSettings::class, ActiveQuest::class, WorkoutSession::class, WorkoutSetLog::class, UserWallet::class, QuestHistory::class], version = 1, exportSchema = false)
+@Database(entities = [User::class, UserProfile::class, UserSettings::class, ActiveQuest::class,
+    WorkoutSession::class, WorkoutSetLog::class, UserWallet::class, QuestHistory::class,
+    Monster::class, UserMonster::class], version = 1, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDAO(): UserDAO
@@ -17,6 +19,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun workoutSetLogDao(): WorkoutSetLogDao
     abstract fun userWalletDao(): UserWalletDao
     abstract fun questHistoryDao(): QuestHistoryDao
+    abstract fun monsterDao(): MonsterDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null

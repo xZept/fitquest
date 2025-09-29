@@ -83,7 +83,8 @@ interface QuestHistoryDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnore(row: QuestHistory): Long
 
-    @Query("UPDATE questHistory SET lastUsedAt = :ts WHERE userId = :userId AND 'key' = :questKey")
+    // FIX: use backticks around the column name `key`
+    @Query("UPDATE questHistory SET lastUsedAt = :ts WHERE userId = :userId AND `key` = :questKey")
     suspend fun touch(userId: Int, questKey: String, ts: Long = System.currentTimeMillis())
 
     @Query("UPDATE questHistory SET pinned = :pinned WHERE id = :id")
@@ -111,6 +112,7 @@ interface QuestHistoryDao {
     @Query("SELECT * FROM questHistory WHERE id = :id AND userId = :userId LIMIT 1")
     suspend fun getById(userId: Int, id: Long): QuestHistory?
 }
+
 
 
 // ----- Workout Session -----
@@ -190,6 +192,60 @@ interface FoodDao {
     }
 }
 
+// ----- Monster Shop -----
+data class MonsterListItem(
+    val code: String,
+    val name: String,
+    val spriteRes: String,
+    val price: Int,
+    val owned: Boolean
+)
 
+@Dao
+interface MonsterDao {
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAllIgnore(monsters: List<Monster>): List<Long>
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIgnore(monster: Monster): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun own(row: UserMonster): Long
+
+    @Query("SELECT * FROM monster WHERE code = :code LIMIT 1")
+    suspend fun getByCode(code: String): Monster?
+
+    @Query("SELECT EXISTS(SELECT 1 FROM userMonster WHERE userId = :userId AND monsterCode = :code)")
+    suspend fun isOwned(userId: Int, code: String): Boolean
+
+    @Query("DELETE FROM monster WHERE code NOT IN (:keep)")
+    suspend fun deleteAllExcept(keep: List<String>)
+
+    // NEW: allow price updates during seeding
+    @Query("UPDATE monster SET price = :price WHERE code = :code")
+    suspend fun updatePrice(code: String, price: Int)
+
+    // NEW (optional): allow changing display name or sprite without changing code
+    @Query("UPDATE monster SET name = :name, spriteRes = :spriteRes WHERE code = :code")
+    suspend fun updateMeta(code: String, name: String, spriteRes: String)
+
+    @Query("""
+        SELECT m.code AS code, m.name AS name, m.spriteRes AS spriteRes, m.price AS price,
+               CASE WHEN um.id IS NULL THEN 0 ELSE 1 END AS owned
+        FROM monster m
+        LEFT JOIN userMonster um
+          ON um.monsterCode = m.code AND um.userId = :userId
+        ORDER BY m.price ASC, m.name ASC
+    """)
+    suspend fun listForUser(userId: Int): List<MonsterListItem>
+
+    @Query("""
+        SELECT m.* FROM userMonster um
+        JOIN monster m ON m.code = um.monsterCode
+        WHERE um.userId = :userId
+        ORDER BY um.acquiredAt DESC
+        LIMIT 1
+    """)
+    suspend fun getLatestOwnedForUser(userId: Int): Monster?
+}

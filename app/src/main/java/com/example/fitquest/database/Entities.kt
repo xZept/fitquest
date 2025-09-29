@@ -174,7 +174,27 @@ data class Portion(
     val isApproximate: Boolean = false
 )
 
+// ----- Monster Catalog -----
+@Entity(
+    tableName = "monster",
+    indices = [Index(value = ["code"], unique = true)]
+)
+data class Monster(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val code: String,           // stable id like "slime_blue"
+    val name: String,           // shown in UI
+    val spriteRes: String,      // drawable name, e.g. "monster_slime_blue"
+    val price: Int              // cost in coins
+)
 
-
-
-
+// ----- User-Owned Monsters -----
+@Entity(
+    tableName = "userMonster",
+    indices = [Index(value = ["userId", "monsterCode"], unique = true)]
+)
+data class UserMonster(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val userId: Int,
+    val monsterCode: String,
+    val acquiredAt: Long = System.currentTimeMillis()
+)

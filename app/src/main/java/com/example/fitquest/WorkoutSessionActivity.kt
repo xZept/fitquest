@@ -1,5 +1,7 @@
 package com.example.fitquest
 
+import android.animation.AnimatorSet
+import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.os.Build
 import android.os.Bundle
@@ -19,6 +21,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlin.math.ceil
 
 class WorkoutSessionActivity : AppCompatActivity() {
 
@@ -26,7 +29,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private var userId: Int = -1
 
     // UI (top)
-    private lateinit var ivAvatar: ImageView
     private lateinit var ivMonster: ImageView
     private lateinit var hpBar: ProgressBar
     private lateinit var tvHp: TextView
@@ -56,6 +58,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     // Coins
     private var coinsEarned = 0
+    private var monsterMultiplier = 1   // x1 by default
 
     // timers
     private var restTimer: CountDownTimer? = null
@@ -67,6 +70,10 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private var sessionRowId: Long = -1L
     private var startedAtMs: Long = 0L
 
+    // current monster identifiers
+    private var currentMonsterSprite: String = "monster_slime" // drawable name (e.g., monster_goblin)
+    private var currentMonsterCode: String = "slime"           // code (e.g., goblin)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout_session)
@@ -75,7 +82,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         db = AppDatabase.getInstance(applicationContext)
 
         // bind (top)
-        ivAvatar = findViewById(R.id.iv_avatar)
         ivMonster = findViewById(R.id.iv_monster)
         hpBar = findViewById(R.id.hp_bar)
         tvHp = findViewById(R.id.tv_hp)
@@ -104,6 +110,20 @@ class WorkoutSessionActivity : AppCompatActivity() {
             restSeconds = withContext(Dispatchers.IO) {
                 db.userSettingsDao().getByUserId(userId)?.restTimerSec ?: 180
             }
+
+            // ----- Load the monster to display + set multiplier -----
+            val latestMonster = withContext(Dispatchers.IO) {
+                db.monsterDao().getLatestOwnedForUser(userId)
+            }
+            currentMonsterSprite = latestMonster?.spriteRes ?: "monster_slime" // default slime
+            currentMonsterCode = latestMonster?.code ?: "slime"
+
+            // apply idle frame now
+            setMonsterFrame(stateSuffix = "idle")
+
+            // coin multiplier based on monster
+            monsterMultiplier = monsterMultiplierFor(currentMonsterCode)
+            // --------------------------------------------------------
 
             questTitle = listOfNotNull(activeQuest.split, activeQuest.modifier).joinToString(" • ").ifBlank { "Your Quest" }
             items = activeQuest.exercises.sortedBy { it.order }
@@ -141,6 +161,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
         restTimer?.cancel()
         super.onDestroy()
     }
+
+    /* ---------- Rendering ---------- */
 
     private fun renderCurrent() {
         if (exerciseIndex >= items.size) {
@@ -336,9 +358,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
         setsDone += 1
         updateHpFromSets(animate = true)
 
-        // TODO: hook in monster multiplier later; for now always 1
-        val multiplier = 1
-        coinsEarned += (1 * multiplier)
+        // apply monster-based multiplier
+        coinsEarned += monsterMultiplier
 
         if (setsDone >= totalSets) {
             finishSession(success = true)
@@ -368,7 +389,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             val coins = if (success) coinsEarned else 0
 
             if (success) {
-                // update + award coins
                 db.workoutSessionDao().finishSession(
                     sessionId = sessionRowId,
                     endedAt = ended,
@@ -379,15 +399,12 @@ class WorkoutSessionActivity : AppCompatActivity() {
                     db.userWalletDao().ensure(userId)
                     db.userWalletDao().add(userId, coins)
                 }
-                // remember quest variant
                 recordQuestToHistory(activeQuest)
             } else {
-                // ABANDON: purge logs + remove the session row entirely
                 db.workoutSetLogDao().deleteForSession(sessionRowId)
                 db.workoutSessionDao().deleteById(sessionRowId)
             }
 
-            // Clear active quest no matter what
             db.activeQuestDao().clearForUser(userId)
 
             withContext(Dispatchers.Main) {
@@ -408,13 +425,10 @@ class WorkoutSessionActivity : AppCompatActivity() {
         }
     }
 
-
     /* -------- Quest History helpers -------- */
 
     private fun questKeyOf(q: ActiveQuest): String {
-        // Stable key: split|modifier|hash(exercise list)
         val json = q.exercises.joinToString("|") {
-            // Include name + sets + reps + order so equivalent quests dedupe
             "${it.name}:${it.sets}:${it.repsMin}-${it.repsMax}:${it.order}"
         }
         val hash = json.hashCode()
@@ -434,7 +448,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         )
         val dao = db.questHistoryDao()
         val inserted = dao.insertIgnore(row)
-        if (inserted == -1L) dao.touch(q.userId, key) // present → bump lastUsedAt
+        if (inserted == -1L) dao.touch(q.userId, key)
         dao.pruneUnpinned(q.userId)
     }
 
@@ -443,7 +457,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private fun updateHpFromSets(animate: Boolean) {
         val remainingSets = (totalSets - setsDone).coerceAtLeast(0)
         val target = if (remainingSets == 0) 0
-        else kotlin.math.ceil(remainingSets.toDouble() * hpMax / totalSets).toInt()
+        else ceil(remainingSets.toDouble() * hpMax / totalSets).toInt()
 
         if (!animate) {
             hpLeft = target
@@ -465,19 +479,52 @@ class WorkoutSessionActivity : AppCompatActivity() {
         hpLeft = end
     }
 
-    /* --------- Anim hooks --------- */
+    /* --------- Monster frame helpers (single ImageView) --------- */
 
-    private fun showIdle() { /* TODO: idle sprite */ }
+    private fun resolveDrawableId(name: String): Int {
+        val id = resources.getIdentifier(name, "drawable", packageName)
+        return if (id != 0) id else 0
+    }
+
+    /**
+     * stateSuffix can be "idle" or "attack". We try:
+     * 1) "<sprite>_<state>" (e.g., monster_goblin_attack)
+     * 2) "<sprite>" fallback
+     * 3) "monster_slime" ultimate fallback
+     */
+    private fun setMonsterFrame(stateSuffix: String) {
+        val candidate = "${currentMonsterSprite}_${stateSuffix}"
+        val id1 = resolveDrawableId(candidate)
+        val id2 = if (id1 != 0) id1 else resolveDrawableId(currentMonsterSprite)
+        val finalId = if (id2 != 0) id2 else resolveDrawableId("monster_slime")
+        if (finalId != 0) ivMonster.setImageResource(finalId)
+    }
+
+    private fun showIdle() {
+        setMonsterFrame("idle")
+    }
 
     private fun playAttackThen(onDone: () -> Unit) {
-        // TODO: attack sprite (play animation clip here)
-        ivAvatar.postDelayed({
-            onDone()
+        // swap to attack frame if you have it, otherwise it keeps current
+        setMonsterFrame("attack")
+
+        // quick tween on single ImageView to suggest impact
+        val sx = ObjectAnimator.ofFloat(ivMonster, "scaleX", 1f, 1.1f, 1f)
+        val sy = ObjectAnimator.ofFloat(ivMonster, "scaleY", 1f, 1.1f, 1f)
+        val shake = ObjectAnimator.ofFloat(ivMonster, "translationX", 0f, -8f, 8f, -6f, 6f, 0f)
+        AnimatorSet().apply {
+            duration = ATTACK_ANIM_MS
+            playTogether(sx, sy, shake)
+            start()
+        }
+
+        ivMonster.postDelayed({
             showIdle()
+            onDone()
         }, ATTACK_ANIM_MS)
     }
 
-    private fun showSleep() { /* TODO: sleep sprite */ }
+    private fun showSleep() { /* optional later */ }
 
     /* --------- Rest dialog --------- */
 
@@ -555,5 +602,11 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
                         android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         }
+    }
+
+    private fun monsterMultiplierFor(code: String): Int = when (code) {
+        "goblin"   -> 3
+        "mushroom" -> 2
+        else       -> 1 // slime/default
     }
 }
