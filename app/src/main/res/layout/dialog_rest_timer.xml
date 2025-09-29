@@ -1,49 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/dialog_root"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:layout_height="match_parent">
 
-    <!-- Put your rest animation here (Lottie/Image/frames) -->
-    <FrameLayout
-        android:id="@+id/rest_anim_host"
+    <!-- Animated background spans the whole dialog -->
+    <ImageView
+        android:id="@+id/iv_rest_bg"
         android:layout_width="match_parent"
-        android:layout_height="120dp"
-        android:layout_marginBottom="8dp" />
+        android:layout_height="550dp"
+        android:adjustViewBounds="false"
+        android:scaleType="centerCrop" />
 
-    <TextView
-        android:id="@+id/tv_rest_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Rest"
-        android:textStyle="bold"
-        android:textColor="@android:color/white"
-        android:textSize="16sp" />
-
-    <TextView
-        android:id="@+id/tv_rest_countdown"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="0:30"
-        android:textColor="@android:color/white"
-        android:textSize="20sp"
-        android:paddingTop="4dp" />
-
-    <ProgressBar
-        android:id="@+id/rest_progress"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="10dp"
-        android:max="100"
-        android:progress="100"
-        android:layout_marginTop="6dp" />
-
-    <Button
-        android:id="@+id/btn_skip_rest"
+    <!-- Foreground content on top of the animated bg -->
+    <LinearLayout
+        android:id="@+id/dialog_content"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Skip Rest"
-        android:layout_marginTop="12dp" />
-</LinearLayout>
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/tv_rest_countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0:30"
+            android:textColor="@android:color/white"
+            android:layout_gravity="center"
+            android:textSize="70sp"
+            android:layout_marginBottom="25dp"
+            android:paddingTop="4dp" />
+
+        <ImageButton
+            android:id="@+id/btn_skip_rest"
+            android:layout_width="wrap_content"
+            android:layout_height="56dp"
+            android:layout_marginTop="12dp"
+            android:src="@drawable/button_skip"
+            android:scaleType="fitCenter"
+            android:layout_gravity="center"
+            android:adjustViewBounds="true"
+            android:background="@drawable/button_skip" />
+
+    </LinearLayout>
+</FrameLayout>

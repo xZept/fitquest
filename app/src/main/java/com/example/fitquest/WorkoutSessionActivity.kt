@@ -24,7 +24,11 @@ import kotlin.math.roundToInt
 import kotlin.math.ceil
 import android.graphics.BitmapFactory
 import android.os.SystemClock
+import android.view.animation.AnimationUtils
 import androidx.annotation.DrawableRes
+import com.example.fitquest.ui.widgets.SpriteSheetDrawable
+import android.graphics.drawable.ColorDrawable
+import android.view.ViewGroup
 
 
 class WorkoutSessionActivity : AppCompatActivity() {
@@ -86,6 +90,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private var currentMonsterSprite: String = "monster_slime" // drawable name (e.g., monster_goblin)
     private var currentMonsterCode: String = "slime"           // code (e.g., goblin)
 
+    private lateinit var pressAnim: android.view.animation.Animation
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout_session)
@@ -105,6 +111,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
         tvRepRange = findViewById(R.id.tv_rep_range)
         btnComplete = findViewById(R.id.btn_complete_set)
         btnEnd = findViewById(R.id.btn_end_session)
+
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@WorkoutSessionActivity).first()
@@ -249,6 +257,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private fun wireButtons() {
         btnComplete.setOnClickListener {
+            it.startAnimation(pressAnim)
+
             btnComplete.isEnabled = false
             // Play attack, THEN open log dialog (cleanest UX)
             playAttackThen {
@@ -256,6 +266,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             }
         }
         btnEnd.setOnClickListener {
+            it.startAnimation(pressAnim)
             AlertDialog.Builder(this)
                 .setTitle("Abandon Quest?")
                 .setMessage("Are you sure you want to end this session now?\n\nYou will NOT receive any rewards.")
@@ -610,41 +621,52 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private fun showSleep() { /* optional later */ }
 
+
+
     /* --------- Rest dialog --------- */
 
     private fun showRestDialog(totalSec: Int) {
         setResting(true)
 
         val view = layoutInflater.inflate(R.layout.dialog_rest_timer, null)
+        val ivBg = view.findViewById<ImageView>(R.id.iv_rest_bg)
         val tvCountdown = view.findViewById<TextView>(R.id.tv_rest_countdown)
-        val progress = view.findViewById<ProgressBar>(R.id.rest_progress)
-        val btnSkip = view.findViewById<Button>(R.id.btn_skip_rest)
+        val btnSkip = view.findViewById<ImageButton>(R.id.btn_skip_rest)
+
+        // Build the looping spritesheet background (tweak rows/cols/fps to your sheet)
+        val restBg = buildRestBgAnim(rows = 1, cols = 20, fps = 12)
+        ivBg.setImageDrawable(restBg)
 
         tvCountdown.text = format(totalSec)
-        progress.max = 100
-        progress.progress = 100
+
 
         val dlg = AlertDialog.Builder(this)
             .setView(view)
             .setCancelable(false)
             .create()
 
+        dlg.setOnShowListener {
+            restBg.resetToStart()
+            restBg.start()
+
+            // Size and make window bg transparent so edges of your art show
+            val dm = resources.displayMetrics
+            val width = (dm.widthPixels * 0.92f).toInt()
+            dlg.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+            dlg.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+        }
+
+        dlg.setOnDismissListener { restBg.stop() }
+
         var remaining = totalSec
         restTimer?.cancel()
         restTimer = object : CountDownTimer(totalSec * 1000L, 1000L) {
-            override fun onTick(millisUntilFinished: Long) {
+            override fun onTick(ms: Long) {
                 remaining -= 1
                 tvCountdown.text = format(remaining)
                 val pct = ((remaining / totalSec.toFloat()) * 100f).roundToInt()
-                val start = progress.progress
                 val end = pct.coerceIn(0, 100)
-                ValueAnimator.ofInt(start, end).apply {
-                    duration = 300
-                    addUpdateListener { a -> progress.progress = a.animatedValue as Int }
-                    start()
-                }
             }
-
             override fun onFinish() {
                 dlg.dismiss()
                 setResting(false)
@@ -654,6 +676,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         }.start()
 
         btnSkip.setOnClickListener {
+            it.startAnimation(pressAnim)
             restTimer?.cancel()
             dlg.dismiss()
             setResting(false)
@@ -664,6 +687,14 @@ class WorkoutSessionActivity : AppCompatActivity() {
         showSleep()
         dlg.show()
     }
+
+    private fun buildRestBgAnim(rows: Int = 1, cols: Int = 24, fps: Int = 18): SpriteSheetDrawable {
+        val opts = BitmapFactory.Options().apply { inScaled = false }
+        val bmp = BitmapFactory.decodeResource(resources, R.drawable.bg_rest_spritesheet, opts)
+        return SpriteSheetDrawable(bmp, rows, cols, fps, loop = true,
+            scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP)
+    }
+
 
     /* --------- Utils --------- */
 
