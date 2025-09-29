@@ -22,8 +22,13 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.ceil
+import android.graphics.BitmapFactory
+import android.os.SystemClock
+import androidx.annotation.DrawableRes
+
 
 class WorkoutSessionActivity : AppCompatActivity() {
+
 
     private lateinit var db: AppDatabase
     private var userId: Int = -1
@@ -38,8 +43,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private lateinit var tvExercise: TextView
     private lateinit var tvSetInfo: TextView
     private lateinit var tvRepRange: TextView
-    private lateinit var btnComplete: Button
-    private lateinit var btnEnd: Button
+    private lateinit var btnComplete: ImageButton
+    private lateinit var btnEnd: ImageButton
 
     // Session state
     private var questTitle: String = "Your Quest"
@@ -49,6 +54,13 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private var setIndex = 0
     private var restSeconds = 60
     private var isResting = false
+    // Sprite sheet animations
+    private data class SpriteAnim(val drawable: com.example.fitquest.ui.widgets.SpriteSheetDrawable, val frames: Int, val fps: Int, val loop: Boolean)
+
+    private var idleAnim: SpriteAnim? = null
+    private var fightAnim: SpriteAnim? = null
+    private var currentAnim: SpriteAnim? = null
+
 
     // HP
     private var totalSets = 1
@@ -119,7 +131,9 @@ class WorkoutSessionActivity : AppCompatActivity() {
             currentMonsterCode = latestMonster?.code ?: "slime"
 
             // apply idle frame now
-            setMonsterFrame(stateSuffix = "idle")
+            initAnimations()   // NEW: build both sprites
+            showIdle()         // start looping idle
+
 
             // coin multiplier based on monster
             monsterMultiplier = monsterMultiplierFor(currentMonsterCode)
@@ -157,10 +171,68 @@ class WorkoutSessionActivity : AppCompatActivity() {
         }
     }
 
+    // SpriteSheetDrawable.kt  (inside class SpriteSheetDrawable)
+
+
+
+    private fun buildAnim(
+        @DrawableRes resId: Int,
+        rows: Int,
+        cols: Int,
+        fps: Int,
+        loop: Boolean,
+        scale: com.example.fitquest.ui.widgets.SpriteSheetDrawable.ScaleMode =
+            com.example.fitquest.ui.widgets.SpriteSheetDrawable.ScaleMode.CENTER_CROP
+    ): SpriteAnim {
+        val opts = BitmapFactory.Options().apply { inScaled = false } // honor pixel-perfect frames
+        val bmp = BitmapFactory.decodeResource(resources, resId, opts)
+        val dr = com.example.fitquest.ui.widgets.SpriteSheetDrawable(bmp, rows, cols, fps, loop, scale)
+        return SpriteAnim(dr, frames = rows * cols, fps = fps, loop = loop)
+    }
+
+    private fun startAnim(target: SpriteAnim) {
+        // stop current if any
+        currentAnim?.drawable?.stop()
+        // swap drawable
+        ivMonster.setImageDrawable(target.drawable)
+        target.drawable.start()
+        currentAnim = target
+    }
+
+    private fun stopAnim() {
+        currentAnim?.drawable?.stop()
+        ivMonster.setImageDrawable(null)
+        currentAnim = null
+    }
+
+    private fun initAnimations() {
+        // TODO: adjust rows/cols/fps if your sheets differ
+        idleAnim = buildAnim(
+            resId = R.drawable.session_male_slime_idle,
+            rows = 1, cols = 13, fps = 13, loop = true
+        )
+        fightAnim = buildAnim(
+            resId = R.drawable.session_male_slime_fight,
+            rows = 1, cols = 24, fps = 24, loop = false
+        )
+    }
+
+    override fun onPause() {
+        super.onPause()
+        currentAnim?.drawable?.stop()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!isResting) showIdle()
+    }
+
     override fun onDestroy() {
         restTimer?.cancel()
+        stopAnim()
         super.onDestroy()
     }
+
 
     /* ---------- Rendering ---------- */
 
@@ -192,6 +264,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 .show()
         }
     }
+
 
     private fun setResting(resting: Boolean) {
         isResting = resting
@@ -501,28 +574,39 @@ class WorkoutSessionActivity : AppCompatActivity() {
     }
 
     private fun showIdle() {
-        setMonsterFrame("idle")
+        val idle = idleAnim ?: return
+        // If we're already on the idle animation, ensure it's running; else start it.
+        if (currentAnim?.drawable === idle.drawable) {
+            if (!idle.drawable.isRunning()) idle.drawable.start()
+        } else {
+            startAnim(idle)
+        }
     }
 
-    private fun playAttackThen(onDone: () -> Unit) {
-        // swap to attack frame if you have it, otherwise it keeps current
-        setMonsterFrame("attack")
 
-        // quick tween on single ImageView to suggest impact
-        val sx = ObjectAnimator.ofFloat(ivMonster, "scaleX", 1f, 1.1f, 1f)
-        val sy = ObjectAnimator.ofFloat(ivMonster, "scaleY", 1f, 1.1f, 1f)
-        val shake = ObjectAnimator.ofFloat(ivMonster, "translationX", 0f, -8f, 8f, -6f, 6f, 0f)
-        AnimatorSet().apply {
-            duration = ATTACK_ANIM_MS
-            playTogether(sx, sy, shake)
-            start()
+
+    /**
+     * Plays the non-loop 'fight' animation once, then returns to idle and calls onDone().
+     */
+    private fun playAttackThen(onDone: () -> Unit) {
+        val fight = fightAnim
+        if (fight == null) {
+            onDone(); return
         }
+
+        // ✅ ensure the one-shot anim starts from frame 0 every time
+        fight.drawable.resetToStart()
+        startAnim(fight)
+
+        val durationMs = (fight.frames * (1000L / fight.fps.coerceAtLeast(1))).toLong()
 
         ivMonster.postDelayed({
             showIdle()
             onDone()
-        }, ATTACK_ANIM_MS)
+        }, durationMs)
     }
+
+
 
     private fun showSleep() { /* optional later */ }
 

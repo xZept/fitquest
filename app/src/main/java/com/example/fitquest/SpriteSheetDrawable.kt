@@ -56,15 +56,29 @@ class SpriteSheetDrawable(
         canvas.drawBitmap(sheet, src, dest, paint)
     }
 
+    // SpriteSheetDrawable.kt  (inside class SpriteSheetDrawable)
+    fun resetToStart() {
+        frameIndex = 0
+        invalidateSelf()
+    }
+
     override fun run() {
         if (!running) return
         frameIndex++
         if (frameIndex >= totalFrames) {
-            if (loop) frameIndex = 0 else { running = false; return }
+            if (loop) {
+                frameIndex = 0
+            } else {
+                frameIndex = totalFrames - 1 // clamp to last frame
+                running = false
+                invalidateSelf()
+                return
+            }
         }
         invalidateSelf()
         scheduleSelf(this, SystemClock.uptimeMillis() + frameDurationMs)
     }
+
 
     fun start() {
         if (running) return

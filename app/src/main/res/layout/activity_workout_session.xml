@@ -1,139 +1,155 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/session_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@drawable/bg_workout">
 
-    <!-- Top half: avatar vs monster + HP bar -->
-    <FrameLayout
-        android:id="@+id/scene_host"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <!-- Monster HP bar (lowered + red) -->
-        <LinearLayout
-            android:id="@+id/hp_bar_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top"
-            android:layout_marginTop="36dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:orientation="vertical">
-
-            <ProgressBar
-                android:id="@+id/hp_bar"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="14dp"
-                android:max="100"
-                android:progress="100"
-                android:progressTint="#EF4444"
-                android:progressBackgroundTint="#552222" />
-
-            <TextView
-                android:id="@+id/tv_hp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="HP 100/100"
-                android:textColor="@android:color/white"
-                android:textSize="12sp"
-                android:paddingTop="6dp" />
-        </LinearLayout>
-
-        <!-- Monster (placeholder)-->
-        <ImageView
-            android:id="@+id/iv_monster"
-            android:layout_width="370dp"
-            android:layout_height="160dp"
-            android:layout_gravity="right|center_vertical"
-            android:layout_marginEnd="16dp"
-            android:contentDescription="Monster" />
-    </FrameLayout>
-
-    <!-- Bottom half: current exercise + actions -->
+    <!-- Main vertical content -->
     <LinearLayout
-        android:id="@+id/panel"
+        android:id="@+id/content_column"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:paddingBottom="96dp">
+        <!-- paddingBottom ensures content never hides behind bottom bar -->
 
-        <LinearLayout
-            android:id="@+id/card"
+        <!-- Top half: avatar vs monster + HP bar -->
+        <FrameLayout
+            android:id="@+id/scene_host"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <!-- Monster HP bar -->
+            <LinearLayout
+                android:id="@+id/hp_bar_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="top"
+                android:layout_marginTop="36dp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:orientation="vertical">
+
+                <ProgressBar
+                    android:id="@+id/hp_bar"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="14dp"
+                    android:max="100"
+                    android:progress="100"
+                    android:progressTint="#EF4444"
+                    android:progressBackgroundTint="#552222" />
+
+                <TextView
+                    android:id="@+id/tv_hp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="HP 100/100"
+                    android:textColor="@android:color/white"
+                    android:textSize="12sp"
+                    android:paddingTop="6dp" />
+            </LinearLayout>
+
+            <!-- animation -->
+            <ImageView
+                android:id="@+id/iv_monster"
+                android:layout_width="370dp"
+                android:layout_height="160dp"
+                android:layout_gravity="right|center_vertical"
+                android:layout_marginEnd="16dp"
+                android:contentDescription="Monster" />
+        </FrameLayout>
+
+        <!-- Bottom panel: current exercise card (actions moved out) -->
+        <LinearLayout
+            android:id="@+id/panel"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
             android:orientation="vertical"
-            android:padding="16dp"
-            android:background="@drawable/item_container">
+            android:padding="16dp">
 
-            <TextView
-                android:id="@+id/tv_day_title"
+            <LinearLayout
+                android:id="@+id/card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Push • General"
-                android:textColor="@android:color/white"
-                android:textSize="14sp" />
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:background="@drawable/item_container">
 
-            <TextView
-                android:id="@+id/tv_exercise"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Barbell Bench Press"
-                android:textStyle="bold"
-                android:textColor="@android:color/white"
-                android:textSize="18sp"
-                android:paddingTop="4dp" />
+                <TextView
+                    android:id="@+id/tv_day_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Push • General"
+                    android:textColor="@android:color/white"
+                    android:textSize="14sp" />
 
-            <TextView
-                android:id="@+id/tv_set_info"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Set 1 of 5"
-                android:textColor="@android:color/darker_gray"
-                android:textSize="13sp"
-                android:paddingTop="4dp" />
+                <TextView
+                    android:id="@+id/tv_exercise"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Barbell Bench Press"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:textSize="18sp"
+                    android:paddingTop="4dp" />
 
-            <TextView
-                android:id="@+id/tv_rep_range"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="8–12 reps"
-                android:textColor="@android:color/darker_gray"
-                android:textSize="13sp" />
+                <TextView
+                    android:id="@+id/tv_set_info"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Set 1 of 5"
+                    android:textColor="@android:color/darker_gray"
+                    android:textSize="13sp"
+                    android:paddingTop="4dp" />
+
+                <TextView
+                    android:id="@+id/tv_rep_range"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="8–12 reps"
+                    android:textColor="@android:color/darker_gray"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <!-- (No action buttons here anymore) -->
         </LinearLayout>
-
-        <!-- Actions -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:paddingTop="16dp">
-
-            <Button
-                android:id="@+id/btn_complete_set"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Complete Set" />
-
-            <Space
-                android:layout_width="12dp"
-                android:layout_height="1dp" />
-
-            <Button
-                android:id="@+id/btn_end_session"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="End Session" />
-        </LinearLayout>
-
-        <!-- Rest bar moved into dialog: nothing here -->
     </LinearLayout>
-</LinearLayout>
+
+    <!-- Sticky bottom bar -->
+    <LinearLayout
+        android:id="@+id/bottom_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:padding="16dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/btn_complete_set"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:background="@drawable/button_complete_set"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true" />
+
+        <Space
+            android:layout_width="12dp"
+            android:layout_height="1dp" />
+
+        <ImageButton
+            android:id="@+id/btn_end_session"
+            android:layout_width="0dp"
+            android:layout_height="56dp"
+            android:layout_weight="1"
+            android:background="@drawable/button_quit"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true" />
+    </LinearLayout>
+
+</FrameLayout>
