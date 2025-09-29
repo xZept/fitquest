@@ -27,30 +27,57 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="top"
-                android:layout_marginTop="36dp"
+                android:layout_marginTop="20dp"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:orientation="vertical">
 
-                <ProgressBar
-                    android:id="@+id/hp_bar"
-                    style="?android:attr/progressBarStyleHorizontal"
+                <!-- Background + progress + label stacked -->
+                <FrameLayout
+                    android:id="@+id/hp_bar_frame"
                     android:layout_width="match_parent"
-                    android:layout_height="14dp"
-                    android:max="100"
-                    android:progress="100"
-                    android:progressTint="#EF4444"
-                    android:progressBackgroundTint="#552222" />
+                    android:layout_height="wrap_content">
 
-                <TextView
-                    android:id="@+id/tv_hp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="HP 100/100"
-                    android:textColor="@android:color/white"
-                    android:textSize="12sp"
-                    android:paddingTop="6dp" />
+                    <ImageView
+                        android:id="@+id/iv_hp_bg"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:src="@drawable/container_slime_hp"
+                        android:scaleType="fitCenter"
+                        android:adjustViewBounds="true" />
+
+                    <!-- progress sits inside the art's inner gutter -->
+                    <ProgressBar
+                        android:id="@+id/hp_bar"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="14dp"
+                        android:layout_gravity="center_vertical"
+                        android:layout_marginStart="24dp"
+                        android:layout_marginEnd="24dp"
+                        android:max="100"
+                        android:progress="100"
+                        android:progressTint="#EF4444"
+                        android:progressBackgroundTint="#552222" />
+
+                    <!-- HP label over the background -->
+                    <TextView
+                        android:id="@+id/tv_hp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="HP 100/100"
+                        android:textColor="@android:color/white"
+                        android:textStyle="bold"
+                        android:textSize="12sp"
+                        android:shadowColor="#80000000"
+                        android:shadowDx="0"
+                        android:shadowDy="1"
+                        android:shadowRadius="3" />
+                </FrameLayout>
             </LinearLayout>
+
+
 
             <!-- animation -->
             <ImageView
@@ -71,51 +98,73 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <LinearLayout
+            <FrameLayout
                 android:id="@+id/card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp"
-                android:background="@drawable/item_container">
+                >
 
-                <TextView
-                    android:id="@+id/tv_day_title"
-                    android:layout_width="match_parent"
+                <ImageView
+                    android:id="@+id/card_bg"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Push • General"
-                    android:textColor="@android:color/white"
-                    android:textSize="14sp" />
+                    android:src="@drawable/container_split_plan"
+                    android:adjustViewBounds="true"
+                    android:layout_gravity="center_horizontal"
+                    android:scaleType="fitStart" />
 
-                <TextView
-                    android:id="@+id/tv_exercise"
-                    android:layout_width="match_parent"
+                <LinearLayout
+                    android:id="@+id/card_content"
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Barbell Bench Press"
-                    android:textStyle="bold"
-                    android:textColor="@android:color/white"
-                    android:textSize="18sp"
-                    android:paddingTop="4dp" />
+                    android:orientation="vertical"
+                    android:layout_gravity="center"
+                    android:padding="16dp">
 
-                <TextView
-                    android:id="@+id/tv_set_info"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Set 1 of 5"
-                    android:textColor="@android:color/darker_gray"
-                    android:textSize="13sp"
-                    android:paddingTop="4dp" />
+                    <TextView
+                        android:id="@+id/tv_day_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Push • General"
+                        android:textColor="@android:color/white"
+                        android:textAlignment="center"
+                        android:textSize="30sp" />
 
-                <TextView
-                    android:id="@+id/tv_rep_range"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="8–12 reps"
-                    android:textColor="@android:color/darker_gray"
-                    android:textSize="13sp" />
-            </LinearLayout>
+                    <TextView
+                        android:id="@+id/tv_exercise"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Barbell Bench Press"
+                        android:textStyle="bold"
+                        android:textColor="@android:color/white"
+                        android:textAlignment="center"
+                        android:textSize="18sp"
+                        android:paddingTop="4dp" />
 
-            <!-- (No action buttons here anymore) -->
+                    <TextView
+                        android:id="@+id/tv_set_info"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textAlignment="center"
+                        android:layout_marginVertical="25dp"
+                        android:text="Set 1 of 5"
+                        android:textColor="@android:color/white"
+                        android:textSize="40sp"
+                        android:paddingTop="4dp" />
+
+                    <TextView
+                        android:id="@+id/tv_rep_range"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="8–12 reps"
+                        android:layout_marginTop="20dp"
+                        android:textAlignment="center"
+                        android:textColor="@android:color/white"
+                        android:textSize="20sp" />
+                </LinearLayout>
+
+            </FrameLayout>
+
         </LinearLayout>
     </LinearLayout>
 
