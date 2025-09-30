@@ -14,10 +14,13 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.material3.Button
+import androidx.wear.compose.material.Button
 import com.example.fitquest.utils.TipsHelper
 import com.example.fitquest.utils.TipsLoader
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import android.widget.Button
 
 class MacroActivity : AppCompatActivity() {
 
@@ -38,6 +41,16 @@ class MacroActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_macro)
+
+        // Search food
+        findViewById<Button>(R.id.btnSearchFood).setOnClickListener {
+            val repo = (application as FitQuestApp).foodRepository
+            FoodSearchBottomSheet(
+                repo = repo,
+                onPicked = { item -> /* handle picked item */ }
+            ).show(supportFragmentManager, "food_search")
+        }
+
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 

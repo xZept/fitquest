@@ -1,34 +1,42 @@
 package com.example.fitquest
 
-import android.app.Activity
 import android.app.Application
-import android.os.Bundle
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import com.example.fitquest.fdc.FdcApi
+import com.example.fitquest.fdc.FdcService
+import com.example.fitquest.BuildConfig
+import com.example.fitquest.database.AppDatabase
+import com.example.fitquest.data.repository.FoodRepository
 
 class FitQuestApp : Application() {
+    lateinit var fdcService: FdcService
+        private set
+    lateinit var db: AppDatabase
+
+    val foodRepository: FoodRepository by lazy { FoodRepository(fdcService, db) }
 
     override fun onCreate() {
         super.onCreate()
 
-        // Hides status bar when activity is opened
+        // For debugging
+        val key = BuildConfig.FDC_API_KEY
+        android.util.Log.d("FDC", "API key length = ${key.length}")
+
+        // BuildConfig is available here (app module)
+        fdcService = FdcApi.create { BuildConfig.FDC_API_KEY }
+
+        db = AppDatabase.getInstance(this)
+
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
-            override fun onActivityResumed(activity: Activity) {
-                hideStatusBar(activity)
+            override fun onActivityResumed(activity: android.app.Activity) {
+                WindowCompat.setDecorFitsSystemWindows(activity.window, false)
             }
-            override fun onActivityCreated(a: Activity, b: Bundle?) {}
-            override fun onActivityStarted(a: Activity) {}
-            override fun onActivityPaused(a: Activity) {}
-            override fun onActivityStopped(a: Activity) {}
-            override fun onActivitySaveInstanceState(a: Activity, outState: Bundle) {}
-            override fun onActivityDestroyed(a: Activity) {}
+            override fun onActivityCreated(a: android.app.Activity, b: android.os.Bundle?) {}
+            override fun onActivityStarted(a: android.app.Activity) {}
+            override fun onActivityPaused(a: android.app.Activity) {}
+            override fun onActivityStopped(a: android.app.Activity) {}
+            override fun onActivitySaveInstanceState(a: android.app.Activity, outState: android.os.Bundle) {}
+            override fun onActivityDestroyed(a: android.app.Activity) {}
         })
-    }
-
-    private fun hideStatusBar(activity: Activity) {
-        // background reaches the top of the screen
-        WindowCompat.setDecorFitsSystemWindows(activity.window, false)
-
     }
 }

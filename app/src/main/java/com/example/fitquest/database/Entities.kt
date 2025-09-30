@@ -6,7 +6,6 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
-import com.example.fitquest.models.Food
 import com.example.fitquest.models.QuestExercise
 import java.time.Instant
 
@@ -136,7 +135,8 @@ data class WorkoutSetLog(
 )
 
 // ----- Food -----
-@Entity (tableName = "food")
+@Entity (tableName = "food",
+    indices = [Index(value=["normalizedName"], unique = true)])
 data class Food (
     @PrimaryKey(autoGenerate = true) val foodId: Long = 0L,
     val foodName: String,
@@ -155,7 +155,7 @@ data class Food (
 
 
 // ----- Portion -----
-@Entity (
+@Entity(
     tableName = "portion",
     foreignKeys = [ForeignKey(
         entity = Food::class,
@@ -163,16 +163,20 @@ data class Food (
         childColumns = ["foodId"],
         onDelete = ForeignKey.CASCADE
     )],
-    indices = [Index("foodId"), Index(value=["foodId", "measurementType", "quantity"], unique = true)]
+    indices = [
+        Index("foodId"),
+        Index(value = ["foodId","measurementType","quantity"], unique = true)
+    ]
 )
 data class Portion(
     @PrimaryKey(autoGenerate = true) val portionId: Long = 0L,
-    val foodId: Int,
-    val measurementType: Food.MeasurementType,
+    val foodId: Long,
+    val measurementType: MeasurementType,
     val quantity: Double,
     val gramWeight: Double,
     val isApproximate: Boolean = false
 )
+
 
 // ----- Monster Catalog -----
 @Entity(
@@ -198,3 +202,26 @@ data class UserMonster(
     val monsterCode: String,
     val acquiredAt: Long = System.currentTimeMillis()
 )
+
+    @Entity(
+        tableName = "foodLog",
+        foreignKeys = [ForeignKey(
+            entity = Food::class,
+            parentColumns = ["foodId"],
+            childColumns = ["foodId"],
+            onDelete = ForeignKey.CASCADE
+        )],
+        indices = [Index("userId"), Index("foodId"), Index(value = ["userId", "loggedAt"])]
+    )
+    data class FoodLog(
+        @PrimaryKey(autoGenerate = true) val logId: Long = 0L,
+        val userId: Int,
+        val foodId: Long,
+        val grams: Double,
+        val calories: Double,
+        val protein: Double,
+        val carbohydrate: Double,
+        val fat: Double,
+        val note: String? = null,
+        val loggedAt: Long
+    )

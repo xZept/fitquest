@@ -24,6 +24,12 @@
             android:layout_height="wrap_content"
             android:src="@drawable/title_page_macro"
             android:contentDescription="Macro" />
+
+        <Button
+            android:id="@+id/btnSearchFood"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SEARCH" />
     </LinearLayout>
 
     <TextView
@@ -179,6 +185,13 @@
                         android:orientation="vertical" />
                 </ScrollView>
             </LinearLayout>
+
+            <Button
+                android:id="@+id/button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Button" />
         </LinearLayout>
     </HorizontalScrollView>
 
@@ -274,4 +287,5 @@
                 android:contentDescription="Macros" />
         </FrameLayout>
     </LinearLayout>
+
 </RelativeLayout>

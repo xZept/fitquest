@@ -177,19 +177,17 @@ interface WorkoutSetLogDao {
 // ----- Food -----
 @Dao
 interface FoodDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertFood(food: Food): Long
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun upsert(food: Food): Long
 
-    @Query("SELECT foodId FROM food WHERE normalizedName = :n LIMIT 1")
-    suspend fun findIdByNormalizedName(n: String): Long?
+    @Query("SELECT * FROM food WHERE foodId = :id")
+    fun getById(id: Long): Food?
 
-    @Transaction
-    suspend fun upsert(food: Food): Long {
-        val id = insertFood(food)
-        if (id != -1L) return id
-        return findIdByNormalizedName(food.normalizedName)
-            ?: error("Duplicate but no existing id for ${food.normalizedName}")
-    }
+    @Query("SELECT * FROM food WHERE normalizedName = :norm LIMIT 1")
+    fun getByNormalizedName(norm: String): Food?
+
+    @Query("SELECT * FROM food ORDER BY lastUpdated DESC LIMIT :limit")
+    fun recent(limit: Int): List<Food>
 }
 
 // ----- Monster Shop -----
@@ -249,3 +247,22 @@ interface MonsterDao {
     """)
     suspend fun getLatestOwnedForUser(userId: Int): Monster?
 }
+
+@Dao
+interface FoodLogDao {
+    @Insert
+    fun insert(log: FoodLog): Long
+
+    @Query("SELECT * FROM foodLog WHERE userId = :userId ORDER BY loggedAt DESC LIMIT :limit")
+    fun recent(userId: Int, limit: Int): List<FoodLog>
+}
+
+@Dao
+interface PortionDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insertAll(portions: List<Portion>)
+
+    @Query("SELECT * FROM portion WHERE foodId = :foodId ORDER BY portionId ASC")
+    fun getForFood(foodId: Long): List<Portion>
+}
+

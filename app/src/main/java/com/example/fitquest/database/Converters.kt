@@ -1,7 +1,7 @@
 package com.example.fitquest.database
 
 import androidx.room.TypeConverter
-import com.example.fitquest.models.Food.MeasurementType
+import com.example.fitquest.database.MeasurementType
 import com.example.fitquest.models.QuestExercise
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -42,10 +42,18 @@ object Converters {
     }
 
     // Converters for food
-    @TypeConverter fun toType(name: String) = MeasurementType.valueOf(name)
-    @TypeConverter fun fromType(type: MeasurementType) = type.name
-    @TypeConverter fun fromInstant(i: Instant?) = i?.toEpochMilli()
-    @TypeConverter fun toInstant(millis: Long?) = millis?.let { Instant.ofEpochMilli(it) }
+    @TypeConverter @JvmStatic
+    fun measurementTypeFromString(v: String?) =
+        v?.let { runCatching { MeasurementType.valueOf(it) }.getOrNull() }
+
+    @TypeConverter @JvmStatic
+    fun measurementTypeToString(t: MeasurementType?) = t?.name
+
+    @TypeConverter @JvmStatic
+    fun instantFromLong(v: Long?) = v?.let(java.time.Instant::ofEpochMilli)
+
+    @TypeConverter @JvmStatic
+    fun instantToLong(i: java.time.Instant?) = i?.toEpochMilli()
 
 }
 
