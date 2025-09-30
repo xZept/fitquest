@@ -29,6 +29,16 @@ import androidx.annotation.DrawableRes
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import android.graphics.drawable.ColorDrawable
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.view.Gravity
+import androidx.core.content.ContextCompat
+import android.graphics.Color
+import android.view.View
+import android.widget.TextView
+import android.widget.ArrayAdapter
+import android.widget.ImageButton
+import androidx.appcompat.widget.AppCompatSpinner
 
 
 class WorkoutSessionActivity : AppCompatActivity() {
@@ -283,35 +293,118 @@ class WorkoutSessionActivity : AppCompatActivity() {
         btnComplete.alpha = if (resting) 0.5f else 1f
     }
 
+
+
     /* ------------ logging dialog ------------ */
 
     private fun promptLogThenCompleteSet() {
         val types = listOf("Bodyweight", "External load (kg)", "Assisted (-kg)", "Band level")
 
-        val root = LinearLayout(this).apply {
+        // ---------- BG image (keeps aspect) + centered form on top ----------
+        val panel = FrameLayout(this)
+
+        val ivBg = ImageView(this).apply {
+            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.container_log_set))
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
+        }
+        panel.addView(
+            ivBg,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val d = resources.displayMetrics.density
+        val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(24, 8, 24, 0)
+            // top padding requested
+            setPadding((24 * d).toInt(), (32 * d).toInt(), (24 * d).toInt(), (16 * d).toInt())
+        }
+        panel.addView(
+            content,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.CENTER // center vertically & horizontally
+            )
+        )
+
+        // ---------- Form contents (text in BLACK) ----------
+        val lblHeader = TextView(this).apply {
+            text = "Log Set"
+            setTextColor(Color.BLACK)
+            textSize = 18f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setPadding(0, (6 * d).toInt(), 0, (10 * d).toInt())
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
         }
 
-        val lblType = TextView(this).apply { text = "Load type" }
-        val spType = Spinner(this).apply {
-            adapter = ArrayAdapter(this@WorkoutSessionActivity, android.R.layout.simple_spinner_dropdown_item, types)
+        val lblType = TextView(this).apply {
+            text = "Load type"
+            setTextColor(Color.BLACK)
         }
+
+        // Spinner with black text for selected & dropdown rows
+        val lightGray = Color.parseColor("#f0f0f0")
+
+        val spinnerAdapter = object : ArrayAdapter<String>(
+            this@WorkoutSessionActivity,
+            android.R.layout.simple_spinner_item,
+            types
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val v = super.getView(position, convertView, parent) as TextView
+                v.setTextColor(Color.BLACK)
+                v.setBackgroundColor(lightGray)  // closed (selected) row bg
+                return v
+            }
+            override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val v = super.getDropDownView(position, convertView, parent) as TextView
+                v.setTextColor(Color.BLACK)
+                v.setBackgroundColor(lightGray)  // each dropdown row bg
+                return v
+            }
+        }.apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+
+
+        val spType = AppCompatSpinner(this).apply {
+            adapter = spinnerAdapter
+            background = ColorDrawable(lightGray)                 // spinner “chip” bg
+            setPopupBackgroundDrawable(ColorDrawable(lightGray))  // dropdown panel bg
+        }
+
         val tvHelp = TextView(this).apply {
-            setTextColor(0xFF9CA3AF.toInt()); textSize = 12f; text = ""
+            setTextColor(Color.BLACK)
+            textSize = 12f
+            text = ""
         }
+
         val etNumber = EditText(this).apply {
-            hint = ""; inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            hint = ""
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
             isSingleLine = true
+            setTextColor(Color.BLACK)
+            setHintTextColor(Color.parseColor("#66000000"))
         }
         val etBandKg = EditText(this).apply {
             hint = "Optional: estimated resistance (kg)"
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-            isSingleLine = true; visibility = android.view.View.GONE
+            isSingleLine = true
+            visibility = android.view.View.GONE
+            setTextColor(Color.BLACK)
+            setHintTextColor(Color.parseColor("#66000000"))
         }
         val etText = EditText(this).apply {
-            hint = ""; inputType = android.text.InputType.TYPE_CLASS_TEXT
-            isSingleLine = true; visibility = android.view.View.GONE
+            hint = ""
+            inputType = android.text.InputType.TYPE_CLASS_TEXT
+            isSingleLine = true
+            visibility = android.view.View.GONE
+            setTextColor(Color.BLACK)
+            setHintTextColor(Color.parseColor("#66000000"))
         }
 
         fun refreshUiForType() {
@@ -350,93 +443,152 @@ class WorkoutSessionActivity : AppCompatActivity() {
             override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) = refreshUiForType()
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+
+        // ---------- Buttons INSIDE the container — as ImageButtons ----------
+        val btnRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, (16 * d).toInt(), 0, 0)
+        }
+
+        val btnSave = ImageButton(this).apply {
+            contentDescription = "Save"
+            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_save))
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
+            layoutParams = LinearLayout.LayoutParams(0, (56 * d).toInt(), 1f).apply {
+                marginEnd = (8 * d).toInt()
+            }
+        }
+
+        val btnSkip = ImageButton(this).apply {
+
+            contentDescription = "Skip"
+            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_skip))
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
+            layoutParams = LinearLayout.LayoutParams(0, (56 * d).toInt(), 1f)
+        }
+
+        btnRow.addView(btnSave)
+        btnRow.addView(btnSkip)
+
+        // Assemble content
+        content.addView(lblHeader)
+        content.addView(lblType)
+        content.addView(spType)
+        content.addView(tvHelp)
+        content.addView(etNumber)
+        content.addView(etText)
+        content.addView(etBandKg)
+        content.addView(btnRow)
+
         refreshUiForType()
 
-        root.addView(lblType); root.addView(spType); root.addView(tvHelp)
-        root.addView(etNumber); root.addView(etText); root.addView(etBandKg)
+        // ---------- Dialog ----------
+        val dlg = AlertDialog.Builder(this)
+            .setView(panel)
+            .setCancelable(true)
+            .create()
 
-        AlertDialog.Builder(this)
-            .setTitle("Log Set")
-            .setView(root)
-            .setPositiveButton("Save") { _, _ ->
-                val type = spType.selectedItem.toString()
-                val valueText: String = when (type) {
-                    "Bodyweight" -> {
-                        val n = etNumber.text.toString().trim()
-                        if (n.isEmpty()) "Bodyweight" else "Bodyweight $n kg"
-                    }
-                    "External load (kg)" -> {
-                        val n = etNumber.text.toString().trim()
-                        if (n.isEmpty()) {
-                            Toast.makeText(this, "Please enter the load in kg.", Toast.LENGTH_SHORT).show()
-                            btnComplete.isEnabled = true; return@setPositiveButton
-                        }
-                        "$n kg"
-                    }
-                    "Assisted (-kg)" -> {
-                        val n = etNumber.text.toString().trim()
-                        if (n.isEmpty()) {
-                            Toast.makeText(this, "Please enter the assistance in kg.", Toast.LENGTH_SHORT).show()
-                            btnComplete.isEnabled = true; return@setPositiveButton
-                        }
-                        "-$n kg"
-                    }
-                    "Band level" -> {
-                        val label = etText.text.toString().trim()
-                        if (label.isEmpty()) {
-                            Toast.makeText(this, "Please enter the band color/level.", Toast.LENGTH_SHORT).show()
-                            btnComplete.isEnabled = true; return@setPositiveButton
-                        }
-                        val est = etBandKg.text.toString().trim()
-                        if (est.isEmpty()) label else "$label (~$est kg)"
-                    }
-                    else -> ""
+        dlg.setOnShowListener {
+            dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            val width = (resources.displayMetrics.widthPixels * 0.92f).toInt()
+            dlg.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+
+        // Handlers
+        btnSave.setOnClickListener {
+            it.startAnimation(pressAnim)
+            val type = spType.selectedItem.toString()
+            val valueText: String = when (type) {
+                "Bodyweight" -> {
+                    val n = etNumber.text.toString().trim()
+                    if (n.isEmpty()) "Bodyweight" else "Bodyweight $n kg"
                 }
+                "External load (kg)" -> {
+                    val n = etNumber.text.toString().trim()
+                    if (n.isEmpty()) {
+                        Toast.makeText(this, "Please enter the load in kg.", Toast.LENGTH_SHORT).show()
+                        btnComplete.isEnabled = true
+                        return@setOnClickListener
+                    }
+                    "$n kg"
+                }
+                "Assisted (-kg)" -> {
+                    val n = etNumber.text.toString().trim()
+                    if (n.isEmpty()) {
+                        Toast.makeText(this, "Please enter the assistance in kg.", Toast.LENGTH_SHORT).show()
+                        btnComplete.isEnabled = true
+                        return@setOnClickListener
+                    }
+                    "-$n kg"
+                }
+                "Band level" -> {
+                    val label = etText.text.toString().trim()
+                    if (label.isEmpty()) {
+                        Toast.makeText(this, "Please enter the band color/level.", Toast.LENGTH_SHORT).show()
+                        btnComplete.isEnabled = true
+                        return@setOnClickListener
+                    }
+                    val est = etBandKg.text.toString().trim()
+                    if (est.isEmpty()) label else "$label (~$est kg)"
+                }
+                else -> ""
+            }
 
-                // Persist set log
-                lifecycleScope.launch(Dispatchers.IO) {
-                    val ex = items[exerciseIndex]
-                    val setNum = setIndex + 1
-                    db.workoutSetLogDao().insert(
-                        WorkoutSetLog(
-                            sessionId = sessionRowId,
-                            exerciseName = ex.name,
-                            setNumber = setNum,
-                            repsMin = ex.repsMin,
-                            repsMax = ex.repsMax,
-                            loadType = type,
-                            loadValueText = valueText,
-                            loggedAt = System.currentTimeMillis()
-                        )
+            // Persist set log
+            lifecycleScope.launch(Dispatchers.IO) {
+                val ex = items[exerciseIndex]
+                val setNum = setIndex + 1
+                db.workoutSetLogDao().insert(
+                    WorkoutSetLog(
+                        sessionId = sessionRowId,
+                        exerciseName = ex.name,
+                        setNumber = setNum,
+                        repsMin = ex.repsMin,
+                        repsMax = ex.repsMax,
+                        loadType = type,
+                        loadValueText = valueText,
+                        loggedAt = System.currentTimeMillis()
                     )
-                }
+                )
+            }
 
-                onSetLogged()
-            }
-            .setNegativeButton("Skip") { _, _ ->
-                lifecycleScope.launch(Dispatchers.IO) {
-                    val ex = items[exerciseIndex]
-                    val setNum = setIndex + 1
-                    db.workoutSetLogDao().insert(
-                        WorkoutSetLog(
-                            sessionId = sessionRowId,
-                            exerciseName = ex.name,
-                            setNumber = setNum,
-                            repsMin = ex.repsMin,
-                            repsMax = ex.repsMax,
-                            loadType = "Skipped log",
-                            loadValueText = "",
-                            loggedAt = System.currentTimeMillis()
-                        )
+            dlg.dismiss()
+            onSetLogged()
+        }
+
+        btnSkip.setOnClickListener {
+            it.startAnimation(pressAnim)
+            lifecycleScope.launch(Dispatchers.IO) {
+                val ex = items[exerciseIndex]
+                val setNum = setIndex + 1
+                db.workoutSetLogDao().insert(
+                    WorkoutSetLog(
+                        sessionId = sessionRowId,
+                        exerciseName = ex.name,
+                        setNumber = setNum,
+                        repsMin = ex.repsMin,
+                        repsMax = ex.repsMax,
+                        loadType = "Skipped log",
+                        loadValueText = "",
+                        loggedAt = System.currentTimeMillis()
                     )
-                }
-                onSetLogged()
+                )
             }
-            .setOnDismissListener {
-                if (!isResting) btnComplete.isEnabled = true
-            }
-            .show()
+            dlg.dismiss()
+            onSetLogged()
+        }
+
+        dlg.setOnDismissListener {
+            if (!isResting) btnComplete.isEnabled = true
+        }
+
+        dlg.show()
     }
+
 
     private fun onSetLogged() {
         setsDone += 1
