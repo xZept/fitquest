@@ -4,6 +4,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.animation.AnimationUtils
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -23,12 +24,15 @@ class SessionDetailActivity : AppCompatActivity() {
     private val items = mutableListOf<WorkoutSetLog>()
     private val sdf = SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault())
 
+    private lateinit var pressAnim: android.view.animation.Animation
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_session_detail)
         hideSystemBars()
 
         db = AppDatabase.getInstance(applicationContext)
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         val sessionId = intent.getLongExtra("SESSION_ID", -1L)
         if (sessionId == -1L) { finish(); return }
@@ -56,6 +60,11 @@ class SessionDetailActivity : AppCompatActivity() {
                 items.clear(); items.addAll(logs); adapter.notifyDataSetChanged()
             }
         }
+
+        findViewById<ImageButton>(R.id.btn_back).setOnClickListener {
+            it.startAnimation(pressAnim)
+            onBackPressedDispatcher.onBackPressed() // or: finish()
+        }
     }
 
     private fun hideSystemBars() {
@@ -72,4 +81,6 @@ class SessionDetailActivity : AppCompatActivity() {
                         android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         }
     }
+
+
 }
