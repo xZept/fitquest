@@ -154,7 +154,7 @@
             android:id="@+id/upper_anim_container"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
+            android:layout_weight="1.15"
             android:foregroundGravity="center">
 
             <ImageView
@@ -181,7 +181,8 @@
                 android:id="@+id/shop_items_recycler"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:padding="12dp"/>
+
+                android:padding="12dp" />
         </FrameLayout>
     </LinearLayout>
 

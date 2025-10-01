@@ -256,6 +256,7 @@ class ShopActivity : AppCompatActivity() {
         }
     }
 
+
     /* ---------------- Adapter ---------------- */
 
     private inner class MonsterAdapter : RecyclerView.Adapter<MonsterAdapter.VH>() {
@@ -264,8 +265,10 @@ class ShopActivity : AppCompatActivity() {
             val iv: ImageView = v.findViewById(R.id.iv_sprite)
             val name: TextView = v.findViewById(R.id.tv_name)
             val price: TextView = v.findViewById(R.id.tv_price)
-            val btn: Button = v.findViewById(R.id.btn_buy)
+            val btn: ImageButton = v.findViewById(R.id.btn_buy)
+            val overlay: View = v.findViewById(R.id.overlay_dim)
         }
+
 
         override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): VH {
             val v = layoutInflater.inflate(R.layout.item_shop_monster, parent, false)
@@ -278,27 +281,47 @@ class ShopActivity : AppCompatActivity() {
             val row = items[position]
 
             val resId = resources.getIdentifier(row.spriteRes, "drawable", packageName)
-            if (resId != 0) holder.iv.setImageResource(resId)
-            else holder.iv.setImageResource(android.R.color.transparent)
+            holder.iv.setImageResource(if (resId != 0) resId else android.R.color.transparent)
 
             holder.name.text = row.name
             holder.price.text = "${row.price} coins"
 
             val canBuy = !row.owned && row.price <= balance
+            val notEnough = !row.owned && row.price > balance
+
+            // Button image/state (keep your assets here)
+            val imgRes = when {
+                row.owned -> R.drawable.indicator_owned
+                canBuy    -> R.drawable.button_buy
+                else      -> R.drawable.indicator_not_enough
+            }
+            holder.btn.setImageResource(imgRes)
             holder.btn.isEnabled = canBuy
-            holder.btn.text = when {
-                row.owned -> "Owned"
-                canBuy -> "Buy"
-                else -> "Not enough"
+            holder.btn.isClickable = canBuy
+
+            // 🔲 Dark overlay: show only when NOT ENOUGH
+            holder.overlay.visibility = if (notEnough) View.VISIBLE else View.GONE
+
+            // Ensure no extra dimming for owned/buy
+            holder.itemView.alpha = 1f
+            holder.btn.alpha = 1f
+
+            // A11y
+            holder.btn.contentDescription = when {
+                row.owned -> "${row.name} already owned"
+                canBuy    -> "Buy ${row.name} for ${row.price} coins"
+                else      -> "Not enough coins to buy ${row.name}"
             }
 
             holder.btn.setOnClickListener {
+                if (!canBuy) return@setOnClickListener
+                it.startAnimation(pressAnim)
                 holder.btn.isEnabled = false
+
                 lifecycleScope.launch {
                     val result = withContext(Dispatchers.IO) { repo.purchase(userId, row.code) }
                     when (result) {
                         is PurchaseResult.Success -> {
-                            // Re-read balance + list to keep UI perfectly in sync
                             refreshAll()
                             Toast.makeText(this@ShopActivity, "Purchased ${row.name}!", Toast.LENGTH_SHORT).show()
                         }
@@ -318,5 +341,7 @@ class ShopActivity : AppCompatActivity() {
                 }
             }
         }
+
+
     }
 }
