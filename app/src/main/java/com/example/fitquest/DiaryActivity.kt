@@ -56,8 +56,6 @@ class DiaryActivity : AppCompatActivity() {
             override fun onTabReselected(t: TabLayout.Tab) {}
         })
 
-
-
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener {
             it.startAnimation(pressAnim)
             // If there's a previous screen, this behaves like a normal back.
