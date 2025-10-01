@@ -10,4 +10,10 @@
         <item name="android:textColor">@color/hint_label</item>
     </style>
 
+    <style name="Widget.FitQuest.Tab.Text" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textSize">25sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+
 </resources>
