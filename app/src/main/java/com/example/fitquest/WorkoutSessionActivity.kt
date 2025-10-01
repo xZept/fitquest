@@ -273,13 +273,130 @@ class WorkoutSessionActivity : AppCompatActivity() {
         }
         btnEnd.setOnClickListener {
             it.startAnimation(pressAnim)
-            AlertDialog.Builder(this)
-                .setTitle("Abandon Quest?")
-                .setMessage("Are you sure you want to end this session now?\n\nYou will NOT receive any rewards.")
-                .setNegativeButton("Keep Going", null)
-                .setPositiveButton("Abandon") { _, _ -> finishSession(success = false) }
-                .show()
+            showAbandonDialog()
         }
+
+    }
+
+    private fun showAbandonDialog() {
+        val panel = FrameLayout(this)
+
+        // Background image (keeps aspect; no distortion)
+        val ivBg = ImageView(this).apply {
+            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.container_handler))
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
+        }
+        panel.addView(
+            ivBg,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val d = resources.displayMetrics.density
+
+        // Overlay spans full image so we can center text and anchor buttons
+        val overlay = FrameLayout(this)
+        panel.addView(
+            overlay,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        // Centered title + message (BLACK text)
+        val centerColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            setPadding((24 * d).toInt(), (28 * d).toInt(), (24 * d).toInt(), (96 * d).toInt()) // leave space for buttons
+        }
+        val tvTitle = TextView(this).apply {
+            text = "Abandon Quest?"
+            setTextColor(Color.BLACK)
+            textSize = 22f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            gravity = android.view.Gravity.CENTER
+        }
+        val tvMsg = TextView(this).apply {
+            text = "Are you sure you want to end this session now?\n\nYou will NOT receive any rewards."
+            setTextColor(Color.BLACK)
+            textSize = 16f
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, (10 * d).toInt(), 0, 0)
+        }
+        centerColumn.addView(tvTitle)
+        centerColumn.addView(tvMsg)
+        overlay.addView(
+            centerColumn,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.CENTER
+            )
+        )
+
+        // Bottom row with ImageButtons (inside the image)
+        val btnRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding((16 * d).toInt(), 0, (16 * d).toInt(), (16 * d).toInt())
+        }
+
+        val btnKeep = ImageButton(this).apply {
+            contentDescription = "Keep Going"
+            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_keep_going))
+            background = null // transparent (no ripple)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
+            layoutParams = LinearLayout.LayoutParams(0, (56 * d).toInt(), 1f).apply {
+                marginEnd = (8 * d).toInt()
+            }
+        }
+
+        val btnAbandon = ImageButton(this).apply {
+            contentDescription = "Abandon"
+            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_abandon))
+            background = null // transparent
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
+            layoutParams = LinearLayout.LayoutParams(0, (56 * d).toInt(), 1f)
+        }
+
+        btnRow.addView(btnKeep)
+        btnRow.addView(btnAbandon)
+
+        overlay.addView(
+            btnRow,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.BOTTOM
+            )
+        )
+
+        val dlg = AlertDialog.Builder(this)
+            .setView(panel)
+            .setCancelable(true)
+            .create()
+
+        dlg.setOnShowListener {
+            // Transparent window so PNG edges show
+            dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            // Width ~92% of screen; height wraps to image (no distortion)
+            val width = (resources.displayMetrics.widthPixels * 0.92f).toInt()
+            dlg.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+
+        // Actions
+        btnKeep.setOnClickListener { dlg.dismiss() }
+        btnAbandon.setOnClickListener {
+            dlg.dismiss()
+            finishSession(success = false)
+        }
+
+        dlg.show()
     }
 
 
