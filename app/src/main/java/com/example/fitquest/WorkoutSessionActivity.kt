@@ -1,7 +1,5 @@
 package com.example.fitquest
 
-import android.animation.AnimatorSet
-import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.os.Build
 import android.os.Bundle
@@ -23,7 +21,6 @@ import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.math.ceil
 import android.graphics.BitmapFactory
-import android.os.SystemClock
 import android.view.animation.AnimationUtils
 import androidx.annotation.DrawableRes
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
@@ -31,7 +28,6 @@ import android.graphics.drawable.ColorDrawable
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.view.Gravity
 import androidx.core.content.ContextCompat
 import android.graphics.Color
 import android.view.View
@@ -304,7 +300,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         val panel = FrameLayout(this)
 
         val ivBg = ImageView(this).apply {
-            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.container_log_set))
+            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.container_handler))
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = true
         }
@@ -645,21 +641,133 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
             withContext(Dispatchers.Main) {
                 if (success) {
-                    AlertDialog.Builder(this@WorkoutSessionActivity)
-                        .setTitle("Session Complete")
-                        .setMessage("Nice work!\nCoins earned: $coinsEarned")
-                        .setPositiveButton("OK") { _, _ -> finish() }
-                        .show()
+                    showResultImageDialog(
+                        imageRes = R.drawable.container_session_complete,
+                        title = "Session Complete",
+                        message = "Nice work!\nCoins earned: $coinsEarned"
+                    ) { finish() }
                 } else {
-                    AlertDialog.Builder(this@WorkoutSessionActivity)
-                        .setTitle("Session Ended")
-                        .setMessage("You ended the session early.\nNo rewards were given.")
-                        .setPositiveButton("OK") { _, _ -> finish() }
-                        .show()
+                    showResultImageDialog(
+                        imageRes = R.drawable.container_session_abandoned,
+                        title = "Session Ended",
+                        message = "You ended the session early.\nNo rewards were given."
+                    ) { finish() }
                 }
             }
+
         }
     }
+
+    private fun showResultImageDialog(
+        @DrawableRes imageRes: Int,
+        title: String,
+        message: String,
+        onOk: () -> Unit
+    ) {
+        val panel = FrameLayout(this)
+
+        // Background image (no distortion)
+        val ivBg = ImageView(this).apply {
+            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, imageRes))
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
+        }
+        panel.addView(
+            ivBg,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val d = resources.displayMetrics.density
+
+        // Overlay spans full image area so we can anchor children
+        val overlay = FrameLayout(this)
+        panel.addView(
+            overlay,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        // Centered column for title/message (extra bottom padding to avoid the button)
+        val centerColumn = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            setPadding((24 * d).toInt(), (28 * d).toInt(), (24 * d).toInt(), (72 * d).toInt())
+            background = null
+        }
+
+        val tvTitle = TextView(this).apply {
+            text = title
+            setTextColor(Color.WHITE)   // ← white
+            textSize = 30f              // ← bigger
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            gravity = android.view.Gravity.CENTER
+        }
+        val tvMsg = TextView(this).apply {
+            text = message
+            setTextColor(Color.WHITE)   // ← white
+            textSize = 24f              // ← bigger
+            gravity = android.view.Gravity.CENTER
+            setPadding(0, (10 * d).toInt(), 0, 0)
+        }
+
+        centerColumn.addView(tvTitle)
+        centerColumn.addView(tvMsg)
+
+        overlay.addView(
+            centerColumn,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.CENTER
+            )
+        )
+
+        // Bottom-right "Continue" image button
+        val btnOk = ImageButton(this).apply {
+            contentDescription = "Continue"
+            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_continue))
+            background = null // transparent
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
+        }
+        overlay.addView(
+            btnOk,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                (56 * d).toInt(),
+                android.view.Gravity.END or android.view.Gravity.BOTTOM
+            ).apply {
+                marginEnd = (16 * d).toInt()
+                bottomMargin = (16 * d).toInt()
+            }
+        )
+
+        val dlg = AlertDialog.Builder(this)
+            .setView(panel)
+            .setCancelable(true)
+            .create()
+
+        dlg.setOnShowListener {
+            dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            val width = (resources.displayMetrics.widthPixels * 0.92f).toInt()
+            dlg.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+
+        btnOk.setOnClickListener {
+            dlg.dismiss()
+            onOk()
+        }
+
+        dlg.show()
+    }
+
+
+
 
     /* -------- Quest History helpers -------- */
 
