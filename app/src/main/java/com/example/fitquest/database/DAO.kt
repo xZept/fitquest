@@ -83,7 +83,7 @@ interface QuestHistoryDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnore(row: QuestHistory): Long
 
-    // FIX: use backticks around the column name `key`
+    // backticked `key`
     @Query("UPDATE questHistory SET lastUsedAt = :ts WHERE userId = :userId AND `key` = :questKey")
     suspend fun touch(userId: Int, questKey: String, ts: Long = System.currentTimeMillis())
 
@@ -112,8 +112,6 @@ interface QuestHistoryDao {
     @Query("SELECT * FROM questHistory WHERE id = :id AND userId = :userId LIMIT 1")
     suspend fun getById(userId: Int, id: Long): QuestHistory?
 }
-
-
 
 // ----- Workout Session -----
 @Dao
@@ -164,10 +162,10 @@ interface WorkoutSetLogDao {
     suspend fun insertAll(logs: List<WorkoutSetLog>): List<Long>
 
     @Query("""
-    SELECT * FROM workoutSetLog
-    WHERE sessionId = :sessionId
-    ORDER BY exerciseName COLLATE NOCASE ASC, setNumber ASC, id ASC
-""")
+        SELECT * FROM workoutSetLog
+        WHERE sessionId = :sessionId
+        ORDER BY exerciseName COLLATE NOCASE ASC, setNumber ASC, id ASC
+    """)
     suspend fun getForSession(sessionId: Long): List<WorkoutSetLog>
 
     @Query("DELETE FROM workoutSetLog WHERE sessionId = :sessionId")
@@ -196,7 +194,8 @@ data class MonsterListItem(
     val name: String,
     val spriteRes: String,
     val price: Int,
-    val owned: Boolean
+    val owned: Boolean,
+    val locked: Boolean   // ← NEW: locked if cheaper monsters aren’t owned yet
 )
 
 @Dao
@@ -220,20 +219,44 @@ interface MonsterDao {
     @Query("DELETE FROM monster WHERE code NOT IN (:keep)")
     suspend fun deleteAllExcept(keep: List<String>)
 
-    // NEW: allow price updates during seeding
+    // Allow price/name/sprite updates without recreating rows
     @Query("UPDATE monster SET price = :price WHERE code = :code")
     suspend fun updatePrice(code: String, price: Int)
 
-    // NEW (optional): allow changing display name or sprite without changing code
     @Query("UPDATE monster SET name = :name, spriteRes = :spriteRes WHERE code = :code")
     suspend fun updateMeta(code: String, name: String, spriteRes: String)
 
+    // Number of cheaper monsters the user hasn't bought (progress prereqs)
     @Query("""
-        SELECT m.code AS code, m.name AS name, m.spriteRes AS spriteRes, m.price AS price,
-               CASE WHEN um.id IS NULL THEN 0 ELSE 1 END AS owned
+        SELECT COUNT(*) FROM monster m
+        WHERE m.price < (SELECT price FROM monster WHERE code = :code)
+          AND NOT EXISTS (
+              SELECT 1 FROM userMonster um
+              WHERE um.userId = :userId AND um.monsterCode = m.code
+          )
+    """)
+    suspend fun countMissingPrereqs(userId: Int, code: String): Int
+
+    // List with owned+locked flags (locked if any cheaper unowned monster exists)
+    @Query("""
+        SELECT 
+            m.code       AS code,
+            m.name       AS name,
+            m.spriteRes  AS spriteRes,
+            m.price      AS price,
+            CASE WHEN um.id IS NULL THEN 0 ELSE 1 END AS owned,
+            CASE WHEN EXISTS (
+                SELECT 1
+                FROM monster m2
+                WHERE m2.price < m.price
+                  AND NOT EXISTS (
+                      SELECT 1 FROM userMonster um2
+                      WHERE um2.userId = :userId AND um2.monsterCode = m2.code
+                  )
+            ) THEN 1 ELSE 0 END AS locked
         FROM monster m
         LEFT JOIN userMonster um
-          ON um.monsterCode = m.code AND um.userId = :userId
+               ON um.monsterCode = m.code AND um.userId = :userId
         ORDER BY m.price ASC, m.name ASC
     """)
     suspend fun listForUser(userId: Int): List<MonsterListItem>
@@ -265,4 +288,3 @@ interface PortionDao {
     @Query("SELECT * FROM portion WHERE foodId = :foodId ORDER BY portionId ASC")
     fun getForFood(foodId: Long): List<Portion>
 }
-

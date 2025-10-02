@@ -50,7 +50,6 @@ class ShopActivity : AppCompatActivity() {
     private var coinBitmap: Bitmap? = null
     private var coinDrawable: SpriteSheetDrawable? = null
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shop)
@@ -91,14 +90,11 @@ class ShopActivity : AppCompatActivity() {
             }
         }
 
-        // Apply animated background
+        // Apply animated background + coin anim
         applyAnimatedBackground()
         applyCoinBadgeAnimation()
         setupNavigationBar()
     }
-
-
-
 
     override fun onStart() {
         super.onStart()
@@ -120,27 +116,24 @@ class ShopActivity : AppCompatActivity() {
         coinBitmap = null
     }
 
-
     override fun onResume() {
         super.onResume()
-        // Keep coin badge fresh (also refresh buttons’ enabled state)
         refreshCoins(alsoRefreshButtons = true)
     }
 
     /* ---------------- Data ops ---------------- */
 
     private suspend fun seedMonstersOnce() {
-        // Seed just Mushroom and Goblin (names must match drawable-nodpi resource files)
         withContext(Dispatchers.IO) {
             val dao = db.monsterDao()
 
-            // Desired catalog (edit prices/names/sprites here anytime)
+            // Edit prices/names/sprites here any time
             val catalog = listOf(
                 Monster(code = "mushroom", name = "Mushroom", spriteRes = "monster_mushroom", price = 50),
                 Monster(code = "goblin",   name = "Goblin",   spriteRes = "monster_goblin",   price = 150)
             )
 
-            // Upsert logic: insert if missing, else update mutable fields
+            // Upsert: insert if missing, else update mutable fields
             catalog.forEach { m ->
                 val inserted = dao.insertIgnore(m)
                 if (inserted == -1L) {
@@ -149,7 +142,7 @@ class ShopActivity : AppCompatActivity() {
                 }
             }
 
-            // Dev convenience: keep ONLY these two in the catalog
+            // Keep ONLY these in the catalog (optional for dev)
             dao.deleteAllExcept(catalog.map { it.code })
         }
     }
@@ -183,10 +176,9 @@ class ShopActivity : AppCompatActivity() {
 
     /* ---------------- Background ---------------- */
 
-
     private fun applyCoinBadgeAnimation() {
         val opts = BitmapFactory.Options().apply {
-            inScaled = false                // exact frame math
+            inScaled = false
             inPreferredConfig = Bitmap.Config.ARGB_8888
             inDither = true
         }
@@ -199,9 +191,9 @@ class ShopActivity : AppCompatActivity() {
 
         val coin = SpriteSheetDrawable(
             sheet = requireNotNull(coinBitmap) { "coin_spritesheet failed to decode" },
-            rows = 1,          // <-- adjust if your sheet has multiple rows
-            cols = 6,         // <-- set to your actual frame count
-            fps  = 12,         // <-- tweak for desired speed
+            rows = 1,
+            cols = 6,
+            fps  = 12,
             loop = true,
             scaleMode = SpriteSheetDrawable.ScaleMode.FIT_CENTER
         )
@@ -209,6 +201,7 @@ class ShopActivity : AppCompatActivity() {
         findViewById<ImageView>(R.id.iv_coin_anim).setImageDrawable(coin)
         coinDrawable = coin
     }
+
     private fun applyAnimatedBackground() {
         val opts = BitmapFactory.Options().apply {
             inScaled = false
@@ -218,7 +211,7 @@ class ShopActivity : AppCompatActivity() {
 
         bgBitmap = BitmapFactory.decodeResource(
             resources,
-            R.drawable.bg_shop_spritesheet, // put PNG in drawable-nodpi ideally
+            R.drawable.bg_shop_spritesheet,
             opts
         )
 
@@ -256,7 +249,6 @@ class ShopActivity : AppCompatActivity() {
         }
     }
 
-
     /* ---------------- Adapter ---------------- */
 
     private inner class MonsterAdapter : RecyclerView.Adapter<MonsterAdapter.VH>() {
@@ -268,7 +260,6 @@ class ShopActivity : AppCompatActivity() {
             val btn: ImageButton = v.findViewById(R.id.btn_buy)
             val overlay: View = v.findViewById(R.id.overlay_dim)
         }
-
 
         override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): VH {
             val v = layoutInflater.inflate(R.layout.item_shop_monster, parent, false)
@@ -286,31 +277,32 @@ class ShopActivity : AppCompatActivity() {
             holder.name.text = row.name
             holder.price.text = "${row.price} coins"
 
-            val canBuy = !row.owned && row.price <= balance
-            val notEnough = !row.owned && row.price > balance
+            val locked = row.locked
+            val owned = row.owned
+            val canBuy = !owned && !locked && row.price <= balance
+            val notEnough = !owned && !locked && row.price > balance
 
-            // Button image/state (keep your assets here)
+            // Button image/state (locked falls back to "not enough" icon if no locked icon exists)
+            val lockedIcon = resources.getIdentifier("indicator_locked", "drawable", packageName)
             val imgRes = when {
-                row.owned -> R.drawable.indicator_owned
-                canBuy    -> R.drawable.button_buy
-                else      -> R.drawable.indicator_not_enough
+                owned -> R.drawable.indicator_owned
+                locked -> if (lockedIcon != 0) lockedIcon else R.drawable.indicator_not_enough
+                canBuy -> R.drawable.button_buy
+                else   -> R.drawable.indicator_not_enough
             }
             holder.btn.setImageResource(imgRes)
             holder.btn.isEnabled = canBuy
             holder.btn.isClickable = canBuy
 
-            // 🔲 Dark overlay: show only when NOT ENOUGH
-            holder.overlay.visibility = if (notEnough) View.VISIBLE else View.GONE
-
-            // Ensure no extra dimming for owned/buy
-            holder.itemView.alpha = 1f
-            holder.btn.alpha = 1f
+            // Dim overlay for locked or not-enough
+            holder.overlay.visibility = if (locked || notEnough) View.VISIBLE else View.GONE
 
             // A11y
             holder.btn.contentDescription = when {
-                row.owned -> "${row.name} already owned"
-                canBuy    -> "Buy ${row.name} for ${row.price} coins"
-                else      -> "Not enough coins to buy ${row.name}"
+                owned  -> "${row.name} already owned"
+                locked -> "${row.name} is locked. Buy earlier monsters first."
+                canBuy -> "Buy ${row.name} for ${row.price} coins"
+                else   -> "Not enough coins to buy ${row.name}"
             }
 
             holder.btn.setOnClickListener {
@@ -322,7 +314,7 @@ class ShopActivity : AppCompatActivity() {
                     val result = withContext(Dispatchers.IO) { repo.purchase(userId, row.code) }
                     when (result) {
                         is PurchaseResult.Success -> {
-                            refreshAll()
+                            refreshAll() // recompute locked/owned/affordability
                             Toast.makeText(this@ShopActivity, "Purchased ${row.name}!", Toast.LENGTH_SHORT).show()
                         }
                         is PurchaseResult.Insufficient -> {
@@ -333,6 +325,10 @@ class ShopActivity : AppCompatActivity() {
                             refreshAll()
                             Toast.makeText(this@ShopActivity, "Already owned.", Toast.LENGTH_SHORT).show()
                         }
+                        is PurchaseResult.LockedByProgress -> {
+                            Toast.makeText(this@ShopActivity, "Locked. Buy earlier monsters first.", Toast.LENGTH_LONG).show()
+                            notifyItemChanged(position)
+                        }
                         is PurchaseResult.NotFound -> {
                             Toast.makeText(this@ShopActivity, "Item not found.", Toast.LENGTH_SHORT).show()
                             notifyItemChanged(position)
@@ -341,7 +337,5 @@ class ShopActivity : AppCompatActivity() {
                 }
             }
         }
-
-
     }
 }

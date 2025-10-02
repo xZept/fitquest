@@ -8,6 +8,7 @@ sealed class PurchaseResult {
     data class Insufficient(val balance: Int, val price: Int) : PurchaseResult()
     object AlreadyOwned : PurchaseResult()
     object NotFound : PurchaseResult()
+    object LockedByProgress : PurchaseResult()   // ← NEW
 }
 
 class ShopRepository(private val db: AppDatabase) {
@@ -25,16 +26,23 @@ class ShopRepository(private val db: AppDatabase) {
     }
 
     suspend fun purchase(userId: Int, code: String): PurchaseResult = db.withTransaction {
-        val monster = db.monsterDao().getByCode(code) ?: return@withTransaction PurchaseResult.NotFound
-        if (db.monsterDao().isOwned(userId, code)) return@withTransaction PurchaseResult.AlreadyOwned
+        val mdao = db.monsterDao()
+        val wdao = db.userWalletDao()
 
-        db.userWalletDao().ensure(userId)
-        val balance = db.userWalletDao().getCoins(userId) ?: 0
+        val monster = mdao.getByCode(code) ?: return@withTransaction PurchaseResult.NotFound
+        if (mdao.isOwned(userId, code)) return@withTransaction PurchaseResult.AlreadyOwned
+
+        // Progression gate: must own all cheaper monsters
+        val missing = mdao.countMissingPrereqs(userId, code)
+        if (missing > 0) return@withTransaction PurchaseResult.LockedByProgress
+
+        wdao.ensure(userId)
+        val balance = wdao.getCoins(userId) ?: 0
         if (balance < monster.price) return@withTransaction PurchaseResult.Insufficient(balance, monster.price)
 
-        db.userWalletDao().add(userId, -monster.price)
-        db.monsterDao().own(UserMonster(userId = userId, monsterCode = code))
-        val newBal = db.userWalletDao().getCoins(userId) ?: 0
+        wdao.add(userId, -monster.price)
+        mdao.own(UserMonster(userId = userId, monsterCode = code))
+        val newBal = wdao.getCoins(userId) ?: 0
         PurchaseResult.Success(newBal)
     }
 }
