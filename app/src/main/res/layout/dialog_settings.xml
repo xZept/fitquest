@@ -4,6 +4,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:fillViewport="true"
     android:clickable="true"
     android:focusableInTouchMode="true">
 
@@ -12,7 +13,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:background="@drawable/bg_settings"
+        android:paddingHorizontal="40dp"
+        android:paddingTop="60dp">
+
 
         <TextView
             android:layout_width="wrap_content"
@@ -20,7 +24,7 @@
             android:text="Rest Timer"
             android:textColor="#111827"
             android:textStyle="bold"
-            android:textSize="16sp"
+            android:textSize="18sp"
             android:layout_marginBottom="8dp" />
 
         <com.google.android.material.textfield.TextInputLayout
@@ -67,10 +71,75 @@
             android:textSize="16sp"
             android:layout_marginBottom="8dp" />
 
-        <LinearLayout
+        <ProgressBar
+            android:id="@+id/equipment_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
+        <androidx.gridlayout.widget.GridLayout
             android:id="@+id/equipment_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            app:columnCount="2"
+            app:alignmentMode="alignMargins"
+            app:useDefaultMargins="true" />
+
+        <!-- Footer: custom image buttons (inside the same background) -->
+        <!-- Footer: Cancel & Save on top row, Logout below -->
+        <LinearLayout
+            android:id="@+id/footer_buttons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:orientation="vertical">
+
+            <!-- Top row: Cancel + Save (aligned to end) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <!-- Cancel: stays on the left -->
+                <ImageButton
+                    android:id="@+id/btn_cancel"
+                    android:layout_width="96dp"
+                    android:layout_height="32dp"
+                    android:background="@drawable/button_cancel"
+                    android:adjustViewBounds="true"
+                    android:padding="0dp" />
+
+                <!-- Spacer: expands to push Save to the right -->
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <!-- Save: ends up on the right -->
+                <ImageButton
+                    android:id="@+id/btn_save"
+                    android:layout_width="96dp"
+                    android:layout_height="32dp"
+                    android:background="@drawable/button_save"
+                    android:contentDescription="Save"
+                    android:adjustViewBounds="true"
+                    android:padding="0dp" />
+            </LinearLayout>
+
+
+            <!-- Bottom row: Log out (centered below) -->
+            <ImageButton
+                android:id="@+id/btn_logout"
+                android:layout_width="96dp"
+                android:layout_height="32dp"
+                android:layout_gravity="start"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/button_log_out"
+                android:adjustViewBounds="true"
+                android:padding="0dp" />
+        </LinearLayout>
+
+
     </LinearLayout>
 </ScrollView>

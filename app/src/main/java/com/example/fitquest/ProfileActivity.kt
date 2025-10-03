@@ -29,6 +29,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.fitquest.database.UserSettings
+import androidx.gridlayout.widget.GridLayout
+import android.view.ViewGroup
+import android.text.TextUtils
+import kotlin.math.roundToInt
+
 
 /**
  * Merged ProfileActivity
@@ -66,6 +71,8 @@ class ProfileActivity : AppCompatActivity() {
     private val MAX_HEIGHT_CM = 230
     private val MIN_WEIGHT_KG = 30.0
     private val MAX_WEIGHT_KG = 300.0
+
+    
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -292,7 +299,9 @@ class ProfileActivity : AppCompatActivity() {
         val view = layoutInflater.inflate(R.layout.dialog_settings, null)
         val tilTimer = view.findViewById<TextInputLayout>(R.id.til_timer)
         val etTimer = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.et_timer)
-        val eqContainer = view.findViewById<LinearLayout>(R.id.equipment_container)
+        val eqContainer = view.findViewById<GridLayout>(R.id.equipment_container)
+
+
 
         tilTimer.setDefaultHintTextColor(
             ContextCompat.getColorStateList(this, R.color.hint_label)!!
@@ -318,12 +327,23 @@ class ProfileActivity : AppCompatActivity() {
             withContext(Dispatchers.Main) {
                 canonNames.forEach { canon ->
                     val label = displayLabel(canon)
+
+                    val lp = GridLayout.LayoutParams().apply {
+                        width = 0                                   // stretch evenly per column (weight)
+                        height = ViewGroup.LayoutParams.WRAP_CONTENT
+                        columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)  // weight = 1
+                        setMargins(dp(6), dp(6), dp(6), dp(6))
+                    }
+
                     val cb = CheckBox(this@ProfileActivity).apply {
                         text = label
                         tag = canon
                         setTextColor(0xFF111827.toInt())
                         isChecked = canon in selectedCanon
                         CompoundButtonCompat.setButtonTintList(this, checkboxTint())
+                        maxLines = 2
+                        ellipsize = TextUtils.TruncateAt.END
+                        layoutParams = lp
                     }
                     checks += cb
                     eqContainer.addView(cb)
@@ -331,36 +351,25 @@ class ProfileActivity : AppCompatActivity() {
             }
         }
 
-        val dialog = MaterialAlertDialogBuilder(this)
-            .setTitle("Settings")
-            .setView(view)
-            .setNeutralButton("Log out") { _, _ ->
-                lifecycleScope.launch {
-                    DataStoreManager.clearUserId(this@ProfileActivity)
-                    startActivity(
-                        Intent(this@ProfileActivity, LoginActivity::class.java).apply {
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                        }
-                    )
-                    finishAffinity()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Save", null)
+        view.setPadding(20, 80, 20, 10)
+
+        val dialog = MaterialAlertDialogBuilder(this /* , R.style.FitQuestSettingsImageDialog (optional overlay) */)
+            .setView(view)         // no setPositive/Negative/NeutralButton here
             .create()
 
+
+
         dialog.setOnShowListener {
-            dialog.window?.setBackgroundDrawableResource(R.drawable.dialog_bg_card)
+            // If you’re using a custom background image for the whole dialog:
+            dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+            (view.parent as? View)?.setBackgroundColor(Color.TRANSPARENT)
 
-            val positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            val negative = dialog.getButton(AlertDialog.BUTTON_NEGATIVE)
-            val neutral  = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
-            listOf(positive, negative, neutral).forEach { it?.isAllCaps = false }
-            positive?.setTextColor(0xFF10B981.toInt())
-            negative?.setTextColor(0xFF6B7280.toInt())
-            neutral?.setTextColor(0xFFEF4444.toInt())
+            // wire up image buttons
+            val btnSave   = view.findViewById<ImageButton>(R.id.btn_save)
+            val btnCancel = view.findViewById<ImageButton>(R.id.btn_cancel)
+            val btnLogout = view.findViewById<ImageButton>(R.id.btn_logout)
 
-            positive?.setOnClickListener {
+            btnSave.setOnClickListener {
                 val seconds = parseDurationToSeconds(etTimer.text?.toString()?.trim() ?: "")
                 if (seconds == null || seconds < 15 || seconds > 20 * 60) {
                     Toast.makeText(this, "Please enter 15s to 20m (e.g., 180 or 3:00).", Toast.LENGTH_LONG).show()
@@ -368,7 +377,6 @@ class ProfileActivity : AppCompatActivity() {
                 }
 
                 val chosenCanon = checks.filter { it.isChecked }.map { it.tag as String }
-
                 lifecycleScope.launch {
                     db.userSettingsDao().upsert(
                         UserSettings(
@@ -383,11 +391,28 @@ class ProfileActivity : AppCompatActivity() {
                     }
                 }
             }
+
+            btnCancel.setOnClickListener { dialog.dismiss() }
+
+            btnLogout.setOnClickListener {
+                lifecycleScope.launch {
+                    DataStoreManager.clearUserId(this@ProfileActivity)
+                    startActivity(
+                        Intent(this@ProfileActivity, LoginActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        }
+                    )
+                    finishAffinity()
+                }
+            }
         }
 
         dialog.setOnDismissListener { enterImmersive() }
         dialog.show()
+
     }
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).roundToInt()
 
     private fun setupNavigationBar() {
         findViewById<ImageView>(R.id.nav_icon_workout).setOnClickListener {
