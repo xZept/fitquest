@@ -29,8 +29,8 @@
         <item>Pull</item>
         <item>Legs</item>
         <item>Upper</item>
-        <item>Lower</item>
-        <item>Full Body</item>
+<!--        <item>Lower</item>--> 
+<!--        <item>Full Body</item>-->
     </string-array>
 
     <string-array name="focuses">

@@ -35,6 +35,8 @@ import android.widget.TextView
 import android.widget.ArrayAdapter
 import android.widget.ImageButton
 import androidx.appcompat.widget.AppCompatSpinner
+import android.util.Log
+
 
 
 class WorkoutSessionActivity : AppCompatActivity() {
@@ -56,6 +58,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private lateinit var btnComplete: ImageButton
     private lateinit var btnEnd: ImageButton
 
+    private lateinit var ivHpBg: ImageView
+
     // Session state
     private var questTitle: String = "Your Quest"
     private lateinit var activeQuest: ActiveQuest
@@ -71,6 +75,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private var fightAnim: SpriteAnim? = null
     private var currentAnim: SpriteAnim? = null
 
+    private var userSex: String = "male"
 
     // HP
     private var totalSets = 1
@@ -109,6 +114,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         ivMonster = findViewById(R.id.iv_monster)
         hpBar = findViewById(R.id.hp_bar)
         tvHp = findViewById(R.id.tv_hp)
+        ivHpBg = findViewById(R.id.iv_hp_bg)
 
         // bind (bottom)
         tvDay = findViewById(R.id.tv_day_title)
@@ -117,6 +123,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
         tvRepRange = findViewById(R.id.tv_rep_range)
         btnComplete = findViewById(R.id.btn_complete_set)
         btnEnd = findViewById(R.id.btn_end_session)
+
+
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
@@ -144,9 +152,18 @@ class WorkoutSessionActivity : AppCompatActivity() {
             currentMonsterSprite = latestMonster?.spriteRes ?: "monster_slime" // default slime
             currentMonsterCode = latestMonster?.code ?: "slime"
 
+
+
+            // set HP bar background to match the monster
+            updateHpBackgroundForCode(currentMonsterCode)
+
             // apply idle frame now
-            initAnimations()   // NEW: build both sprites
-            showIdle()         // start looping idle
+            userSex = fetchUserSexSafely() // ← gets "male" or "female" from User table
+            // Use the user's sex for both idle + fight by default:
+            refreshLatestMonsterAndAnimations(restartIdle = true)
+
+            initAnimations()               // ← builds sheets using userSex
+            showIdle()                     // ← starts looping idle
 
 
             // coin multiplier based on monster
@@ -185,10 +202,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         }
     }
 
-    // SpriteSheetDrawable.kt  (inside class SpriteSheetDrawable)
-
-
-
     private fun buildAnim(
         @DrawableRes resId: Int,
         rows: Int,
@@ -220,16 +233,9 @@ class WorkoutSessionActivity : AppCompatActivity() {
     }
 
     private fun initAnimations() {
-        // TODO: adjust rows/cols/fps if your sheets differ
-        idleAnim = buildAnim(
-            resId = R.drawable.session_male_slime_idle,
-            rows = 1, cols = 13, fps = 13, loop = true
-        )
-        fightAnim = buildAnim(
-            resId = R.drawable.session_male_slime_fight,
-            rows = 1, cols = 24, fps = 24, loop = false
-        )
+        initAnimationsForSex(userSex)
     }
+
 
     override fun onPause() {
         super.onPause()
@@ -239,6 +245,13 @@ class WorkoutSessionActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (!isResting) showIdle()
+        lifecycleScope.launch {
+            val latest = withContext(Dispatchers.IO) { db.monsterDao().getLatestOwnedForUser(userId) }
+            currentMonsterCode = latest?.code ?: "slime"
+            updateHpBackgroundForCode(currentMonsterCode)   // ← HP background
+            initAnimations()                                 // ← rebuild idle/fight sheets for new monster
+            if (!isResting) showIdle()
+        }
     }
 
     override fun onDestroy() {
@@ -940,7 +953,100 @@ class WorkoutSessionActivity : AppCompatActivity() {
         hpLeft = end
     }
 
+    private fun updateHpBackgroundForCode(monsterCode: String?) {
+        val code = (monsterCode ?: "slime").lowercase()
+        // We follow your naming: container_<code>_hp.png
+        val wanted = "container_${code}_hp"
+        val pickedId = resources.getIdentifier(wanted, "drawable", packageName)
+        val fallbackId = resources.getIdentifier("container_slime_hp", "drawable", packageName)
+        ivHpBg.setImageResource(if (pickedId != 0) pickedId else fallbackId)
+    }
+
+
+
     /* --------- Monster frame helpers (single ImageView) --------- */
+    /** Resolve first existing drawable id from a list of names; returns 0 if none found */
+    private fun resolveFirstDrawable(vararg names: String): Int {
+        for (n in names) {
+            val id = resources.getIdentifier(n, "drawable", packageName)
+            if (id != 0) return id
+        }
+        return 0
+    }
+
+    /** Hook to load user sex from your own storage. Replace the body when you have a source. */
+    private suspend fun fetchUserSexSafely(): String = withContext(Dispatchers.IO) {
+        try {
+            val sexRaw = db.userDAO().getUserById(userId)?.sex ?: "male"
+            if (sexRaw.equals("female", ignoreCase = true)) "female" else "male"
+        } catch (_: Throwable) {
+            "male"
+        }
+    }
+
+
+    /** (Re)build idle/fight animations for the current monster and provided sex. */
+    /** (Re)build idle/fight animations for the current monster and provided sex. */
+
+    private fun initAnimationsForSex(
+        sexRaw: String,
+        fightSexOverride: String? = null
+    ) {
+        val idleSex = if (sexRaw.equals("female", true)) "female" else "male"
+        val fightSex = when (fightSexOverride?.lowercase()) {
+            "female" -> "female"
+            "male" -> "male"
+            else -> idleSex
+        }
+        val code = currentMonsterCode.ifBlank { "slime" }
+
+        // Try your naming FIRST: session_<sex>_<monster>_<state>
+        val idleRes = resolveFirstDrawable(
+            "session_${idleSex}_${code}_idle",
+            "idle_${code}_${idleSex}",
+            "idle_${code}",
+            "idle_${code}_male"
+        )
+
+        val fightRes = resolveFirstDrawable(
+            "session_${fightSex}_${code}_fight",
+            "fight_${code}_${fightSex}",
+            "fight_${code}",
+            "fight_${code}_male"
+        )
+
+        Log.d("AnimPick", "code=$code idleSex=$idleSex fightSex=$fightSex idleRes=$idleRes fightRes=$fightRes")
+
+        // Adjust these if some monsters have different frame counts
+        val idleCols = 13
+        val fightCols = 24
+
+        idleAnim  = if (idleRes  != 0) buildAnim(idleRes,  rows = 1, cols = idleCols,  fps = 13, loop = true)  else null
+        fightAnim = if (fightRes != 0) buildAnim(fightRes, rows = 1, cols = fightCols, fps = 24, loop = false) else null
+
+        // After rebuilding, make sure the currently shown anim is idle for the new monster
+        showIdle()
+    }
+
+    private suspend fun refreshLatestMonsterAndAnimations(
+        restartIdle: Boolean = true,
+        fightSexOverride: String? = null // e.g., "female" to force female fight
+    ) {
+        val latest = withContext(Dispatchers.IO) { db.monsterDao().getLatestOwnedForUser(userId) }
+        val newCode = latest?.code ?: "slime"
+
+        if (newCode != currentMonsterCode) {
+            currentMonsterCode = newCode
+            withContext(Dispatchers.Main) {
+                initAnimationsForSex(userSex, fightSexOverride)
+                if (restartIdle) showIdle()
+            }
+        } else if (restartIdle) {
+            withContext(Dispatchers.Main) { showIdle() }
+        }
+    }
+
+
 
     private fun resolveDrawableId(name: String): Int {
         val id = resources.getIdentifier(name, "drawable", packageName)
@@ -1065,12 +1171,36 @@ class WorkoutSessionActivity : AppCompatActivity() {
         dlg.show()
     }
 
-    private fun buildRestBgAnim(rows: Int = 1, cols: Int = 24, fps: Int = 18): SpriteSheetDrawable {
+    private fun buildRestBgAnim(
+        rows: Int = 1,
+        cols: Int = 24,
+        fps: Int = 18
+    ): SpriteSheetDrawable {
+        // Use current userSex; default to male if unknown
+        val sex = if (userSex.equals("female", ignoreCase = true)) "female" else "male"
+
+        // Try sex-specific sheet first (bg_female_rest_spritesheet / bg_male_rest_spritesheet),
+        // then fall back to a generic sheet if present, then male as last resort.
+        val resId = resolveFirstDrawable(
+            "bg_${sex}_rest_spritesheet",
+            "bg_rest_spritesheet",          // optional generic fallback
+            "bg_male_rest_spritesheet"      // hard fallback
+        ).let { id ->
+            if (id != 0) id else R.drawable.bg_male_rest_spritesheet
+        }
+
         val opts = BitmapFactory.Options().apply { inScaled = false }
-        val bmp = BitmapFactory.decodeResource(resources, R.drawable.bg_rest_spritesheet, opts)
-        return SpriteSheetDrawable(bmp, rows, cols, fps, loop = true,
-            scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP)
+        val bmp = BitmapFactory.decodeResource(resources, resId, opts)
+        return SpriteSheetDrawable(
+            bmp,
+            rows,
+            cols,
+            fps,
+            loop = true,
+            scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
+        )
     }
+
 
 
     /* --------- Utils --------- */

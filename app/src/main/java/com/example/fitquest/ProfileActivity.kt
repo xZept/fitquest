@@ -302,7 +302,6 @@ class ProfileActivity : AppCompatActivity() {
         val eqContainer = view.findViewById<GridLayout>(R.id.equipment_container)
 
 
-
         tilTimer.setDefaultHintTextColor(
             ContextCompat.getColorStateList(this, R.color.hint_label)!!
         )
