@@ -110,7 +110,7 @@
                     android:layout_gravity="center_horizontal"
                     android:adjustViewBounds="true"
                     android:scaleType="fitStart"
-                    android:src="@drawable/container_split_plan" />
+                    android:src="@drawable/container_split_plan_slime" />
 
                 <LinearLayout
                     android:id="@+id/card_content"

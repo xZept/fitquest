@@ -103,6 +103,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private lateinit var pressAnim: android.view.animation.Animation
 
+    private lateinit var cardBg: ImageView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout_session)
@@ -115,6 +117,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
         hpBar = findViewById(R.id.hp_bar)
         tvHp = findViewById(R.id.tv_hp)
         ivHpBg = findViewById(R.id.iv_hp_bg)
+
+        cardBg = findViewById(R.id.card_bg)
 
         // bind (bottom)
         tvDay = findViewById(R.id.tv_day_title)
@@ -151,7 +155,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             }
             currentMonsterSprite = latestMonster?.spriteRes ?: "monster_slime" // default slime
             currentMonsterCode = latestMonster?.code ?: "slime"
-
+            updateCardBgForCode(currentMonsterCode)
 
 
             // set HP bar background to match the monster
@@ -249,6 +253,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             val latest = withContext(Dispatchers.IO) { db.monsterDao().getLatestOwnedForUser(userId) }
             currentMonsterCode = latest?.code ?: "slime"
             updateHpBackgroundForCode(currentMonsterCode)   // ← HP background
+            updateCardBgForCode(currentMonsterCode)
             initAnimations()                                 // ← rebuild idle/fight sheets for new monster
             if (!isResting) showIdle()
         }
@@ -1104,6 +1109,17 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private fun showSleep() { /* optional later */ }
 
+    private fun updateCardBgForCode(monsterCode: String?) {
+        if (!::cardBg.isInitialized) return  // safety guard
+
+        val code = (monsterCode ?: "slime").lowercase()
+        val pickedId = resolveFirstDrawable(
+            "container_split_plan_${code}",
+            "container_split_plan",
+            "container_split_plan_slime"
+        )
+        if (pickedId != 0) cardBg.setImageResource(pickedId)
+    }
 
 
     /* --------- Rest dialog --------- */

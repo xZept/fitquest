@@ -13,16 +13,11 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.room.Room
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.datastore.DataStoreManager
 import com.example.fitquest.models.Exercise
 import com.example.fitquest.models.QuestExercise
 import com.example.fitquest.models.Tips
-import com.example.fitquest.utils.ExerciseRepository
-import com.example.fitquest.utils.ExerciseRepository.filterByDifficulty
-import com.example.fitquest.utils.ExerciseRepository.filterByEquipment
-import com.example.fitquest.utils.ExerciseRepository.prioritizeByGoal
 import com.example.fitquest.utils.TipsHelper
 import com.example.fitquest.utils.TipsLoader
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
@@ -33,12 +28,13 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
-import kotlin.random.Random
 
 class WorkoutActivity : AppCompatActivity() {
 
     private lateinit var pressAnim: android.view.animation.Animation
     private lateinit var db: AppDatabase
+
+    private var currentMonsterCode: String = "slime"
 
     // overlay host
     private val overlayHost: View by lazy { findViewById(R.id.overlay_host) }
@@ -75,6 +71,12 @@ class WorkoutActivity : AppCompatActivity() {
         val uid = DataStoreManager.getUserId(this@WorkoutActivity).first()
         val active = db.activeQuestDao().getActiveForUser(uid)
 
+        // 🔑 get the most recent monster code on IO thread
+        val latestCode = withContext(Dispatchers.IO) {
+            db.monsterDao().getLatestOwnedForUser(uid)?.code
+        } ?: "slime"
+        currentMonsterCode = latestCode // 🔑 update the field we use below
+
         withContext(Dispatchers.Main) {
             container.removeAllViews()
             if (active != null) {
@@ -84,15 +86,18 @@ class WorkoutActivity : AppCompatActivity() {
                         "${active.split} • ${active.modifier}"
                     else
                         "Your Quest"
-                container.addView(buildDayCardFromQuest(title, active.exercises))
-                // Show action buttons when a quest exists
-                updateActionButtons(visible = true, title, active.exercises)
+
+                // 🔑 pass the code (or rely on the 2-arg overload that reads the updated field)
+                container.addView(buildDayCardFromQuest(title, active.exercises, currentMonsterCode))
+
+                updateActionButtons(visible = true, dayTitle = title, items = active.exercises)
             } else {
                 setOverlayVisible(true)
-                updateActionButtons(visible = false, null, emptyList())
+                updateActionButtons(visible = false, dayTitle = null, items = emptyList())
             }
         }
     }
+
 
     private fun setOverlayVisible(visible: Boolean) {
         overlayHost.visibility = if (visible) View.VISIBLE else View.GONE
@@ -150,12 +155,21 @@ class WorkoutActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 val uid = DataStoreManager.getUserId(this@WorkoutActivity).first()
                 db.activeQuestDao().clearForUser(uid)
+
+                // use uid here (not userId)
+                val code = withContext(Dispatchers.IO) {
+                    db.monsterDao().getLatestOwnedForUser(uid)?.code
+                } ?: "slime"
+                currentMonsterCode = code
+
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@WorkoutActivity, "Quest canceled.", Toast.LENGTH_SHORT).show()
                     renderFromState()
                 }
             }
         }
+
+
 
         btnStart.setOnClickListener {
             it.startAnimation(pressAnim)
@@ -187,8 +201,17 @@ class WorkoutActivity : AppCompatActivity() {
     // -------------------- Card builders --------------------
 
     /** Repo-styled card for *saved* quests using your QuestExercise model (no poster bg). */
+
+
     private fun buildDayCardFromQuest(dayName: String, items: List<QuestExercise>): View {
-        // Outer shell sizes itself to the PNG’s intrinsic size
+        return buildDayCardFromQuest(dayName, items, currentMonsterCode)
+    }
+
+    private fun buildDayCardFromQuest(
+        dayName: String,
+        items: List<QuestExercise>,
+        monsterCode: String?
+    ): View {
         val shell = FrameLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -198,9 +221,15 @@ class WorkoutActivity : AppCompatActivity() {
             clipChildren = false
         }
 
-        // Background image at ORIGINAL size (no stretch)
+        val code = (monsterCode ?: "slime").lowercase()
+        val bgRes = resolveFirstDrawable(
+            "container_split_plan_${code}",
+            "container_split_plan",
+            "container_split_plan_slime"
+        ).let { if (it != 0) it else R.drawable.container_split_plan_slime } // hard fallback
+
         val bg = ImageView(this).apply {
-            setImageResource(R.drawable.container_split_plan)
+            setImageResource(bgRes)
             adjustViewBounds = true
             scaleType = ImageView.ScaleType.CENTER
             imageTintList = null
@@ -222,36 +251,29 @@ class WorkoutActivity : AppCompatActivity() {
             setPadding(dp(16), dp(12), dp(16), dp(12)) // keep text off the art edges
         }
 
-        // Title (tap to open ExerciseActivity, not the whole card—so ScrollView keeps touch)
         val title = TextView(this).apply {
             text = dayName
             setTextColor(ContextCompat.getColor(this@WorkoutActivity, android.R.color.white))
             textSize = 35f
-
-            // make it span the row so it can be centered
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                setMargins(0, 25, 0, dp(0)) // optional spacing below title
-                gravity = Gravity.CENTER_HORIZONTAL // child alignment in LinearLayout (optional)
+                setMargins(0, 25, 0, dp(0))
+                gravity = Gravity.CENTER_HORIZONTAL
             }
-
-            // center the text inside the TextView
             gravity = Gravity.CENTER
             textAlignment = View.TEXT_ALIGNMENT_CENTER
-        }
-
-        title.setOnClickListener {
-            val intent = Intent(this, ExerciseActivity::class.java).apply {
-                putStringArrayListExtra("EXERCISES", ArrayList(items.map { it.name }))
-                putExtra("DAY_NAME", dayName)
+            setOnClickListener {
+                val intent = Intent(this@WorkoutActivity, ExerciseActivity::class.java).apply {
+                    putStringArrayListExtra("EXERCISES", ArrayList(items.map { it.name }))
+                    putExtra("DAY_NAME", dayName)
+                }
+                startActivity(intent)
             }
-            startActivity(intent)
         }
         content.addView(title)
 
-        // Vertical scroll area (fills remaining height under the title)
         val scrollArea = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
@@ -259,11 +281,10 @@ class WorkoutActivity : AppCompatActivity() {
             isFillViewport = true
             isVerticalScrollBarEnabled = true
             overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-        }
-        // Ensure parent doesn’t intercept (restores scrolling)
-        scrollArea.setOnTouchListener { v, _ ->
-            v.parent?.requestDisallowInterceptTouchEvent(true)
-            false
+            setOnTouchListener { v, _ ->
+                v.parent?.requestDisallowInterceptTouchEvent(true)
+                false
+            }
         }
 
         val inner = LinearLayout(this).apply {
@@ -271,13 +292,12 @@ class WorkoutActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_HORIZONTAL
         }
 
-        // Row background: use container_exercsise.png at ORIGINAL size
+        // Row background: use container_exercise.png at ORIGINAL size
         val rowBgDrawable = ContextCompat.getDrawable(this, R.drawable.container_exercise)!!
         val rowW = rowBgDrawable.intrinsicWidth
         val rowH = rowBgDrawable.intrinsicHeight
 
         items.sortedBy { it.order }.forEach { ex ->
-            // A row shell exactly the size of the PNG
             val rowShell = FrameLayout(this).apply {
                 layoutParams = LinearLayout.LayoutParams(rowW, rowH).apply {
                     setMargins(dp(8), dp(6), dp(8), dp(6))
@@ -285,7 +305,6 @@ class WorkoutActivity : AppCompatActivity() {
                 }
             }
 
-            // The PNG itself (fills the shell, but shell == intrinsic size ⇒ no stretch)
             val rowBg = ImageView(this).apply {
                 setImageDrawable(rowBgDrawable)
                 adjustViewBounds = true
@@ -297,7 +316,6 @@ class WorkoutActivity : AppCompatActivity() {
             }
             rowShell.addView(rowBg)
 
-            // Foreground row content constrained to the PNG bounds
             val row = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -305,7 +323,7 @@ class WorkoutActivity : AppCompatActivity() {
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
-                setPadding(dp(12), dp(8), dp(12), dp(8)) // adjust to your art’s safe area
+                setPadding(dp(12), dp(8), dp(12), dp(8))
             }
 
             val name = TextView(this).apply {
@@ -344,6 +362,16 @@ class WorkoutActivity : AppCompatActivity() {
         shell.addView(content)
         return shell
     }
+
+
+    private fun resolveFirstDrawable(vararg names: String): Int {
+        for (n in names) {
+            val id = resources.getIdentifier(n, "drawable", packageName)
+            if (id != 0) return id
+        }
+        return 0
+    }
+
 
 
     /** Repo’s original card for intent-generated preview (kept; no poster bg). */

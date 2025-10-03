@@ -14,11 +14,18 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import android.graphics.BitmapFactory
 import android.view.animation.AnimationUtils
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import java.util.Collections
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.fitquest.database.AppDatabase
+import com.example.fitquest.datastore.DataStoreManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
@@ -43,10 +50,14 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
     private lateinit var itemTouchHelper: ItemTouchHelper
     private lateinit var pressAnim: android.view.animation.Animation
 
+    private lateinit var db: AppDatabase  // ← declare only
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_quest_preview)
         hideNavBar()
+
+        db = AppDatabase.getInstance(applicationContext)
 
         initAnimatedBg(
             rows = 1,           // adjust if your sheet differs
@@ -65,6 +76,16 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
         mode  = intent.getStringExtra("MODE") ?: "basic"
         split = intent.getStringExtra("SPLIT") ?: "Push"
         focus = intent.getStringExtra("FOCUS") ?: "General"
+
+        lifecycleScope.launch {
+            val uid = DataStoreManager.getUserId(this@QuestPreviewActivity).first()
+            val latestCode = withContext(Dispatchers.IO) {
+                db.monsterDao().getLatestOwnedForUser(uid)?.code ?: "slime"
+            }
+            setRvContainerBackgroundForCode(latestCode)
+
+        }
+
 
         WorkoutEngine.defaultScheme(focus).let { (mn, mx, st) ->
             schemeMin = mn; schemeMax = mx; schemeSets = st
@@ -146,6 +167,16 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
     override fun onResume() {
         super.onResume()
         bgDrawable?.start()
+
+
+        // Re-check latest monster and update the RV container
+        lifecycleScope.launch {
+            val uid = DataStoreManager.getUserId(this@QuestPreviewActivity).first()
+            val latestCode = withContext(Dispatchers.IO) {
+                db.monsterDao().getLatestOwnedForUser(uid)?.code ?: "slime"
+            }
+            setRvContainerBackgroundForCode(latestCode)
+        }
     }
 
     override fun onPause() {
@@ -179,6 +210,25 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
         // start happens in onResume, but we can kick it once here too
         bgDrawable?.start()
     }
+
+    private fun resolveFirstDrawable(vararg names: String): Int {
+        for (n in names) {
+            val id = resources.getIdentifier(n, "drawable", packageName)
+            if (id != 0) return id
+        }
+        return 0
+    }
+
+    private fun setRvContainerBackgroundForCode(codeRaw: String?) {
+        val code = (codeRaw ?: "slime").lowercase()
+        val bgId = resolveFirstDrawable(
+            "container_split_plan_${code}",    // e.g., container_split_plan_mushroom
+            "container_split_plan",            // generic (if present)
+            "container_split_plan_slime"       // safe fallback
+        )
+        rv.setBackgroundResource(if (bgId != 0) bgId else R.drawable.container_split_plan_slime)
+    }
+
 
 
 
