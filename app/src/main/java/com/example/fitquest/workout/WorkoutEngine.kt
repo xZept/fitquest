@@ -8,7 +8,7 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
-object WorkoutEngine {
+object gitWorkoutEngine {
 
     // ------------------------------------------------------------
     // Public API

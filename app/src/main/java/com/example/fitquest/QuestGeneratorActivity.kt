@@ -17,7 +17,7 @@ import androidx.room.Room
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.datastore.DataStoreManager
 import com.example.fitquest.models.QuestExercise
-import com.example.fitquest.workout.WorkoutEngine
+import com.example.fitquest.workout.gitWorkoutEngine
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -67,7 +67,7 @@ class QuestGeneratorActivity : AppCompatActivity() {
                 return@launch
             }
 
-            val (minRep, maxRep, sets) = WorkoutEngine.defaultScheme(focus)
+            val (minRep, maxRep, sets) = gitWorkoutEngine.defaultScheme(focus)
 
             val finalList: List<QuestExercise> = names
                 .distinctBy { norm(it) }
@@ -192,7 +192,7 @@ class QuestGeneratorActivity : AppCompatActivity() {
                 ?: emptySet()
 
             // Build structured plan
-            val planResult = WorkoutEngine.buildStructuredPlan(
+            val planResult = gitWorkoutEngine.buildStructuredPlan(
                 context = this@QuestGeneratorActivity,
                 split = split,
                 focus = focus,

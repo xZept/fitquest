@@ -8,7 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import com.example.fitquest.workout.WorkoutEngine
+import com.example.fitquest.workout.gitWorkoutEngine
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -87,7 +87,7 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
         }
 
 
-        WorkoutEngine.defaultScheme(focus).let { (mn, mx, st) ->
+        gitWorkoutEngine.defaultScheme(focus).let { (mn, mx, st) ->
             schemeMin = mn; schemeMax = mx; schemeSets = st
         }
 

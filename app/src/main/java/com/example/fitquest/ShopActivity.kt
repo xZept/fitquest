@@ -127,13 +127,13 @@ class ShopActivity : AppCompatActivity() {
         withContext(Dispatchers.IO) {
             val dao = db.monsterDao()
 
-            // Edit prices/names/sprites here any time
             val catalog = listOf(
-                Monster(code = "mushroom", name = "Mushroom", spriteRes = "monster_mushroom", price = 50),
-                Monster(code = "goblin",   name = "Goblin",   spriteRes = "monster_goblin",   price = 150)
+                Monster(code = "mushroom", name = "Mushroom",  spriteRes = "monster_mushroom", price = 75),
+                Monster(code = "goblin",   name = "Goblin",    spriteRes = "monster_goblin",   price = 150),
+                Monster(code = "ogre",     name = "Ogre",      spriteRes = "monster_ogre",     price = 300),
+                Monster(code = "eye",      name = "Giant Eye", spriteRes = "monster_eye",      price = 500)
             )
 
-            // Upsert: insert if missing, else update mutable fields
             catalog.forEach { m ->
                 val inserted = dao.insertIgnore(m)
                 if (inserted == -1L) {
@@ -282,7 +282,6 @@ class ShopActivity : AppCompatActivity() {
             val canBuy = !owned && !locked && row.price <= balance
             val notEnough = !owned && !locked && row.price > balance
 
-            // Button image/state (locked falls back to "not enough" icon if no locked icon exists)
             val lockedIcon = resources.getIdentifier("indicator_locked", "drawable", packageName)
             val imgRes = when {
                 owned -> R.drawable.indicator_owned
@@ -294,10 +293,8 @@ class ShopActivity : AppCompatActivity() {
             holder.btn.isEnabled = canBuy
             holder.btn.isClickable = canBuy
 
-            // Dim overlay for locked or not-enough
             holder.overlay.visibility = if (locked || notEnough) View.VISIBLE else View.GONE
 
-            // A11y
             holder.btn.contentDescription = when {
                 owned  -> "${row.name} already owned"
                 locked -> "${row.name} is locked. Buy earlier monsters first."
@@ -314,7 +311,7 @@ class ShopActivity : AppCompatActivity() {
                     val result = withContext(Dispatchers.IO) { repo.purchase(userId, row.code) }
                     when (result) {
                         is PurchaseResult.Success -> {
-                            refreshAll() // recompute locked/owned/affordability
+                            refreshAll()
                             Toast.makeText(this@ShopActivity, "Purchased ${row.name}!", Toast.LENGTH_SHORT).show()
                         }
                         is PurchaseResult.Insufficient -> {

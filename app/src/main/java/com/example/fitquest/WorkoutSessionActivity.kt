@@ -1243,8 +1243,10 @@ class WorkoutSessionActivity : AppCompatActivity() {
     }
 
     private fun monsterMultiplierFor(code: String): Int = when (code) {
-        "goblin"   -> 3
-        "mushroom" -> 2
-        else       -> 1 // slime/default
+        "mushroom" -> 2   // starter
+        "goblin"   -> 3   // tier 2
+        "ogre"     -> 4   // tier 3
+        "eye"      -> 5   // tier 4 (Giant Eye)
+        else       -> 1   // default/slime
     }
 }
