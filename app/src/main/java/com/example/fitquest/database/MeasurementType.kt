@@ -19,6 +19,7 @@ enum class MeasurementType(
     val mlPerUnit: Double? = null,    // for VOLUME
     val synonyms: Set<String> = emptySet()
 ) {
+
     // MASS
     GRAM("g", Kind.MASS, gramsPerUnit = 1.0, synonyms = setOf("g", "gram", "grams")),
     OUNCE("oz", Kind.MASS, gramsPerUnit = 28.3495, synonyms = setOf("oz", "ounce", "ounces")),

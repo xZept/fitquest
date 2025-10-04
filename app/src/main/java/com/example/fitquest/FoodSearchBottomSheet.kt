@@ -163,6 +163,10 @@ private class VH(
     fun bind(item: FdcSearchFood) {
         b.tvTitle.text = item.description
         b.tvSub.text = item.dataType ?: ""
-        b.root.setOnClickListener { onClick(item) }
+        b.root.setOnClickListener {
+            b.root.isEnabled = false
+            onClick(item)
+            b.root.postDelayed({ b.root.isEnabled = true }, 500)
+        }
     }
 }

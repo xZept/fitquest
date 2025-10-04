@@ -21,8 +21,30 @@ import com.example.fitquest.utils.TipsLoader
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import android.widget.Button
+import android.widget.ImageButton
+import androidx.lifecycle.lifecycleScope
+import com.example.fitquest.database.AppDatabase
+import com.example.fitquest.database.User
+import com.example.fitquest.datastore.DataStoreManager
+import com.example.fitquest.models.Food
+import com.example.fitquest.showLogFoodDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MacroActivity : AppCompatActivity() {
+
+    private var currentUserId: Int = -1
+    private lateinit var db: AppDatabase
+
+    private lateinit var breakfastContainer: LinearLayout
+    private lateinit var snackContainer: LinearLayout
+    private lateinit var lunchContainer: LinearLayout
+    private lateinit var dinnerContainer: LinearLayout
+
+    private val foodRepo by lazy { (application as FitQuestApp).foodRepository }
+
 
     data class MealItem(
         val mealId: Int,
@@ -40,17 +62,43 @@ class MacroActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_macro)
+        setContentView(R.layout.activity_macro)   // ← set the layout first
 
-        // Search food
-        findViewById<Button>(R.id.btnSearchFood).setOnClickListener {
-            val repo = (application as FitQuestApp).foodRepository
-            FoodSearchBottomSheet(
-                repo = repo,
-                onPicked = { item -> /* handle picked item */ }
-            ).show(supportFragmentManager, "food_search")
+        breakfastContainer = findViewById(R.id.breakfastContainer)
+        snackContainer     = findViewById(R.id.snackContainer)
+        lunchContainer     = findViewById(R.id.lunchContainer)
+        dinnerContainer    = findViewById(R.id.dinnerContainer)
+
+        val searchBtn: ImageButton = findViewById(R.id.btn_buy_food) // ← now it's non-null
+        searchBtn.isEnabled = false
+
+        db = AppDatabase.getInstance(applicationContext)
+
+        lifecycleScope.launch {
+            currentUserId = DataStoreManager.getUserId(this@MacroActivity).first()
+            if (currentUserId > 0) {
+                ensureUserExists(currentUserId)
+                searchBtn.isEnabled = true
+                refreshTodayMeals()
+            } else {
+                // show message or navigate to sign-in
+            }
         }
 
+        // use it safely now
+        searchBtn.setOnClickListener {
+            val repo = (application as FitQuestApp).foodRepository
+            FoodSearchBottomSheet(repo) { item ->
+                showLogFoodDialog(
+                    repo = repo,
+                    userId = currentUserId,
+                    fdcId = item.fdcId,
+                    defaultAmount = 100.0,
+                    defaultUnit = com.example.fitquest.database.MeasurementType.GRAM,
+                    defaultMeal = "Lunch"
+                ) { refreshTodayMeals() }
+            }.show(supportFragmentManager, "food_search")
+        }
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
@@ -87,7 +135,7 @@ class MacroActivity : AppCompatActivity() {
         val lunchContainer = findViewById<LinearLayout>(R.id.lunchContainer)
         val dinnerContainer = findViewById<LinearLayout>(R.id.dinnerContainer)
 
-        // ✅ Load meals filtered by user’s goal + diet type
+/*      // ✅ Load meals filtered by user’s goal + diet type
         val meals = loadMealsFromCSV(this).filter {
             (rawGoal == "any" || it.goal.equals(userGoal, ignoreCase = true)) &&
                     (dietType.isEmpty() || it.dietType.equals(dietType, ignoreCase = true))
@@ -109,7 +157,7 @@ class MacroActivity : AppCompatActivity() {
             .forEach { addMealToContainer(it, lunchContainer) }
 
         pickRandomMeals(meals.filter { it.mealType.equals("Dinner", true) })
-            .forEach { addMealToContainer(it, dinnerContainer) }
+            .forEach { addMealToContainer(it, dinnerContainer) }*/
 
         // Load tips and debug
         val tips = TipsLoader.loadTips(this)
@@ -196,34 +244,114 @@ class MacroActivity : AppCompatActivity() {
         container.addView(mealView, params)
     }
 
-    private fun loadMealsFromCSV(context: Context): List<MealItem> {
-        val meals = mutableListOf<MealItem>()
-        try {
-            val inputStream = context.assets.open("meal_dataset.csv")
-            val reader = BufferedReader(InputStreamReader(inputStream))
-            reader.readLine() // skip header
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                val tokens = line!!.split(",")
-                if (tokens.size >= 9) {
-                    val meal = MealItem(
-                        mealId = tokens[0].toInt(),
-                        mealName = tokens[1],
-                        mealType = tokens[2],
-                        calories = tokens[3].toInt(),
-                        protein = tokens[4].toInt(),
-                        carbs = tokens[5].toInt(),
-                        fat = tokens[6].toInt(),
-                        goal = tokens[7],
-                        dietType = tokens[8]
-                    )
-                    meals.add(meal)
-                }
+    private fun refreshTodayMeals() {
+        if (currentUserId <= 0) return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val logs   = foodRepo.getTodayLogs(currentUserId)
+            val totals = foodRepo.getTodayTotals(currentUserId)
+            withContext(Dispatchers.Main) {
+                // Clear and re-render each plate
+                breakfastContainer.removeAllViews()
+                snackContainer.removeAllViews()
+                lunchContainer.removeAllViews()
+                dinnerContainer.removeAllViews()
+
+                // group logs by mealType (stored uppercase in logIntake)
+                val byMeal = logs.groupBy { it.log.mealType } // "BREAKFAST","LUNCH","DINNER","SNACK"
+
+                renderMealPlate(breakfastContainer, byMeal["BREAKFAST"].orEmpty())
+                renderMealPlate(snackContainer,     byMeal["SNACK"].orEmpty())
+                renderMealPlate(lunchContainer,     byMeal["LUNCH"].orEmpty())
+                renderMealPlate(dinnerContainer,    byMeal["DINNER"].orEmpty())
+
+                // Example: update header totals if you have TextViews
+                // findViewById<TextView>(R.id.tvTotalCalories).text = totals.calories.roundToInt().toString()
+                // findViewById<TextView>(R.id.tvTotalProtein).text  = totals.protein.roundToInt().toString()
+                // findViewById<TextView>(R.id.tvTotalCarbs).text    = totals.carbohydrate.roundToInt().toString()
+                // findViewById<TextView>(R.id.tvTotalFat).text      = totals.fat.roundToInt().toString()
             }
-            reader.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
-        return meals
     }
+
+    private suspend fun ensureUserExists(userId: Int) {
+        withContext(Dispatchers.IO) {
+            val userDao = db.userDAO()
+            val existing = userDao.getUserById(userId)
+            if (existing == null) {
+                // Insert a minimal user record or redirect to a real sign-up flow
+                userDao.insert(
+                    User(
+                        userId = userId,
+                        firstName = "User",
+                        lastName = "",
+                        birthday = "",
+                        age = 0,
+                        sex = "",
+                        username = "user$userId",
+                        email = "",
+                        password = ""
+                    )
+                )
+            }
+        }
+    }
+
+    private fun renderMealPlate(container: LinearLayout, rows: List<com.example.fitquest.database.FoodLogRow>) {
+        for (row in rows) {
+            val v = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(16, 16, 16, 16)
+            }
+            val name = TextView(this).apply {
+                text = (row.foodName ?: "Food #${row.log.foodId}") + " • ${row.log.grams.toInt()}g"
+                textSize = 15f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            val kcal = TextView(this).apply {
+                text = "${row.log.calories.toInt()} kcal"
+                textSize = 14f
+            }
+            v.addView(name)
+            v.addView(kcal)
+
+            // (Optional) long-press to remove that entry later
+            // v.setOnLongClickListener { /* show delete dialog, then refreshTodayMeals() */ true }
+
+            container.addView(v)
+        }
+    }
+
+
+
+//    private fun loadMealsFromCSV(context: Context): List<MealItem> {
+//        val meals = mutableListOf<MealItem>()
+//        try {
+//            val inputStream = context.assets.open("meal_dataset.csv")
+//            val reader = BufferedReader(InputStreamReader(inputStream))
+//            reader.readLine() // skip header
+//            var line: String?
+//            while (reader.readLine().also { line = it } != null) {
+//                val tokens = line!!.split(",")
+//                if (tokens.size >= 9) {
+//                    val meal = MealItem(
+//                        mealId = tokens[0].toInt(),
+//                        mealName = tokens[1],
+//                        mealType = tokens[2],
+//                        calories = tokens[3].toInt(),
+//                        protein = tokens[4].toInt(),
+//                        carbs = tokens[5].toInt(),
+//                        fat = tokens[6].toInt(),
+//                        goal = tokens[7],
+//                        dietType = tokens[8]
+//                    )
+//                    meals.add(meal)
+//                }
+//            }
+//            reader.close()
+//        } catch (e: Exception) {
+//            e.printStackTrace()
+//        }
+//        return meals
+//    }
 }
+

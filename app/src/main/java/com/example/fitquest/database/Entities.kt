@@ -203,25 +203,30 @@ data class UserMonster(
     val acquiredAt: Long = System.currentTimeMillis()
 )
 
-    @Entity(
-        tableName = "foodLog",
-        foreignKeys = [ForeignKey(
-            entity = Food::class,
-            parentColumns = ["foodId"],
-            childColumns = ["foodId"],
-            onDelete = ForeignKey.CASCADE
-        )],
-        indices = [Index("userId"), Index("foodId"), Index(value = ["userId", "loggedAt"])]
-    )
-    data class FoodLog(
-        @PrimaryKey(autoGenerate = true) val logId: Long = 0L,
-        val userId: Int,
-        val foodId: Long,
-        val grams: Double,
-        val calories: Double,
-        val protein: Double,
-        val carbohydrate: Double,
-        val fat: Double,
-        val note: String? = null,
-        val loggedAt: Long
-    )
+@Entity(
+    tableName = "foodLog",
+    foreignKeys = [ForeignKey(
+        entity = User::class,
+        parentColumns = ["userId"],
+        childColumns = ["userId"],
+        onDelete = ForeignKey.CASCADE
+    )],
+    indices = [Index("userId"), Index("foodId"), Index(value = ["userId", "loggedAt"])]
+)
+data class FoodLog(
+    @PrimaryKey(autoGenerate = true) val logId: Long = 0L,
+    val userId: Int,
+    val foodId: Long,
+    val grams: Double,
+    val calories: Double,
+    val protein: Double,
+    val carbohydrate: Double,
+    val fat: Double,
+
+    // timestamps
+    val loggedAt: Long,          // epoch ms UTC
+    val dayKey: Int,             // e.g., 20251004 for Oct 4, 2025 in user's tz
+
+    // optional: group the UI by meals
+    val mealType: String
+)

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/macro_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -14,9 +15,9 @@
         android:layout_alignParentTop="true"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingStart="0dp"
-        android:paddingEnd="16dp"
-        android:paddingTop="8dp">
+        android:paddingStart="0sp"
+        android:paddingEnd="16sp"
+        android:paddingTop="8sp">
 
         <ImageView
             android:id="@+id/img_profile_title"
@@ -25,11 +26,6 @@
             android:src="@drawable/title_page_macro"
             android:contentDescription="Macro" />
 
-        <Button
-            android:id="@+id/btnSearchFood"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SEARCH" />
     </LinearLayout>
 
     <TextView
@@ -37,7 +33,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textSize="14sp"
-        android:padding="16dp"
+        android:padding="16sp"
         android:textStyle="italic"
         android:text="Loading macro tip..."
         android:layout_below="@id/header_bar"
@@ -45,13 +41,109 @@
         android:textColor="@android:color/white"
         android:background="@drawable/tip_macro"/>
 
+    <com.google.android.flexbox.FlexboxLayout
+        android:id="@+id/progress_bars"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/meal_scroll"
+        android:layout_below="@+id/macroTip"
+        app:alignItems="center"
+        app:flexDirection="row"
+        android:padding="10sp">
+
+        <com.google.android.flexbox.FlexboxLayout
+            android:id="@+id/progress_left"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/meal_scroll"
+            android:layout_below="@+id/macroTip"
+            android:gravity="center"
+            app:flexDirection="column"
+            android:padding="5sp">
+
+            <ProgressBar
+                android:id="@+id/calories_progress"
+                style="?android:attr/progressBarStyle"
+                android:layout_width="75sp"
+                android:layout_height="75sp"
+                app:layout_alignSelf="center" />
+
+            <TextView
+                android:id="@+id/calories_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Total Calories"
+                android:textSize="18sp"
+                android:layout_marginBottom="8sp"
+                app:layout_alignSelf="center"
+                android:textColor="@color/white"/>
+
+        </com.google.android.flexbox.FlexboxLayout>
+
+        <com.google.android.flexbox.FlexboxLayout
+            android:id="@+id/progress_right"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:flexDirection="column"
+            app:alignItems="center"
+            android:padding="5sp">
+
+            <ProgressBar
+                android:id="@+id/protein_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:id="@+id/protein_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Protein"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:layout_marginBottom="8sp"/>
+
+            <ProgressBar
+                android:id="@+id/carbs_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/carbs_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:text="Fat"
+                android:layout_marginBottom="8sp"/>
+
+            <ProgressBar
+                android:id="@+id/fat_progress"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <TextView
+                android:id="@+id/fat_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Carbohydrate"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:layout_marginBottom="8sp"/>
+        </com.google.android.flexbox.FlexboxLayout>
+
+    </com.google.android.flexbox.FlexboxLayout>
 
     <!-- Meal Plan Section -->
     <HorizontalScrollView
         android:id="@+id/meal_scroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_above="@id/btn_add_meal"
+        android:layout_above="@id/btn_buy_food"
         android:fillViewport="true"
         android:scrollbars="none">
 
@@ -60,15 +152,15 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:padding="16dp">
+            android:padding="16sp">
 
             <!-- Breakfast container -->
             <LinearLayout
-                android:layout_width="250dp"
+                android:layout_width="250sp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="12dp"
-                android:layout_marginRight="12dp"
+                android:padding="12sp"
+                android:layout_marginRight="12sp"
                 android:background="@drawable/breakfast_container">
 
                 <TextView
@@ -78,11 +170,11 @@
                     android:text="Breakfast"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:padding="4dp" />
+                    android:padding="4sp" />
 
                 <ScrollView
                     android:layout_width="match_parent"
-                    android:layout_height="150dp"
+                    android:layout_height="150sp"
                     android:fillViewport="true">
 
                     <LinearLayout
@@ -95,11 +187,11 @@
 
             <!-- Snack container -->
             <LinearLayout
-                android:layout_width="250dp"
+                android:layout_width="250sp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="12dp"
-                android:layout_marginRight="12dp"
+                android:padding="12sp"
+                android:layout_marginRight="12sp"
                 android:background="@drawable/empty_plate_container">
 
                 <TextView
@@ -109,11 +201,11 @@
                     android:text="Snack"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:padding="4dp" />
+                    android:padding="4sp" />
 
                 <ScrollView
                     android:layout_width="match_parent"
-                    android:layout_height="150dp"
+                    android:layout_height="150sp"
                     android:fillViewport="true">
 
                     <LinearLayout
@@ -126,11 +218,11 @@
 
             <!-- Lunch container -->
             <LinearLayout
-                android:layout_width="250dp"
+                android:layout_width="250sp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="12dp"
-                android:layout_marginRight="12dp"
+                android:padding="12sp"
+                android:layout_marginRight="12sp"
                 android:background="@drawable/lunch_container">
 
                 <TextView
@@ -140,11 +232,11 @@
                     android:text="Lunch"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:padding="4dp" />
+                    android:padding="4sp" />
 
                 <ScrollView
                     android:layout_width="match_parent"
-                    android:layout_height="150dp"
+                    android:layout_height="150sp"
                     android:fillViewport="true">
 
                     <LinearLayout
@@ -157,11 +249,11 @@
 
             <!-- Dinner container -->
             <LinearLayout
-                android:layout_width="250dp"
+                android:layout_width="250sp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="12dp"
-                android:layout_marginRight="12dp"
+                android:padding="12sp"
+                android:layout_marginRight="12sp"
                 android:background="@drawable/dinner_container">
 
                 <TextView
@@ -171,11 +263,11 @@
                     android:text="Dinner"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:padding="4dp" />
+                    android:padding="4sp" />
 
                 <ScrollView
                     android:layout_width="match_parent"
-                    android:layout_height="150dp"
+                    android:layout_height="150sp"
                     android:fillViewport="true">
 
                     <LinearLayout
@@ -186,106 +278,99 @@
                 </ScrollView>
             </LinearLayout>
 
-            <Button
-                android:id="@+id/button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Button" />
         </LinearLayout>
     </HorizontalScrollView>
 
     <!-- Add Meal Button -->
     <ImageButton
-        android:id="@+id/btn_add_meal"
+        android:id="@+id/btn_buy_food"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:background="@drawable/button_buy_food"
         android:layout_above="@id/bottom_nav"
         android:layout_centerHorizontal="true"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginBottom="12sp" />
 
     <!-- Bottom Navigation -->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
-        android:layout_height="100dp"
+        android:layout_height="100sp"
         android:layout_alignParentBottom="true"
         android:background="@drawable/navigation_bg_macro"
         android:gravity="center"
         android:orientation="horizontal"
-        android:padding="8dp"
+        android:padding="8sp"
         android:weightSum="5">
 
         <FrameLayout
-            android:layout_width="0dp"
+            android:layout_width="0sp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
             <ImageView
                 android:id="@+id/nav_icon_shop"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="64sp"
+                android:layout_height="64sp"
                 android:layout_gravity="center"
                 android:src="@drawable/navigation_shop"
                 android:contentDescription="Workout" />
         </FrameLayout>
 
         <FrameLayout
-            android:layout_width="0dp"
+            android:layout_width="0sp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
             <ImageView
                 android:id="@+id/nav_icon_macro"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="64sp"
+                android:layout_height="64sp"
                 android:layout_gravity="center"
                 android:src="@drawable/navigation_macro"
                 android:contentDescription="Shop" />
         </FrameLayout>
 
         <FrameLayout
-            android:layout_width="0dp"
+            android:layout_width="0sp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
             <ImageView
                 android:id="@+id/nav_icon_dashboard"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="64sp"
+                android:layout_height="64sp"
                 android:layout_gravity="center"
                 android:src="@drawable/navigation_dashboard"
                 android:contentDescription="Dashboard" />
         </FrameLayout>
 
         <FrameLayout
-            android:layout_width="0dp"
+            android:layout_width="0sp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
             <ImageView
                 android:id="@+id/nav_icon_workout"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="64sp"
+                android:layout_height="64sp"
                 android:layout_gravity="center"
                 android:src="@drawable/navigation_workout"
                 android:contentDescription="Profile" />
         </FrameLayout>
 
         <FrameLayout
-            android:layout_width="0dp"
+            android:layout_width="0sp"
             android:layout_height="match_parent"
             android:layout_weight="1"
             android:gravity="center">
             <ImageView
                 android:id="@+id/nav_icon_profile"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="64sp"
+                android:layout_height="64sp"
                 android:layout_gravity="center"
                 android:src="@drawable/navigation_user"
                 android:contentDescription="Macros" />
         </FrameLayout>
     </LinearLayout>
-
 </RelativeLayout>

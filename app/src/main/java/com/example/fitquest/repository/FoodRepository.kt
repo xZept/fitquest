@@ -1,5 +1,6 @@
 package com.example.fitquest.data.repository
 
+import android.util.Log
 import com.example.fitquest.fdc.FdcModels
 import com.example.fitquest.fdc.FdcService
 import com.example.fitquest.fdc.toFoodEntity
@@ -8,11 +9,26 @@ import com.example.fitquest.database.*
 import com.example.fitquest.database.MeasurementType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Instant
+import java.time.ZoneId
 
 class FoodRepository(
     private val api: FdcService,
     private val db: AppDatabase
 ) {
+
+    suspend fun getTodayLogs(userId: Int, zone: ZoneId = ZoneId.of("Asia/Manila")): List<FoodLogRow> =
+        withContext(Dispatchers.IO) {
+            val dk = dayKeyFor(System.currentTimeMillis(), zone)
+            db.foodLogDao().logsForDay(userId, dk)
+        }
+
+    suspend fun getTodayTotals(userId: Int, zone: ZoneId = ZoneId.of("Asia/Manila")): DayTotals =
+        withContext(Dispatchers.IO) {
+            val dk = dayKeyFor(System.currentTimeMillis(), zone)
+            db.foodLogDao().totalsForDay(userId, dk)
+        }
+
     // 1) SEARCH & SHOW MATCHES
     suspend fun search(term: String, page: Int = 1, pageSize: Int = 50) =
         api.searchFoods(query = term, pageNumber = page, pageSize = pageSize).foods
@@ -21,6 +37,7 @@ class FoodRepository(
     suspend fun getMacrosForMeasurement(fdcId: Long, userInput: MeasurementInput): PortionMacros =
         withContext(Dispatchers.IO) {
             val detail = api.getFood(fdcId)
+            detail.debugDump()
 
             // ensure the food exists locally (for dedupe & logging)
             val foodId = db.foodDao().upsert(detail.toFoodEntity())
@@ -44,8 +61,14 @@ class FoodRepository(
             )
         }
 
+    fun dayKeyFor(instantMs: Long, zone: ZoneId = ZoneId.of("Asia/Manila")): Int {
+        val d = Instant.ofEpochMilli(instantMs).atZone(zone).toLocalDate()
+        return d.year * 10000 + d.monthValue * 100 + d.dayOfMonth  // YYYYMMDD
+    }
+
     // 3) LOG TO HISTORY (for quick reuse next time)
-    suspend fun logIntake(userId: Int, foodId: Long, grams: Double, note: String? = null): Long =
+    suspend fun logIntake(userId: Int, foodId: Long, grams: Double, mealType: String): Long =
+
         withContext(Dispatchers.IO) {
             val f = db.foodDao().getById(foodId) ?: error("Food not found")
             val factor = grams / 100.0
@@ -58,8 +81,9 @@ class FoodRepository(
                 protein = f.proteinPer100g * factor,
                 carbohydrate = f.carbPer100g * factor,
                 fat = f.fatPer100g * factor,
-                note = note,
-                loggedAt = System.currentTimeMillis()
+                loggedAt = System.currentTimeMillis(),
+                dayKey = dayKeyFor(System.currentTimeMillis()),
+                mealType = mealType
             )
             db.foodLogDao().insert(log)
         }
@@ -91,6 +115,14 @@ class FoodRepository(
                 ?: error("No 'sandok' mapping for this food; add a default for rice/soups.")
         }
     }
+
+    // In FoodRepository
+    suspend fun ensureLocalIdForFdc(fdcId: Long): Long = withContext(Dispatchers.IO) {
+        val detail = api.getFood(fdcId)
+        detail.debugDump()
+        db.foodDao().upsert(detail.toFoodEntity()) // returns local foodId
+    }
+
 }
 
 // Simple holder for what the user typed/selected:
@@ -103,3 +135,19 @@ data class PortionMacros(
     val fat: Double,
     val resolvedGramWeight: Double
 )
+
+fun FdcModels.FdcFoodDetail.debugDump(tag: String = "FDC.dump") {
+    Log.d(tag, "fdcId=$fdcId desc='${description}' dataType=$dataType serving=$servingSize $servingSizeUnit")
+    Log.d(tag, "labelNutrients=${labelNutrients}")
+    if (foodNutrients.isEmpty()) {
+        Log.d(tag, "foodNutrients: []")
+    } else {
+        val preview = foodNutrients.take(20).joinToString(" | ") {
+            val num  = it.nutrient?.number ?: it.number
+            val name = it.nutrient?.name ?: it.name
+            val unit = it.nutrient?.unitName ?: it.unitName
+            "$num:$name=${it.amount} $unit"
+        }
+        Log.d(tag, "foodNutrients(${foodNutrients.size}): $preview")
+    }
+}

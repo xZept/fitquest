@@ -276,9 +276,48 @@ interface FoodLogDao {
     @Insert
     fun insert(log: FoodLog): Long
 
+    @Query("""
+        SELECT fl.*, f.foodName AS foodName
+        FROM foodLog AS fl
+        LEFT JOIN food AS f ON f.foodId = fl.foodId
+        WHERE fl.userId = :uid AND fl.dayKey = :dayKey
+        ORDER BY fl.loggedAt DESC
+    """)
+    suspend fun logsForDay(uid: Int, dayKey: Int): List<FoodLogRow>
+
+    @Query("""
+        SELECT 
+            COALESCE(SUM(calories), 0)      AS calories,
+            COALESCE(SUM(protein), 0)       AS protein,
+            COALESCE(SUM(carbohydrate), 0)  AS carbohydrate,
+            COALESCE(SUM(fat), 0)           AS fat
+        FROM foodLog
+        WHERE userId = :uid AND dayKey = :dayKey
+    """)
+    suspend fun totalsForDay(uid: Int, dayKey: Int): DayTotals
+
     @Query("SELECT * FROM foodLog WHERE userId = :userId ORDER BY loggedAt DESC LIMIT :limit")
     fun recent(userId: Int, limit: Int): List<FoodLog>
+
+    @Query("""
+        SELECT * FROM foodLog
+        WHERE userId = :uid AND dayKey = :dayKey
+        ORDER BY loggedAt ASC
+    """)
+    suspend fun entriesForDay(uid: Int, dayKey: Int): List<FoodLog>
 }
+
+data class FoodLogRow(
+    @Embedded val log: FoodLog,
+    @ColumnInfo(name = "foodName") val foodName: String?
+)
+
+data class DayTotals(
+    val calories: Double,
+    val protein: Double,
+    val carbohydrate: Double,
+    val fat: Double
+)
 
 @Dao
 interface PortionDao {

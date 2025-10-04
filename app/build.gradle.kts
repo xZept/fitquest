@@ -56,6 +56,7 @@ android {
 dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material)
+    implementation("com.google.android.flexbox:flexbox:3.0.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

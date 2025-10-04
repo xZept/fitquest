@@ -14,9 +14,5 @@ interface FdcService {
     ): FdcModels.FdcSearchResponse
 
     @GET("v1/food/{fdcId}")
-    suspend fun getFood(
-        @Path("fdcId") fdcId: Long,
-        // ask only for what you need: energy(1008), protein(1003), fat(1004), carb(1005)
-        @Query("nutrients") nutrients: List<Int>? = listOf(1008, 1003, 1004, 1005)
-    ): FdcModels.FdcFoodDetail
+    suspend fun getFood(@Path("fdcId") id: Long): FdcModels.FdcFoodDetail
 }

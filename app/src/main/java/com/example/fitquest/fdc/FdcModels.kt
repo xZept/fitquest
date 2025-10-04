@@ -27,10 +27,21 @@ class FdcModels {
     )
 
     data class FdcNutrient(
-        val number: String?,    // e.g., "1008"
-        val name: String?,
-        val amount: Double?,    // usually per 100 g for SR Legacy/Foundation
-        val unitName: String?
+        // flat (rare in detail, common in search)
+        val number: String? = null,
+        val name: String? = null,
+        val unitName: String? = null,
+        val amount: Double? = null,
+
+        // nested (common in /food/{id})
+        val nutrient: NutrientRef? = null
+    )
+
+    data class NutrientRef(
+        val id: Long? = null,
+        val number: String? = null,
+        val name: String? = null,
+        val unitName: String? = null
     )
 
     data class FdcPortion(
