@@ -16,6 +16,27 @@ class FoodRepository(
     private val api: FdcService,
     private val db: AppDatabase
 ) {
+    suspend fun deleteLog(logId: Long) {
+        db.foodLogDao().deleteById(logId)
+    }
+
+    // Overload if you prefer deleting by entity
+    suspend fun deleteLog(log: FoodLog) {
+        db.foodLogDao().delete(log)
+    }
+
+    suspend fun updateLogServing(logId: Long, newGrams: Double): Int = withContext(Dispatchers.IO) {
+        val log  = db.foodLogDao().getById(logId) ?: return@withContext 0
+        val food = db.foodDao().getById(log.foodId) ?: return@withContext 0
+
+        val factor = newGrams / 100.0
+        val cals = food.kcalPer100g * factor
+        val pro  = food.proteinPer100g * factor
+        val carb = food.carbPer100g * factor
+        val fat  = food.fatPer100g * factor
+
+        db.foodLogDao().updateServing(logId, newGrams, cals, pro, carb, fat)
+    }
 
     suspend fun getTodayLogs(userId: Int, zone: ZoneId = ZoneId.of("Asia/Manila")): List<FoodLogRow> =
         withContext(Dispatchers.IO) {

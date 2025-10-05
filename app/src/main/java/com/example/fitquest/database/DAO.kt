@@ -273,6 +273,37 @@ interface MonsterDao {
 
 @Dao
 interface FoodLogDao {
+    @Query("SELECT * FROM foodLog WHERE logId = :logId LIMIT 1")
+    suspend fun getById(logId: Long): FoodLog?
+
+    @Query("""
+        UPDATE foodLog
+        SET grams = :grams,
+            calories = :calories,
+            protein = :protein,
+            carbohydrate = :carbohydrate,
+            fat = :fat
+        WHERE logId = :logId
+    """)
+    suspend fun updateServing(
+        logId: Long,
+        grams: Double,
+        calories: Double,
+        protein: Double,
+        carbohydrate: Double,
+        fat: Double
+    ): Int
+
+    @Query("DELETE FROM foodLog WHERE logId = :logId")
+    suspend fun deleteById(logId: Long): Int
+
+    // Fallback: delete by passing the whole entity (works even if your PK name differs)
+    @Delete
+    suspend fun delete(log: FoodLog)
+
+    @Query("UPDATE foodLog SET grams = :grams WHERE logId = :logId")
+    suspend fun updateGrams(logId: Long, grams: Double)
+
     @Insert
     fun insert(log: FoodLog): Long
 

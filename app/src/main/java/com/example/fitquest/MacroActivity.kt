@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.view.ContextThemeWrapper
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -34,6 +35,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import android.widget.ProgressBar
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import com.google.android.material.progressindicator.CircularProgressIndicator
 
 class MacroActivity : AppCompatActivity() {
@@ -338,6 +341,12 @@ class MacroActivity : AppCompatActivity() {
             val v = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding(16, 16, 16, 16)
+
+                // ripple on press
+                val attrs = intArrayOf(android.R.attr.selectableItemBackground)
+                val typed = obtainStyledAttributes(attrs)
+                foreground = typed.getDrawable(0)
+                typed.recycle()
             }
             val name = TextView(this).apply {
                 text = (row.foodName ?: "Food #${row.log.foodId}") + " • ${row.log.grams.toInt()}g"
@@ -351,12 +360,87 @@ class MacroActivity : AppCompatActivity() {
             v.addView(name)
             v.addView(kcal)
 
-            // (Optional) long-press to remove that entry later
-            // v.setOnLongClickListener { /* show delete dialog, then refreshTodayMeals() */ true }
+            //  Long press
+            v.setOnLongClickListener {
+                it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                showFoodItemActionsDialog(row)
+                true
+            }
 
             container.addView(v)
         }
     }
+
+    private fun showFoodItemActionsDialog(row: com.example.fitquest.database.FoodLogRow) {
+        val title   = row.foodName ?: "Food #${row.log.foodId}"
+        val message = "${row.log.mealType} • ${row.log.grams.roundToInt()} g • ${row.log.calories.roundToInt()} kcal"
+
+        val builder = com.google.android.material.dialog.MaterialAlertDialogBuilder(
+            ContextThemeWrapper(
+                this,
+                com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog
+            )
+        )
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("Edit serving") { _, _ -> showEditServingDialog(row) }
+            .setNeutralButton("Delete") { _, _ -> confirmDeleteRow(row) }
+            .setNegativeButton("Cancel", null)
+
+        val dlg = builder.create()
+        dlg.setOnShowListener {
+            dlg.getButton(AlertDialog.BUTTON_NEUTRAL)
+                .setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+        }
+        dlg.show()
+    }
+
+    private fun confirmDeleteRow(row: com.example.fitquest.database.FoodLogRow) {
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Remove item?")
+            .setMessage("This will remove it from ${row.log.mealType}.")
+            .setPositiveButton("Delete") { _, _ ->
+                lifecycleScope.launch(Dispatchers.IO) {
+                    foodRepo.deleteLog(row.log.logId)    // use your primary key
+                    withContext(Dispatchers.Main) {
+                        refreshTodayMeals()
+                        refreshTodayTotals()
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showEditServingDialog(row: com.example.fitquest.database.FoodLogRow) {
+        val input = android.widget.EditText(this).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            setText(row.log.grams.toString())
+            setSelection(text.length)
+        }
+
+        android.app.AlertDialog.Builder(this)
+            .setTitle("Edit serving (grams)")
+            .setView(input)
+            .setPositiveButton("Save") { _, _ ->
+                val newGrams = input.text.toString().toDoubleOrNull()
+                if (newGrams != null && newGrams > 0) {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        val updated = foodRepo.updateLogServing(row.log.logId, newGrams)
+                        withContext(Dispatchers.Main) {
+                            if (updated == 0) {
+                                android.widget.Toast.makeText(this@MacroActivity, "Update failed", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                            refreshTodayMeals()
+                            refreshTodayTotals()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
 
 
 
