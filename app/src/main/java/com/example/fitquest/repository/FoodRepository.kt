@@ -23,11 +23,10 @@ class FoodRepository(
             db.foodLogDao().logsForDay(userId, dk)
         }
 
-    suspend fun getTodayTotals(userId: Int, zone: ZoneId = ZoneId.of("Asia/Manila")): DayTotals =
-        withContext(Dispatchers.IO) {
-            val dk = dayKeyFor(System.currentTimeMillis(), zone)
-            db.foodLogDao().totalsForDay(userId, dk)
-        }
+    suspend fun getTodayTotals(userId: Int, zone: ZoneId = ZoneId.of("Asia/Manila")): DayTotals {
+        val dk = dayKeyFor(System.currentTimeMillis(), zone)
+        return db.foodLogDao().totalsForDay(userId, dk)
+    }
 
     // 1) SEARCH & SHOW MATCHES
     suspend fun search(term: String, page: Int = 1, pageSize: Int = 50) =
@@ -68,7 +67,6 @@ class FoodRepository(
 
     // 3) LOG TO HISTORY (for quick reuse next time)
     suspend fun logIntake(userId: Int, foodId: Long, grams: Double, mealType: String): Long =
-
         withContext(Dispatchers.IO) {
             val f = db.foodDao().getById(foodId) ?: error("Food not found")
             val factor = grams / 100.0
@@ -82,8 +80,8 @@ class FoodRepository(
                 carbohydrate = f.carbPer100g * factor,
                 fat = f.fatPer100g * factor,
                 loggedAt = System.currentTimeMillis(),
-                dayKey = dayKeyFor(System.currentTimeMillis()),
-                mealType = mealType
+                dayKey  = dayKeyFor(System.currentTimeMillis()),
+                mealType = mealType.uppercase()
             )
             db.foodLogDao().insert(log)
         }
@@ -116,14 +114,33 @@ class FoodRepository(
         }
     }
 
-    // In FoodRepository
     suspend fun ensureLocalIdForFdc(fdcId: Long): Long = withContext(Dispatchers.IO) {
         val detail = api.getFood(fdcId)
         detail.debugDump()
         db.foodDao().upsert(detail.toFoodEntity()) // returns local foodId
     }
 
+    private val previewCache = mutableMapOf<Long, PreviewMacros>()
+
+    suspend fun previewMacrosPer100g(fdcId: Long): PreviewMacros = withContext(Dispatchers.IO) {
+        previewCache[fdcId]?.let { return@withContext it }
+        val d = api.getFood(fdcId)
+        val food = d.toFoodEntity() // uses n(...) above
+        val out = PreviewMacros(
+            protein = food.proteinPer100g,
+            fat     = food.fatPer100g,
+            carbs   = food.carbPer100g
+        )
+        previewCache[fdcId] = out
+        out
+    }
 }
+
+data class PreviewMacros(
+    val protein: Double,
+    val fat: Double,
+    val carbs: Double
+)
 
 // Simple holder for what the user typed/selected:
 data class MeasurementInput(val type: MeasurementType, val quantity: Double)
@@ -151,3 +168,4 @@ fun FdcModels.FdcFoodDetail.debugDump(tag: String = "FDC.dump") {
         Log.d(tag, "foodNutrients(${foodNutrients.size}): $preview")
     }
 }
+

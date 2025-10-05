@@ -32,6 +32,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
+import android.widget.ProgressBar
+import com.google.android.material.progressindicator.CircularProgressIndicator
 
 class MacroActivity : AppCompatActivity() {
 
@@ -60,6 +63,14 @@ class MacroActivity : AppCompatActivity() {
 
     private lateinit var pressAnim: android.view.animation.Animation
 
+    override fun onResume() {
+        super.onResume()
+        if (currentUserId > 0) {
+            refreshTodayMeals()
+            refreshTodayTotals()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_macro)   // ← set the layout first
@@ -80,12 +91,12 @@ class MacroActivity : AppCompatActivity() {
                 ensureUserExists(currentUserId)
                 searchBtn.isEnabled = true
                 refreshTodayMeals()
+                refreshTodayTotals()
             } else {
                 // show message or navigate to sign-in
             }
         }
 
-        // use it safely now
         searchBtn.setOnClickListener {
             val repo = (application as FitQuestApp).foodRepository
             FoodSearchBottomSheet(repo) { item ->
@@ -96,7 +107,12 @@ class MacroActivity : AppCompatActivity() {
                     defaultAmount = 100.0,
                     defaultUnit = com.example.fitquest.database.MeasurementType.GRAM,
                     defaultMeal = "Lunch"
-                ) { refreshTodayMeals() }
+                ) {
+                    lifecycleScope.launch {
+                        refreshTodayMeals()      // redraw plates
+                        refreshTodayTotals()     // update numbers + progress
+                    }
+                }
             }.show(supportFragmentManager, "food_search")
         }
 
@@ -128,12 +144,6 @@ class MacroActivity : AppCompatActivity() {
         val dietType = intent.getStringExtra("DIET_TYPE") ?: ""
 
         Log.d("MacroDebug", "Raw Goal: $rawGoal | Mapped Goal: $userGoal | Split: $splitKey | Condition: $userCondition")
-
-        // ✅ Get references to meal containers
-        val breakfastContainer = findViewById<LinearLayout>(R.id.breakfastContainer)
-        val snackContainer = findViewById<LinearLayout>(R.id.snackContainer)
-        val lunchContainer = findViewById<LinearLayout>(R.id.lunchContainer)
-        val dinnerContainer = findViewById<LinearLayout>(R.id.dinnerContainer)
 
 /*      // ✅ Load meals filtered by user’s goal + diet type
         val meals = loadMealsFromCSV(this).filter {
@@ -244,25 +254,51 @@ class MacroActivity : AppCompatActivity() {
         container.addView(mealView, params)
     }
 
+    private fun refreshTodayTotals() {
+        if (currentUserId <= 0) return
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val totals = foodRepo.getTodayTotals(currentUserId)  // DayTotals from repo
+            withContext(Dispatchers.Main) {
+                // 1) Show numbers
+                findViewById<TextView>(R.id.calories_total).text = totals.calories.roundToInt().toString()
+                findViewById<TextView>(R.id.protein_total).text  = totals.protein.roundToInt().toString()
+                findViewById<TextView>(R.id.carbs_total).text    = totals.carbohydrate.roundToInt().toString()
+                findViewById<TextView>(R.id.fat_total).text      = totals.fat.roundToInt().toString()
+
+                // 2) Map to progress bars (0..100)
+                val goalCalories = 3010.0
+                val goalProtein  = 151.0   // g
+                val goalCarbs    = 376.0   // g
+                val goalFat      = 100.0    // g
+
+                fun pct(done: Double, goal: Double) =
+                    if (goal <= 0.0) 0 else ((done / goal) * 100.0).roundToInt().coerceIn(0, 100)
+
+                findViewById<ProgressBar>(R.id.calories_progress).apply{ max = 100; progress = pct(totals.calories,goalCalories) }
+                findViewById<ProgressBar>(R.id.protein_progress).apply{ max = 100; progress = pct(totals.protein,goalProtein) }
+                findViewById<ProgressBar>(R.id.carbs_progress).apply{ max = 100; progress = pct(totals.carbohydrate,goalCarbs) }
+                findViewById<ProgressBar>(R.id.fat_progress).apply{ max = 100; progress = pct(totals.fat,goalFat) }
+            }
+        }
+    }
+
     private fun refreshTodayMeals() {
         if (currentUserId <= 0) return
         lifecycleScope.launch(Dispatchers.IO) {
-            val logs   = foodRepo.getTodayLogs(currentUserId)
-            val totals = foodRepo.getTodayTotals(currentUserId)
+            val logs = foodRepo.getTodayLogs(currentUserId)
             withContext(Dispatchers.Main) {
-                // Clear and re-render each plate
                 breakfastContainer.removeAllViews()
                 snackContainer.removeAllViews()
                 lunchContainer.removeAllViews()
                 dinnerContainer.removeAllViews()
 
-                // group logs by mealType (stored uppercase in logIntake)
-                val byMeal = logs.groupBy { it.log.mealType } // "BREAKFAST","LUNCH","DINNER","SNACK"
-
+                val byMeal = logs.groupBy { it.log.mealType } // "BREAKFAST", "SNACK", "LUNCH", "DINNER"
                 renderMealPlate(breakfastContainer, byMeal["BREAKFAST"].orEmpty())
                 renderMealPlate(snackContainer,     byMeal["SNACK"].orEmpty())
                 renderMealPlate(lunchContainer,     byMeal["LUNCH"].orEmpty())
                 renderMealPlate(dinnerContainer,    byMeal["DINNER"].orEmpty())
+
 
                 // Example: update header totals if you have TextViews
                 // findViewById<TextView>(R.id.tvTotalCalories).text = totals.calories.roundToInt().toString()
@@ -271,6 +307,7 @@ class MacroActivity : AppCompatActivity() {
                 // findViewById<TextView>(R.id.tvTotalFat).text      = totals.fat.roundToInt().toString()
             }
         }
+        refreshTodayTotals()
     }
 
     private suspend fun ensureUserExists(userId: Int) {

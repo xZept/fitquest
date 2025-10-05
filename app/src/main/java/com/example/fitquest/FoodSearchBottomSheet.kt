@@ -34,10 +34,9 @@ class FoodSearchBottomSheet(
 
     private val queryFlow = MutableStateFlow("")
     private var searchJob: Job? = null
-    private val adapter = FoodSearchAdapter { item ->
-        onPicked(item)
-        dismiss()
-    }
+
+    // Create adapter only after viewLifecycleOwner exists
+    private lateinit var adapter: FoodSearchAdapter
 
     override fun onCreateDialog(savedInstanceState: Bundle?) =
         (super.onCreateDialog(savedInstanceState) as BottomSheetDialog).apply {
@@ -49,26 +48,36 @@ class FoodSearchBottomSheet(
             }
         }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View {
         _binding = DialogFoodSearchBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        adapter = FoodSearchAdapter(
+            scope = viewLifecycleOwner.lifecycleScope,
+            repo = repo
+        ) { item ->
+            // ← this WILL be called on tap
+            onPicked(item)
+            dismiss()
+        }
+
         binding.rvResults.layoutManager = LinearLayoutManager(requireContext())
         binding.rvResults.adapter = adapter
 
-        // Debounced text change
         binding.etSearch.addTextChangedListener {
             queryFlow.value = it?.toString().orEmpty()
         }
+
         queryFlow
-            .debounce(300)
+            .debounce(400)              // slow down a bit to reduce cancels
             .filter { it.length >= 2 }
             .onEach { performSearch(it) }
             .launchIn(viewLifecycleOwner.lifecycleScope)
 
-        // IME search action
         binding.etSearch.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 performSearch(binding.etSearch.text?.toString().orEmpty())
@@ -76,7 +85,6 @@ class FoodSearchBottomSheet(
             } else false
         }
 
-        // Auto focus + keyboard
         binding.etSearch.requestFocus()
     }
 
@@ -84,44 +92,52 @@ class FoodSearchBottomSheet(
         if (term.isBlank()) return
         binding.progress.isVisible = true
         binding.tvEmpty.isVisible = false
-        searchJob?.cancel()
+        binding.rvResults.isVisible = false
 
+        searchJob?.cancel()
         searchJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val items = withContext(Dispatchers.IO) {
                     repo.search(term, page = 1, pageSize = 50)
                 }
+
+                // Log and render
+                android.util.Log.d("FoodSearch", "results=${items.size} for '$term'")
                 adapter.submit(items)
+                android.util.Log.d("FoodSearch", "adapter itemCount=${adapter.itemCount}")
+
+                binding.rvResults.isVisible = items.isNotEmpty()
                 binding.tvEmpty.isVisible = items.isEmpty()
+                binding.tvEmpty.text = if (items.isEmpty()) "No results." else ""
             } catch (ce: CancellationException) {
+                // normal during fast typing
                 throw ce
             } catch (he: retrofit2.HttpException) {
                 val code = he.code()
                 val body = withContext(Dispatchers.IO) { he.response()?.errorBody()?.string() }
                 android.util.Log.e("FoodSearch", "HTTP $code: $body", he)
+                adapter.submit(emptyList())
+                android.util.Log.d("FoodSearch", "adapter itemCount=${adapter.itemCount}")
+                binding.rvResults.isVisible = false
                 binding.tvEmpty.isVisible = true
                 binding.tvEmpty.text = when (code) {
                     401, 403 -> "API key rejected. Check your FDC key."
                     429 -> "Rate limit reached. Try again shortly."
                     else -> "Server error ($code). Try again."
                 }
-                adapter.submit(emptyList())
             } catch (e: Exception) {
                 android.util.Log.e("FoodSearch", "Search failed", e)
-                binding.tvEmpty.isVisible = true
-                binding.tvEmpty.text = when {
-                    e is java.net.UnknownHostException ||
-                            e is java.net.SocketException     -> "No internet connection."
-                    else                               -> "Error searching. Please try again."
-                }
                 adapter.submit(emptyList())
+                android.util.Log.d("FoodSearch", "adapter itemCount=${adapter.itemCount}")
+                binding.rvResults.isVisible = false
+                binding.tvEmpty.isVisible = true
+                binding.tvEmpty.text = if (e is java.net.UnknownHostException || e is java.net.SocketException)
+                    "No internet connection." else "Error searching. Please try again."
             } finally {
                 binding.progress.isVisible = false
             }
         }
     }
-
-
 
     override fun onDestroyView() {
         super.onDestroyView()
@@ -131,42 +147,80 @@ class FoodSearchBottomSheet(
 }
 
 private class FoodSearchAdapter(
-    val onClick: (FdcSearchFood) -> Unit
+    private val scope: CoroutineScope,
+    private val repo: FoodRepository,
+    private val onClick: (FdcSearchFood) -> Unit
 ) : RecyclerView.Adapter<VH>() {
 
     private val items = mutableListOf<FdcSearchFood>()
 
+    // Avoid multiple network calls while scrolling the same id
+    private val textCache = mutableMapOf<Long, String>()           // fdcId -> "Protein: Xg; Fat: Yg; Carbs: Zg"
+    private val inFlight  = mutableMapOf<Long, Deferred<String>>() // fdcId -> job
+
     fun submit(newItems: List<FdcSearchFood>) {
+        val oldItems = items.toList()
         val diff = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
-            override fun getOldListSize() = items.size
+            override fun getOldListSize() = oldItems.size
             override fun getNewListSize() = newItems.size
-            override fun areItemsTheSame(old: Int, new: Int) = items[old].fdcId == newItems[new].fdcId
-            override fun areContentsTheSame(old: Int, new: Int) = items[old] == newItems[new]
+            override fun areItemsTheSame(old: Int, new: Int) =
+                oldItems[old].fdcId == newItems[new].fdcId
+            override fun areContentsTheSame(old: Int, new: Int) =
+                oldItems[old] == newItems[new]
         })
-        items.clear(); items.addAll(newItems)
+        items.clear()
+        items.addAll(newItems)
         diff.dispatchUpdatesTo(this)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val binding = ItemFoodSearchBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return VH(binding, onClick)
+        val b = ItemFoodSearchBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        return VH(b)
     }
 
     override fun getItemCount() = items.size
-    override fun onBindViewHolder(holder: VH, position: Int) = holder.bind(items[position])
+
+    override fun onBindViewHolder(holder: VH, position: Int) {
+        val item = items[position]
+        holder.bind(item) { onClick(item) }  // ← click now uses the actual item
+
+        // Sub line: cached or fetch once
+        val cached = textCache[item.fdcId]
+        if (cached != null) {
+            holder.bindSub(cached)
+        } else {
+            holder.bindSub("") // or " "
+            val job = inFlight[item.fdcId] ?: scope.async(Dispatchers.IO) {
+                val pm = repo.previewMacrosPer100g(item.fdcId)
+                "Protein: ${pm.protein.toInt()}g; Fat: ${pm.fat.toInt()}g; Carbs: ${pm.carbs.toInt()}g"
+            }.also { inFlight[item.fdcId] = it }
+
+            scope.launch {
+                try {
+                    val line = job.await()
+                    textCache[item.fdcId] = line
+                    if (holder.bindingAdapterPosition != RecyclerView.NO_POSITION &&
+                        items.getOrNull(holder.bindingAdapterPosition)?.fdcId == item.fdcId) {
+                        holder.bindSub(line)
+                    }
+                } finally {
+                    inFlight.remove(item.fdcId)
+                }
+            }
+        }
+    }
 }
 
 private class VH(
-    private val b: ItemFoodSearchBinding,
-    val onClick: (FdcSearchFood) -> Unit
+    private val b: ItemFoodSearchBinding
 ) : RecyclerView.ViewHolder(b.root) {
-    fun bind(item: FdcSearchFood) {
+
+    fun bind(item: FdcSearchFood, onClick: () -> Unit) {
         b.tvTitle.text = item.description
-        b.tvSub.text = item.dataType ?: ""
-        b.root.setOnClickListener {
-            b.root.isEnabled = false
-            onClick(item)
-            b.root.postDelayed({ b.root.isEnabled = true }, 500)
-        }
+        b.root.setOnClickListener { onClick() }
+    }
+
+    fun bindSub(text: String) {
+        b.tvSub.text = text
     }
 }
