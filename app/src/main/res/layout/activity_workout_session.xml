@@ -42,7 +42,7 @@
                         android:id="@+id/iv_hp_bg"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:src="@drawable/container_slime_hp"
+                        android:src="@drawable/container_hp_slime"
                         android:scaleType="fitCenter"
                         android:adjustViewBounds="true" />
 

@@ -960,12 +960,22 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private fun updateHpBackgroundForCode(monsterCode: String?) {
         val code = (monsterCode ?: "slime").lowercase()
-        // We follow your naming: container_<code>_hp.png
-        val wanted = "container_${code}_hp"
-        val pickedId = resources.getIdentifier(wanted, "drawable", packageName)
-        val fallbackId = resources.getIdentifier("container_slime_hp", "drawable", packageName)
+
+        // Try old pattern, then new pattern
+        val pickedId = resolveFirstDrawable(
+            "container_${code}_hp",   // old: container_slime_hp
+            "container_hp_${code}"    // new: container_hp_slime
+        )
+
+        // Try both fallbacks too
+        val fallbackId = resolveFirstDrawable(
+            "container_slime_hp",
+            "container_hp_slime"
+        )
+
         ivHpBg.setImageResource(if (pickedId != 0) pickedId else fallbackId)
     }
+
 
 
 
@@ -1027,7 +1037,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         val fightCols = 24
 
         idleAnim  = if (idleRes  != 0) buildAnim(idleRes,  rows = 1, cols = idleCols,  fps = 13, loop = true)  else null
-        fightAnim = if (fightRes != 0) buildAnim(fightRes, rows = 1, cols = fightCols, fps = 24, loop = false) else null
+        fightAnim = if (fightRes != 0) buildAnim(fightRes, rows = 1, cols = fightCols, fps = 12, loop = false) else null
 
         // After rebuilding, make sure the currently shown anim is idle for the new monster
         showIdle()
