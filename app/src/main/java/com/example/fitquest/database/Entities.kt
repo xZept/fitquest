@@ -230,3 +230,22 @@ data class FoodLog(
     // optional: group the UI by meals
     val mealType: String
 )
+
+@Entity(
+    tableName = "macroPlan",
+    foreignKeys = [ForeignKey(
+        entity = User::class,
+        parentColumns = ["userId"],
+        childColumns = ["userId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
+data class MacroPlan(
+    @PrimaryKey(autoGenerate = true) val macroId: Long = 0L,
+    val calories: Int,
+    val proteinG: Int,
+    val fatG: Int,
+    val carbsG: Int,
+    val bmr: Double,
+    val tdee: Double
+)
