@@ -8,14 +8,12 @@ plugins {
 
 android {
     namespace = "com.example.fitquest"
-    // FIX: Using latest stable SDK version
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.fitquest"
         minSdk = 27
-        // FIX: Target SDK should match compile SDK
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -57,6 +55,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material)
     implementation("com.google.android.flexbox:flexbox:3.0.0")
+    implementation(libs.androidx.activity)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
     implementation("com.squareup.moshi:moshi-kotlin:1.15.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

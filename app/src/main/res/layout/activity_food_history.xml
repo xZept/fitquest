@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_diary">
+
+    <!-- Main vertical content -->
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <!-- Title image (flush left) -->
+        <ImageView
+            android:id="@+id/titleImage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/title_page_diary"
+            android:adjustViewBounds="true"
+            android:layout_marginTop="10dp"
+            android:layout_gravity="start"
+            android:scaleType="centerInside"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Padded content -->
+        <LinearLayout
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <com.google.android.material.tabs.TabLayout
+                android:id="@+id/tabLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="20dp"
+                android:background="@android:color/transparent"
+                app:tabIndicatorColor="@android:color/black"
+                app:tabRippleColor="@android:color/transparent"
+                app:tabSelectedTextColor="@android:color/black"
+                app:tabTextAppearance="@style/Widget.FitQuest.Tab.Text"
+                app:tabTextColor="@android:color/darker_gray" />
+
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/pager"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="60dp"
+                android:layout_weight="1"
+                android:paddingHorizontal="25dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Floating Back button (bottom-right) -->
+    <ImageButton
+        android:id="@+id/btnBack"
+        android:layout_width="wrap_content"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="16dp"
+        android:background="@drawable/button_back"
+        android:adjustViewBounds="true"
+        android:scaleType="fitCenter" />
+</FrameLayout>

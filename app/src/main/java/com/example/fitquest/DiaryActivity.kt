@@ -24,6 +24,7 @@ class DiaryActivity : AppCompatActivity() {
         setContentView(R.layout.activity_diary)
         hideSystemBars()
 
+
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         val tabs = findViewById<TabLayout>(R.id.tabLayout)
