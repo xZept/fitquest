@@ -5,8 +5,17 @@
     android:id="@+id/profile_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_profile"
+    android:background="@drawable/bg_page_profile"
     tools:context=".ProfileActivity">
+
+    <!-- NEW: animated bg host (must be first so it’s at the back) -->
+    <ImageView
+        android:id="@+id/bg_anim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:clickable="false"
+        android:focusable="false" />
 
     <LinearLayout
         android:id="@+id/header_bar"
@@ -72,7 +81,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:background="@drawable/tier1_user_info_container">
+                android:background="@drawable/container_user_info">
 
                 <!-- LEFT: profile image / illustration -->
                 <ImageView
@@ -170,7 +179,7 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="40dp"
                                     android:background="@drawable/bg_edit_text"
-                                    android:hint="Enter Height (cm)"
+                                    android:hint="Height (cm)"
                                     android:imeOptions="actionNext"
                                     android:inputType="number"
                                     android:padding="8dp"
@@ -202,7 +211,7 @@
                                     android:layout_width="match_parent"
                                     android:layout_height="40dp"
                                     android:background="@drawable/bg_edit_text"
-                                    android:hint="Enter Weight (kg)"
+                                    android:hint="Weight (kg)"
                                     android:imeOptions="actionDone"
                                     android:inputType="numberDecimal"
                                     android:padding="8dp"
@@ -222,7 +231,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:background="@drawable/tier1_user_fitness_container">
+                android:background="@drawable/container_user_fitness">
 
                 <!-- Left image + Right content -->
                 <LinearLayout
@@ -304,19 +313,28 @@
                     </LinearLayout>
                 </LinearLayout>
             </FrameLayout>
+
+            <TextView
+                android:id="@+id/tv_settings_hint"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/container_handler_text"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="15dp"
+                android:gravity="left"
+                android:text="Manage rest timer and equipment in Settings"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
         </LinearLayout>
     </ScrollView>
 
-    <ImageView
-        android:id="@+id/iv_lady_sprite"
-        android:layout_width="wrap_content"
-        android:layout_height="300dp"
-        android:layout_above="@id/btn_save_profile"
-        android:adjustViewBounds="true"
-        android:layout_marginBottom="2dp"
-        android:contentDescription="@null"
-        android:layout_centerHorizontal="true"
-        android:src="@drawable/lady_helper_sprite" />
+
+
+
+
 
     <ImageButton
         android:id="@+id/btn_save_profile"

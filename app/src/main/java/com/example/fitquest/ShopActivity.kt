@@ -211,7 +211,7 @@ class ShopActivity : AppCompatActivity() {
 
         bgBitmap = BitmapFactory.decodeResource(
             resources,
-            R.drawable.bg_shop_spritesheet,
+            R.drawable.bg_page_shop_spritesheet0,
             opts
         )
 

@@ -48,7 +48,7 @@ class DashboardActivity : AppCompatActivity() {
             inScaled = false
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
-        val sheet = BitmapFactory.decodeResource(resources, R.drawable.bg_dashboard_spritesheet, opts)
+        val sheet = BitmapFactory.decodeResource(resources, R.drawable.bg_page_dashboard_spritesheet0, opts)
         bgAnim = SpriteSheetDrawable(
             sheet = sheet,
             rows = 1,

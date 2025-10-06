@@ -1,6 +1,5 @@
 package com.example.fitquest
 
-import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
@@ -13,7 +12,6 @@ import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import androidx.room.Room
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.datastore.DataStoreManager
 import com.example.fitquest.models.QuestExercise
@@ -102,7 +100,7 @@ class QuestGeneratorActivity : AppCompatActivity() {
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
 
-        bgBitmap = BitmapFactory.decodeResource(resources, R.drawable.bg_dashboard_spritesheet, opts)
+        bgBitmap = BitmapFactory.decodeResource(resources, R.drawable.bg_page_dashboard_spritesheet0, opts)
 
         val rows = 1
         val cols = 12

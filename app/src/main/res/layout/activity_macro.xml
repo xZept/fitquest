@@ -296,7 +296,7 @@
                 android:layout_width="250dp"
                 android:layout_height="wrap_content"
                 android:layout_marginRight="12dp"
-                android:background="@drawable/lunch_container"
+                android:background="@drawable/container_lunch"
                 android:orientation="vertical"
                 android:padding="12dp">
 

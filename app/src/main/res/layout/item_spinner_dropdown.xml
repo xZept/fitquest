@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/tv"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:background="@android:color/white"
-    android:textColor="#111827"
+    android:layout_height="48dp"
+    android:gravity="center_vertical"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:singleLine="true"
+    android:ellipsize="end"
+    android:textColor="@android:color/white"
     android:textSize="16sp"
-    android:padding="12dp" />
+    android:background="?attr/selectableItemBackground"/>

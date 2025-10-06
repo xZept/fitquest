@@ -195,7 +195,7 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
     }
 
     private fun initAnimatedBg(rows: Int, cols: Int, fps: Int) {
-        val bmp = BitmapFactory.decodeResource(resources, R.drawable.bg_dashboard_spritesheet)
+        val bmp = BitmapFactory.decodeResource(resources, R.drawable.bg_page_dashboard_spritesheet0)
         bgDrawable = SpriteSheetDrawable(
             sheet = bmp,
             rows = rows,

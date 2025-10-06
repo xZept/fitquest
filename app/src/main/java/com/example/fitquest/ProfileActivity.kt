@@ -33,7 +33,8 @@ import androidx.gridlayout.widget.GridLayout
 import android.view.ViewGroup
 import android.text.TextUtils
 import kotlin.math.roundToInt
-
+import android.graphics.BitmapFactory
+import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 
 /**
  * Merged ProfileActivity
@@ -65,6 +66,8 @@ class ProfileActivity : AppCompatActivity() {
     private var ladyAnim: AnimationDrawable? = null
 
     private lateinit var pressAnim: android.view.animation.Animation
+    private lateinit var bgView: ImageView
+    private var bgSprite: SpriteSheetDrawable? = null
 
     // --- VALIDATION CONSTANTS (repo) ---
     private val MIN_HEIGHT_CM = 120
@@ -77,6 +80,26 @@ class ProfileActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
+
+        bgView = findViewById(R.id.bg_anim)
+
+        // Load your sheet without density scaling so frame math stays exact.
+        val opts = BitmapFactory.Options().apply { inScaled = false }
+        val sheet = BitmapFactory.decodeResource(resources, R.drawable.bg_page_profile_spritesheet0, opts)
+
+
+        bgSprite = SpriteSheetDrawable(
+            sheet = sheet,
+            rows = 1,
+            cols = 12,
+            fps = 12,
+            loop = true,
+            scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
+        ).also { drawable ->
+            bgView.setImageDrawable(drawable)
+            drawable.start()
+        }
+
 
         enterImmersive()
 
@@ -127,11 +150,6 @@ class ProfileActivity : AppCompatActivity() {
 
         // Default sprite while loading
         setSpriteForSex(null)
-
-        ladySpriteView = findViewById(R.id.iv_lady_sprite)
-        ladySpriteView.setImageResource(R.drawable.lady_helper_sprite)
-        ladyAnim = ladySpriteView.drawable as? AnimationDrawable
-        ladySpriteView.post { ladyAnim?.start() }
 
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@ProfileActivity).first()
@@ -227,12 +245,22 @@ class ProfileActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         iconAnim?.start()
+        bgSprite?.start()
     }
 
     override fun onPause() {
+        bgSprite?.stop()
         iconAnim?.stop()
         super.onPause()
     }
+
+    override fun onDestroy() {
+        // Optional: release ref to help GC
+        bgView.setImageDrawable(null)
+        bgSprite = null
+        super.onDestroy()
+    }
+
 
     // ---------- Validation (repo) ----------
 
