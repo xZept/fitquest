@@ -25,6 +25,10 @@ import com.example.fitquest.repository.FitquestRepository
 import kotlinx.coroutines.launch
 import java.util.*
 import kotlin.math.roundToInt
+import android.graphics.BitmapFactory
+import androidx.constraintlayout.widget.ConstraintLayout
+import com.example.fitquest.ui.widgets.SpriteSheetDrawable
+
 
 class RegisterActivity : AppCompatActivity() {
     private lateinit var repository: FitquestRepository
@@ -34,6 +38,8 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var female: ImageView
 
     private lateinit var pressAnim: android.view.animation.Animation
+    private var bgSprite: SpriteSheetDrawable? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         repository = FitquestRepository(this)
@@ -42,6 +48,35 @@ class RegisterActivity : AppCompatActivity() {
         setContentView(R.layout.activity_register)
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
+
+        // === Animated background (spritesheet) ===
+        val root = findViewById<ConstraintLayout>(R.id.registerLayout)
+
+// Prevent density scaling to keep frame grid exact
+        val opts = BitmapFactory.Options().apply {
+            inScaled = false
+            inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+        }
+
+        val sheet = BitmapFactory.decodeResource(
+            resources,
+            R.drawable.bg_page_register_spritesheet,
+            opts
+        )
+
+
+        bgSprite = SpriteSheetDrawable(
+            sheet = sheet,
+            rows = 1,
+            cols = 12,
+            fps = 18,
+            loop = true,
+            scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
+        )
+
+    // Put the animated sheet behind everything
+        root.background = bgSprite
+
 
         // Initialize sex options
         male = findViewById(R.id.iv_male)
@@ -316,6 +351,23 @@ class RegisterActivity : AppCompatActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        bgSprite?.start()
+    }
+
+    override fun onPause() {
+        bgSprite?.stop()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        bgSprite?.stop()
+        bgSprite = null
+        super.onDestroy()
+    }
+
 
     private fun highlightSelected(selected: ImageView, unselected: ImageView) {
         selected.setBackgroundResource(R.drawable.sex_container_selected)
