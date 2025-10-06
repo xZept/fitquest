@@ -3,7 +3,6 @@ package com.example.fitquest
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
-import android.media.Image
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -148,8 +147,8 @@ class WorkoutGeneratorActivity : AppCompatActivity() {
             val edit = findViewById<EditText?>(id)
             edit?.setOnFocusChangeListener { view, hasFocus ->
                 view.setBackgroundResource(
-                    if (hasFocus) R.drawable.user_input_bg_selected
-                    else R.drawable.user_input_bg
+                    if (hasFocus) R.drawable.bg_user_input_selected
+                    else R.drawable.bg_user_input
                 )
             }
         }

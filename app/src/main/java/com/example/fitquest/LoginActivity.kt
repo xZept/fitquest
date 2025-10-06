@@ -1,6 +1,8 @@
 package com.example.fitquest
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -14,16 +16,24 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.lifecycle.lifecycleScope
 import com.example.fitquest.datastore.DataStoreManager
 import com.example.fitquest.repository.FitquestRepository
+import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var repository: FitquestRepository
     private lateinit var pressAnim: android.view.animation.Animation
+
+    // Sprite background refs so we can start/stop with lifecycle
+    private var bgDrawable: SpriteSheetDrawable? = null
+    private var bgBitmap: Bitmap? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,6 +57,60 @@ class LoginActivity : AppCompatActivity() {
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
         repository = FitquestRepository(this)
+
+
+        val rows = 1
+        val cols = 24
+        val fps = 12
+
+        val root = findViewById<androidx.constraintlayout.widget.ConstraintLayout>(R.id.loginLayout)
+        val form = findViewById<android.widget.LinearLayout>(R.id.formContainer)
+        val sign = findViewById<android.widget.TextView>(R.id.tvSignUpLink)
+        val loginBtn = findViewById<android.widget.ImageButton>(R.id.btnLogin)
+
+        // remember original form bottom padding so we don't accumulate
+        val baseFormBottom = form.paddingBottom
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+
+            // 1) Keep the sign-up link visually at screen bottom by offsetting it back down
+            //    by the keyboard height (if shown). This prevents it from "riding up".
+            sign.translationY = ime.bottom.toFloat()
+            loginBtn.translationY = ime.bottom.toFloat()
+
+            // 2) Let the form breathe above nav/IME by adding bottom padding.
+            val extraBottom = maxOf(ime.bottom, sys.bottom)
+            form.setPadding(
+                form.paddingLeft,
+                form.paddingTop,
+                form.paddingRight,
+                baseFormBottom + extraBottom
+            )
+
+            insets // don't consume; keep normal resize behavior for the rest
+        }
+
+        // Decode once and reuse (drawable-nodpi recommended)
+        bgBitmap = BitmapFactory.decodeResource(resources, R.drawable.bg_page_login_spritesheet)
+
+        bgDrawable = bgBitmap?.let { bmp ->
+            SpriteSheetDrawable(
+                sheet = bmp,
+                rows = rows,
+                cols = cols,
+                fps = fps,
+                loop = true,
+                scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP // background-friendly
+            )
+        }
+
+        // Set as background and start when the view has bounds
+        bgDrawable?.let { drawable ->
+            root.background = drawable
+            root.post { drawable.start() }
+        }
 
         // Auto-skip login if a user is already stored
         lifecycleScope.launch {
@@ -106,5 +170,24 @@ class LoginActivity : AppCompatActivity() {
         tvSignUpLink.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
         }
+    }
+    override fun onResume() {
+        super.onResume()
+        bgDrawable?.start()
+    }
+
+    override fun onPause() {
+        bgDrawable?.stop()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        // Free bitmap if not rotating
+        bgDrawable?.stop()
+        if (!isChangingConfigurations) {
+            bgBitmap?.recycle()
+            bgBitmap = null
+        }
+        super.onDestroy()
     }
 }

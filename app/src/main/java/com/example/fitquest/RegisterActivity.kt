@@ -1,7 +1,6 @@
 package com.example.fitquest
 
 import android.app.DatePickerDialog
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.os.Build
@@ -339,8 +338,8 @@ class RegisterActivity : AppCompatActivity() {
         for (id in inputs) {
             findViewById<EditText>(id).setOnFocusChangeListener { view, hasFocus ->
                 view.setBackgroundResource(
-                    if (hasFocus) R.drawable.user_input_bg_selected
-                    else R.drawable.user_input_bg
+                    if (hasFocus) R.drawable.bg_user_input_selected
+                    else R.drawable.bg_user_input
                 )
             }
         }

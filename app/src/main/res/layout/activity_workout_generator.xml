@@ -33,7 +33,7 @@
                     android:id="@+id/input_height"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/user_input_bg"
+                    android:background="@drawable/bg_user_input"
                     android:hint="Height (cm)"
                     android:inputType="numberDecimal"
                     android:padding="13dp"
@@ -52,7 +52,7 @@
                     android:id="@+id/input_weight"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/user_input_bg"
+                    android:background="@drawable/bg_user_input"
                     android:hint="Weight (kg)"
                     android:inputType="numberDecimal"
                     android:padding="13dp"
@@ -72,7 +72,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="8dp"
-                    android:background="@drawable/user_input_bg"
+                    android:background="@drawable/bg_user_input"
                     android:entries="@array/fitness_goals"
                     android:textColor="@color/white"
                     />
@@ -90,7 +90,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="8dp"
-                    android:background="@drawable/user_input_bg"
+                    android:background="@drawable/bg_user_input"
                     android:entries="@array/activity_levels"
                     android:textColor="@color/white" />
             </LinearLayout>
@@ -106,7 +106,7 @@
                     android:id="@+id/input_health_condition"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/user_input_bg"
+                    android:background="@drawable/bg_user_input"
                     android:hint="Enter health condition"
                     android:inputType="textCapSentences"
                     android:padding="13dp"
@@ -126,7 +126,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="8dp"
-                    android:background="@drawable/user_input_bg"
+                    android:background="@drawable/bg_user_input"
                     android:entries="@array/equipment_choices"
                     android:textColor="@color/white"/>
             </LinearLayout>
@@ -137,7 +137,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:background="@drawable/user_input_bg"
+                android:background="@drawable/bg_user_input"
                 android:orientation="vertical"
                 android:paddingVertical="12dp">
 
