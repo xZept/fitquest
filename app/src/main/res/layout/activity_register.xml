@@ -12,7 +12,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_begin="534dp" />
+        app:layout_constraintGuide_begin="524dp" />
 
     <!-- FORM (scrolls). Constrained between title and 2/3 guideline -->
     <ScrollView
@@ -229,11 +229,14 @@
         android:layout_height="wrap_content"
         android:paddingHorizontal="32dp"
         android:paddingVertical="8dp"
+        android:layout_marginHorizontal="20sp"
+        android:background="@drawable/container_handler_text"
         android:text="Welcome, Adventurer! Forge your profile above so we can match quests to your strength, skill, and goals. When you’re ready, tap Enlist to enter the realm."
         android:textColor="@color/black"
         android:textSize="16sp"
-        android:gravity="center"
+        android:gravity="clip_vertical"
         android:maxLines="3"
+        android:visibility="gone"
         app:layout_constraintTop_toBottomOf="@id/formScroll"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

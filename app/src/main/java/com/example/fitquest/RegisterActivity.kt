@@ -32,6 +32,11 @@ import android.graphics.drawable.AnimationDrawable
 import androidx.core.content.ContextCompat
 import android.view.MotionEvent
 import android.widget.*
+import android.widget.TextView
+import androidx.core.view.isVisible
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
 
 
 
@@ -45,6 +50,8 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var pressAnim: android.view.animation.Animation
     private var bgSprite: SpriteSheetDrawable? = null
 
+    private lateinit var welcomeBanner: TextView
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         repository = FitquestRepository(this)
@@ -53,6 +60,27 @@ class RegisterActivity : AppCompatActivity() {
         setContentView(R.layout.activity_register)
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
+
+        welcomeBanner = findViewById(R.id.tv_welcome_banner)
+
+        // Show for a few seconds on entry
+        lifecycleScope.launch {
+            // prepare & fade in
+            welcomeBanner.alpha = 0f
+            welcomeBanner.visibility = View.VISIBLE
+            welcomeBanner.animate().alpha(1f).setDuration(200).withLayer().start()
+
+            // stay visible for N ms
+            delay(2500)
+
+            // fade out, then hide
+            welcomeBanner.animate()
+                .alpha(0f)
+                .setDuration(220)
+                .withEndAction { welcomeBanner.visibility = View.GONE }
+                .withLayer()
+                .start()
+        }
 
         // === Animated background (spritesheet) ===
         val root = findViewById<ConstraintLayout>(R.id.registerLayout)
@@ -388,6 +416,16 @@ class RegisterActivity : AppCompatActivity() {
         bgSprite?.stop()
         super.onPause()
     }
+
+    override fun onStop() {
+        welcomeBanner.animate().cancel()
+        if (welcomeBanner.isVisible) {
+            welcomeBanner.visibility = View.GONE
+            welcomeBanner.alpha = 0f
+        }
+        super.onStop()
+    }
+
 
     override fun onDestroy() {
         bgSprite?.stop()
