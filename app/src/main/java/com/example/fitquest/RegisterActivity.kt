@@ -28,6 +28,11 @@ import kotlin.math.roundToInt
 import android.graphics.BitmapFactory
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
+import android.graphics.drawable.AnimationDrawable
+import androidx.core.content.ContextCompat
+import android.view.MotionEvent
+import android.widget.*
+
 
 
 class RegisterActivity : AppCompatActivity() {
@@ -125,10 +130,30 @@ class RegisterActivity : AppCompatActivity() {
             finish()
         }
 
+        // EditTexts
+        wireEditText(findViewById(R.id.et_first_name))
+        wireEditText(findViewById(R.id.et_last_name))
+        wireEditText(findViewById(R.id.et_username))
+        wireEditText(findViewById(R.id.et_email))
+        wireEditText(findViewById(R.id.et_password))
+        wireEditText(findViewById(R.id.et_confirm_password))
+        wireEditText(findViewById(R.id.et_height))
+        wireEditText(findViewById(R.id.et_weight))
+
+        // Birthday (click-only field)
+        val birthdayEditText = findViewById<EditText>(R.id.et_birthday).apply {
+            // Keep same selector bg
+            background = ContextCompat.getDrawable(context, R.drawable.user_input_bg_selector)
+            setOnClickListener {
+                // do your date picker...
+                it.pulseThenSetActivated(text.isNotBlank())
+            }
+        }
+        wireEditText(birthdayEditText) // optional: keeps state by value if you later allow typing
+
         // Form fields
         val firstNameEditText = findViewById<EditText>(R.id.et_first_name)
         val lastNameEditText = findViewById<EditText>(R.id.et_last_name)
-        val birthdayEditText = findViewById<EditText>(R.id.et_birthday)
         val ageTextView = findViewById<TextView>(R.id.tv_age)
         val usernameEditText = findViewById<EditText>(R.id.et_username)
         val emailEditText = findViewById<EditText>(R.id.et_email)
@@ -136,10 +161,12 @@ class RegisterActivity : AppCompatActivity() {
         val confirmPasswordEditText = findViewById<EditText>(R.id.et_confirm_password)
         val heightEditText = findViewById<EditText>(R.id.et_height)
         val weightEditText = findViewById<EditText>(R.id.et_weight)
-        val spinnerActivityLevel = findViewById<Spinner>(R.id.spinner_activity_levels)
-        val spinnerGoal = findViewById<Spinner>(R.id.spinner_fitness_goals)
         val registerButton = findViewById<ImageButton>(R.id.btn_register)
 
+        val spinnerActivityLevel = findViewById<Spinner>(R.id.spinner_activity_levels)
+        val spinnerGoal = findViewById<Spinner>(R.id.spinner_fitness_goals)
+        wireSpinner(spinnerActivityLevel, placeholderIndex = 0) // adjust index if no placeholder
+        wireSpinner(spinnerGoal, placeholderIndex = 0)
 
         // Constrain inputs
         heightEditText.applyNumericConstraints(MIN_HEIGHT_CM, MAX_HEIGHT_CM, maxDecimals = 1)
@@ -366,6 +393,71 @@ class RegisterActivity : AppCompatActivity() {
         bgSprite?.stop()
         bgSprite = null
         super.onDestroy()
+    }
+
+    private fun View.pulseThenSetActivated(activateAfter: Boolean, totalMs: Long = 360L) {
+        // Play pulse
+        background = ContextCompat.getDrawable(context, R.drawable.user_input_pulse)
+        (background as? AnimationDrawable)?.start()
+
+        // After pulse, restore selector & set final state
+        postDelayed({
+            background = ContextCompat.getDrawable(context, R.drawable.user_input_bg_selector)
+            isActivated = activateAfter
+            isSelected  = activateAfter
+        }, totalMs)
+    }
+
+    private fun wireEditText(et: EditText) {
+        // initial bg + state
+        et.background = ContextCompat.getDrawable(this, R.drawable.user_input_bg_selector)
+        et.isActivated = et.text?.isNotBlank() == true
+        et.isSelected  = et.isActivated
+
+        et.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) {
+                v.pulseThenSetActivated(et.text.isNotBlank())
+            } else {
+                val active = et.text.isNotBlank()
+                v.isActivated = active
+                v.isSelected  = active
+            }
+        }
+
+        et.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                val active = !s.isNullOrBlank()
+                et.isActivated = active
+                et.isSelected  = active
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+    }
+
+    private fun wireSpinner(sp: Spinner, placeholderIndex: Int = 0) {
+        sp.background = ContextCompat.getDrawable(this, R.drawable.user_input_bg_selector)
+
+        // Pulse when the user taps to open
+        sp.setOnTouchListener { v, e ->
+            if (e.action == MotionEvent.ACTION_DOWN) {
+                v.pulseThenSetActivated(sp.selectedItemPosition != placeholderIndex)
+            }
+            false
+        }
+
+        // Lock visual state based on selection
+        sp.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>, view: View?, pos: Int, id: Long) {
+                val active = pos != placeholderIndex
+                sp.isActivated = active
+                sp.isSelected  = active
+            }
+            override fun onNothingSelected(p: AdapterView<*>) {
+                sp.isActivated = false
+                sp.isSelected  = false
+            }
+        }
     }
 
 

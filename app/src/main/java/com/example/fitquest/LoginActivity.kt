@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.addTextChangedListener
 
 class LoginActivity : AppCompatActivity() {
 
@@ -131,16 +132,34 @@ class LoginActivity : AppCompatActivity() {
         val btnLogin = findViewById<ImageButton>(R.id.btnLogin)
         val tvSignUpLink = findViewById<TextView>(R.id.tvSignUpLink)
 
+
+
+        // Initialize disabled until valid
+        updateLoginEnabled(btnLogin, edtUsername, edtPassword)
+
+        // Recompute on every text change (KTX extension)
+        edtUsername.addTextChangedListener { updateLoginEnabled(btnLogin, edtUsername, edtPassword) }
+        edtPassword.addTextChangedListener { updateLoginEnabled(btnLogin, edtUsername, edtPassword) }
+
+        // Only trigger IME "Done" if valid
         edtPassword.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE) {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE &&
+                loginFormIsValid(edtUsername.text, edtPassword.text)
+            ) {
                 btnLogin.performClick(); true
             } else false
         }
 
+
+
         btnLogin.setOnClickListener {
+            if (!btnLogin.isEnabled) return@setOnClickListener
             it.startAnimation(pressAnim)
+
             val username = edtUsername.text.toString().trim()
             val password = edtPassword.text.toString().trim()
+
+            if (!loginFormIsValid(username, password)) return@setOnClickListener
 
             if (username.isEmpty() || password.isEmpty()) {
                 Toast.makeText(this, "Please enter username and password.", Toast.LENGTH_SHORT).show()
@@ -190,4 +209,25 @@ class LoginActivity : AppCompatActivity() {
         }
         super.onDestroy()
     }
+
+    // --- Add these helpers in LoginActivity ---
+    private fun loginFormIsValid(
+        u: CharSequence?,
+        p: CharSequence?
+    ): Boolean {
+        val username = u?.toString()?.trim().orEmpty()
+        val password = p?.toString().orEmpty()
+
+        // Minimum check: not blank. (Best practice: enforce min lengths if you want)
+        // e.g., username.length >= 3 && password.length >= 6
+        return username.isNotEmpty() && password.isNotEmpty()
+    }
+
+    private fun updateLoginEnabled(btn: ImageButton, user: EditText, pass: EditText) {
+        val enabled = loginFormIsValid(user.text, pass.text)
+        btn.isEnabled = enabled
+        // ImageButton uses a background drawable; View.alpha is the easiest visual cue
+        btn.alpha = if (enabled) 1f else 0.6f
+    }
+
 }

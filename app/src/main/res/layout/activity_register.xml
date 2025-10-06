@@ -12,17 +12,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.6" />
+        app:layout_constraintGuide_begin="534dp" />
 
     <!-- FORM (scrolls). Constrained between title and 2/3 guideline -->
     <ScrollView
-        android:layout_marginTop="90sp"
         android:id="@+id/formScroll"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:fillViewport="true"
         android:clipToPadding="false"
         android:paddingBottom="16dp"
+        android:layout_marginTop="90sp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/topGuideline"
         app:layout_constraintStart_toStartOf="parent"
@@ -42,7 +42,7 @@
                 android:layout_height="wrap_content"
                 android:hint="First Name"
                 android:padding="12dp"
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -54,7 +54,7 @@
                 android:layout_height="wrap_content"
                 android:hint="Last Name"
                 android:padding="12dp"
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -68,7 +68,7 @@
                 android:focusable="false"
                 android:clickable="true"
                 android:padding="12dp"
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -78,7 +78,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Age: "
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:textColor="@color/white"
                 android:textSize="17sp"
                 android:paddingLeft="12dp"
@@ -92,7 +92,7 @@
                 android:layout_height="wrap_content"
                 android:text="Select Your Avatar"
                 android:textSize="20sp"
-                android:textColor="#FFFFFF" />
+                android:textColor="@color/black" />
 
             <LinearLayout
                 android:id="@+id/sexSelectionLayout"
@@ -133,7 +133,7 @@
                 android:hint="Height (cm)"
                 android:inputType="numberDecimal"
                 android:padding="12dp"
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -146,7 +146,7 @@
                 android:hint="Weight (kg)"
                 android:inputType="numberDecimal"
                 android:padding="12dp"
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -156,7 +156,7 @@
                 android:id="@+id/spinner_activity_levels"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:spinnerMode="dropdown"
                 android:layout_marginBottom="12dp" />
 
@@ -165,7 +165,7 @@
                 android:id="@+id/spinner_fitness_goals"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:spinnerMode="dropdown"
                 android:layout_marginBottom="12dp" />
 
@@ -176,7 +176,7 @@
                 android:layout_height="wrap_content"
                 android:hint="Username"
                 android:padding="12dp"
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -189,7 +189,7 @@
                 android:hint="Email"
                 android:inputType="textEmailAddress"
                 android:padding="12dp"
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
@@ -202,7 +202,7 @@
                 android:hint="Password"
                 android:inputType="textPassword"
                 android:padding="12dp"
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="20dp" />
@@ -215,13 +215,29 @@
                 android:hint="Confirm Password"
                 android:inputType="textPassword"
                 android:padding="12dp"
-                android:background="@drawable/bg_user_input"
+                android:background="@drawable/user_input_bg_selector"
                 android:textColorHint="@color/white"
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
 
         </LinearLayout>
     </ScrollView>
+
+    <TextView
+        android:id="@+id/tv_welcome_banner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="32dp"
+        android:paddingVertical="8dp"
+        android:text="Welcome, Adventurer! Forge your profile above so we can match quests to your strength, skill, and goals. When you’re ready, tap Enlist to enter the realm."
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        android:gravity="center"
+        android:maxLines="3"
+        app:layout_constraintTop_toBottomOf="@id/formScroll"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
 
     <!-- BOTTOM ACTIONS (1/3) -->
     <androidx.constraintlayout.widget.ConstraintLayout
