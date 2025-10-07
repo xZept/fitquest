@@ -1,46 +1,39 @@
 package com.example.fitquest
 
 import android.animation.ValueAnimator
+import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.util.Log
+import android.view.View
+import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.animation.AnimationUtils
 import android.widget.*
+import androidx.annotation.DrawableRes
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatSpinner
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.fitquest.database.*
 import com.example.fitquest.datastore.DataStoreManager
 import com.example.fitquest.models.QuestExercise
+import com.example.fitquest.tips.WarmupTipsDialogFragment
+import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
-import kotlin.math.roundToInt
 import kotlin.math.ceil
-import android.graphics.BitmapFactory
-import android.view.animation.AnimationUtils
-import androidx.annotation.DrawableRes
-import com.example.fitquest.ui.widgets.SpriteSheetDrawable
-import android.graphics.drawable.ColorDrawable
-import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.ImageView
-import androidx.core.content.ContextCompat
-import android.graphics.Color
-import android.view.View
-import android.widget.TextView
-import android.widget.ArrayAdapter
-import android.widget.ImageButton
-import androidx.appcompat.widget.AppCompatSpinner
-import android.util.Log
-
-
+import kotlin.math.roundToInt
 
 class WorkoutSessionActivity : AppCompatActivity() {
-
 
     private lateinit var db: AppDatabase
     private var userId: Int = -1
@@ -59,6 +52,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private lateinit var btnEnd: ImageButton
 
     private lateinit var ivHpBg: ImageView
+    private lateinit var cardBg: ImageView
 
     // Session state
     private var questTitle: String = "Your Quest"
@@ -68,9 +62,14 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private var setIndex = 0
     private var restSeconds = 60
     private var isResting = false
-    // Sprite sheet animations
-    private data class SpriteAnim(val drawable: com.example.fitquest.ui.widgets.SpriteSheetDrawable, val frames: Int, val fps: Int, val loop: Boolean)
 
+    // Sprite sheet animations
+    private data class SpriteAnim(
+        val drawable: com.example.fitquest.ui.widgets.SpriteSheetDrawable,
+        val frames: Int,
+        val fps: Int,
+        val loop: Boolean
+    )
     private var idleAnim: SpriteAnim? = null
     private var fightAnim: SpriteAnim? = null
     private var currentAnim: SpriteAnim? = null
@@ -98,12 +97,10 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private var startedAtMs: Long = 0L
 
     // current monster identifiers
-    private var currentMonsterSprite: String = "monster_slime" // drawable name (e.g., monster_goblin)
-    private var currentMonsterCode: String = "slime"           // code (e.g., goblin)
+    private var currentMonsterSprite: String = "monster_slime"
+    private var currentMonsterCode: String = "slime"
 
     private lateinit var pressAnim: android.view.animation.Animation
-
-    private lateinit var cardBg: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,8 +115,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         tvHp = findViewById(R.id.tv_hp)
         ivHpBg = findViewById(R.id.iv_hp_bg)
 
-        cardBg = findViewById(R.id.card_bg)
-
         // bind (bottom)
         tvDay = findViewById(R.id.tv_day_title)
         tvExercise = findViewById(R.id.tv_exercise)
@@ -128,12 +123,12 @@ class WorkoutSessionActivity : AppCompatActivity() {
         btnComplete = findViewById(R.id.btn_complete_set)
         btnEnd = findViewById(R.id.btn_end_session)
 
-
-
+        cardBg = findViewById(R.id.card_bg)
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@WorkoutSessionActivity).first()
+
             val loaded = withContext(Dispatchers.IO) { db.activeQuestDao().getActiveForUser(userId) }
             if (loaded == null) {
                 Toast.makeText(this@WorkoutSessionActivity, "No active quest.", Toast.LENGTH_SHORT).show()
@@ -153,28 +148,21 @@ class WorkoutSessionActivity : AppCompatActivity() {
             val latestMonster = withContext(Dispatchers.IO) {
                 db.monsterDao().getLatestOwnedForUser(userId)
             }
-            currentMonsterSprite = latestMonster?.spriteRes ?: "monster_slime" // default slime
+            currentMonsterSprite = latestMonster?.spriteRes ?: "monster_slime"
             currentMonsterCode = latestMonster?.code ?: "slime"
             updateCardBgForCode(currentMonsterCode)
-
-
-            // set HP bar background to match the monster
             updateHpBackgroundForCode(currentMonsterCode)
-
-            // apply idle frame now
-            userSex = fetchUserSexSafely() // ← gets "male" or "female" from User table
-            // Use the user's sex for both idle + fight by default:
-            refreshLatestMonsterAndAnimations(restartIdle = true)
-
-            initAnimations()               // ← builds sheets using userSex
-            showIdle()                     // ← starts looping idle
-
-
-            // coin multiplier based on monster
-            monsterMultiplier = monsterMultiplierFor(currentMonsterCode)
             // --------------------------------------------------------
 
-            questTitle = listOfNotNull(activeQuest.split, activeQuest.modifier).joinToString(" • ").ifBlank { "Your Quest" }
+            userSex = fetchUserSexSafely()
+            refreshLatestMonsterAndAnimations(restartIdle = true)
+            initAnimations()
+            showIdle()
+
+            monsterMultiplier = monsterMultiplierFor(currentMonsterCode)
+
+            questTitle = listOfNotNull(activeQuest.split, activeQuest.modifier)
+                .joinToString(" • ").ifBlank { "Your Quest" }
             items = activeQuest.exercises.sortedBy { it.order }
 
             totalSets = items.sumOf { it.sets }.coerceAtLeast(1)
@@ -203,6 +191,38 @@ class WorkoutSessionActivity : AppCompatActivity() {
             renderCurrent()
             wireButtons()
             setResting(false)
+
+            // 🔒 Only show once and only if preference allows
+            if (savedInstanceState == null &&
+                supportFragmentManager.findFragmentByTag("warmup_tips") == null
+            ) {
+                withContext(Dispatchers.IO) {
+                    maybeShowWarmupTips()
+                }
+            }
+        }
+    }
+
+    /** Try to infer a useful focus string for the tips dialog if caller didn't pass SESSION_FOCUS. */
+    private fun inferSessionFocus(): String {
+        val split = (activeQuest.split ?: "").lowercase(Locale.getDefault())
+        return when {
+            "upper" in split || "push" in split || "pull" in split -> "upper"
+            "lower" in split || "legs" in split -> "legs"
+            else -> "full"
+        }
+    }
+
+    /** Check DataStore and show WarmupTipsDialogFragment if enabled. */
+    private suspend fun maybeShowWarmupTips() {
+        val shouldShow = DataStoreManager.shouldShowWarmupTips(this@WorkoutSessionActivity)
+        if (!shouldShow) return
+
+        val focus = intent.getStringExtra("SESSION_FOCUS") ?: inferSessionFocus()
+        withContext(Dispatchers.Main) {
+            WarmupTipsDialogFragment
+                .newInstance(focus)
+                .show(supportFragmentManager, "warmup_tips")
         }
     }
 
@@ -215,16 +235,14 @@ class WorkoutSessionActivity : AppCompatActivity() {
         scale: com.example.fitquest.ui.widgets.SpriteSheetDrawable.ScaleMode =
             com.example.fitquest.ui.widgets.SpriteSheetDrawable.ScaleMode.CENTER_CROP
     ): SpriteAnim {
-        val opts = BitmapFactory.Options().apply { inScaled = false } // honor pixel-perfect frames
+        val opts = BitmapFactory.Options().apply { inScaled = false }
         val bmp = BitmapFactory.decodeResource(resources, resId, opts)
         val dr = com.example.fitquest.ui.widgets.SpriteSheetDrawable(bmp, rows, cols, fps, loop, scale)
         return SpriteAnim(dr, frames = rows * cols, fps = fps, loop = loop)
     }
 
     private fun startAnim(target: SpriteAnim) {
-        // stop current if any
         currentAnim?.drawable?.stop()
-        // swap drawable
         ivMonster.setImageDrawable(target.drawable)
         target.drawable.start()
         currentAnim = target
@@ -240,7 +258,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         initAnimationsForSex(userSex)
     }
 
-
     override fun onPause() {
         super.onPause()
         currentAnim?.drawable?.stop()
@@ -252,9 +269,9 @@ class WorkoutSessionActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val latest = withContext(Dispatchers.IO) { db.monsterDao().getLatestOwnedForUser(userId) }
             currentMonsterCode = latest?.code ?: "slime"
-            updateHpBackgroundForCode(currentMonsterCode)   // ← HP background
+            updateHpBackgroundForCode(currentMonsterCode)
             updateCardBgForCode(currentMonsterCode)
-            initAnimations()                                 // ← rebuild idle/fight sheets for new monster
+            initAnimations()
             if (!isResting) showIdle()
         }
     }
@@ -264,7 +281,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         stopAnim()
         super.onDestroy()
     }
-
 
     /* ---------- Rendering ---------- */
 
@@ -282,7 +298,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private fun wireButtons() {
         btnComplete.setOnClickListener {
             it.startAnimation(pressAnim)
-
             btnComplete.isEnabled = false
             // Play attack, THEN open log dialog (cleanest UX)
             playAttackThen {
@@ -293,7 +308,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             it.startAnimation(pressAnim)
             showAbandonDialog()
         }
-
     }
 
     private fun showAbandonDialog() {
@@ -329,7 +343,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         val centerColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = android.view.Gravity.CENTER_HORIZONTAL
-            setPadding((24 * d).toInt(), (28 * d).toInt(), (24 * d).toInt(), (96 * d).toInt()) // leave space for buttons
+            setPadding((24 * d).toInt(), (28 * d).toInt(), (24 * d).toInt(), (96 * d).toInt())
         }
         val tvTitle = TextView(this).apply {
             text = "Abandon Quest?"
@@ -417,14 +431,11 @@ class WorkoutSessionActivity : AppCompatActivity() {
         dlg.show()
     }
 
-
     private fun setResting(resting: Boolean) {
         isResting = resting
         btnComplete.isEnabled = !resting
         btnComplete.alpha = if (resting) 0.5f else 1f
     }
-
-
 
     /* ------------ logging dialog ------------ */
 
@@ -458,7 +469,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                android.view.Gravity.CENTER // center vertically & horizontally
+                android.view.Gravity.CENTER
             )
         )
 
@@ -477,7 +488,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             setTextColor(Color.BLACK)
         }
 
-        // Spinner with black text for selected & dropdown rows
         val lightGray = Color.parseColor("#f0f0f0")
 
         val spinnerAdapter = object : ArrayAdapter<String>(
@@ -488,24 +498,23 @@ class WorkoutSessionActivity : AppCompatActivity() {
             override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
                 val v = super.getView(position, convertView, parent) as TextView
                 v.setTextColor(Color.BLACK)
-                v.setBackgroundColor(lightGray)  // closed (selected) row bg
+                v.setBackgroundColor(lightGray)
                 return v
             }
             override fun getDropDownView(position: Int, convertView: View?, parent: ViewGroup): View {
                 val v = super.getDropDownView(position, convertView, parent) as TextView
                 v.setTextColor(Color.BLACK)
-                v.setBackgroundColor(lightGray)  // each dropdown row bg
+                v.setBackgroundColor(lightGray)
                 return v
             }
         }.apply {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
 
-
         val spType = AppCompatSpinner(this).apply {
             adapter = spinnerAdapter
-            background = ColorDrawable(lightGray)                 // spinner “chip” bg
-            setPopupBackgroundDrawable(ColorDrawable(lightGray))  // dropdown panel bg
+            background = ColorDrawable(lightGray)
+            setPopupBackgroundDrawable(ColorDrawable(lightGray))
         }
 
         val tvHelp = TextView(this).apply {
@@ -525,7 +534,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             hint = "Optional: estimated resistance (kg)"
             inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
             isSingleLine = true
-            visibility = android.view.View.GONE
+            visibility = View.GONE
             setTextColor(Color.BLACK)
             setHintTextColor(Color.parseColor("#66000000"))
         }
@@ -533,7 +542,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             hint = ""
             inputType = android.text.InputType.TYPE_CLASS_TEXT
             isSingleLine = true
-            visibility = android.view.View.GONE
+            visibility = View.GONE
             setTextColor(Color.BLACK)
             setHintTextColor(Color.parseColor("#66000000"))
         }
@@ -541,37 +550,37 @@ class WorkoutSessionActivity : AppCompatActivity() {
         fun refreshUiForType() {
             when (spType.selectedItem.toString()) {
                 "Bodyweight" -> {
-                    etNumber.visibility = android.view.View.VISIBLE
+                    etNumber.visibility = View.VISIBLE
                     etNumber.hint = "Enter your body weight (kg) — optional"
-                    etText.visibility = android.view.View.GONE
-                    etBandKg.visibility = android.view.View.GONE
+                    etText.visibility = View.GONE
+                    etBandKg.visibility = View.GONE
                     tvHelp.text = "You can leave this blank if you don’t want to track bodyweight."
                 }
                 "External load (kg)" -> {
-                    etNumber.visibility = android.view.View.VISIBLE
+                    etNumber.visibility = View.VISIBLE
                     etNumber.hint = "How much did you lift (kg)"
-                    etText.visibility = android.view.View.GONE
-                    etBandKg.visibility = android.view.View.GONE
-                    tvHelp.text = "Enter the external load only (bar/dumbbell/kettlebell/etc.)."
+                    etText.visibility = View.GONE
+                    etBandKg.visibility = View.GONE
+                    tvHelp.text = "Enter the external load only (bar/dumbbell/etc.)."
                 }
                 "Assisted (-kg)" -> {
-                    etNumber.visibility = android.view.View.VISIBLE
+                    etNumber.visibility = View.VISIBLE
                     etNumber.hint = "Assistance amount (kg), e.g., 20 for -20 kg"
-                    etText.visibility = android.view.View.GONE
-                    etBandKg.visibility = android.view.View.GONE
+                    etText.visibility = View.GONE
+                    etBandKg.visibility = View.GONE
                     tvHelp.text = "Enter how much the machine/band helped. We’ll save it as a negative (e.g., -20 kg)."
                 }
                 "Band level" -> {
-                    etNumber.visibility = android.view.View.GONE
-                    etText.visibility = android.view.View.VISIBLE
+                    etNumber.visibility = View.GONE
+                    etText.visibility = View.VISIBLE
                     etText.hint = "Band color or level (e.g., Green, Level 3)"
-                    etBandKg.visibility = android.view.View.VISIBLE
+                    etBandKg.visibility = View.VISIBLE
                     tvHelp.text = "Band resistance varies by brand. Enter a label (color/level). Optional: add an estimated kg."
                 }
             }
         }
         spType.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: android.view.View?, position: Int, id: Long) = refreshUiForType()
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = refreshUiForType()
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
@@ -584,7 +593,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         val btnSave = ImageButton(this).apply {
             contentDescription = "Save"
             setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_save))
-            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            setBackgroundColor(Color.TRANSPARENT)
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = true
             layoutParams = LinearLayout.LayoutParams(0, (56 * d).toInt(), 1f).apply {
@@ -593,10 +602,9 @@ class WorkoutSessionActivity : AppCompatActivity() {
         }
 
         val btnSkip = ImageButton(this).apply {
-
             contentDescription = "Skip"
             setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_skip))
-            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            setBackgroundColor(Color.TRANSPARENT)
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = true
             layoutParams = LinearLayout.LayoutParams(0, (56 * d).toInt(), 1f)
@@ -720,7 +728,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         dlg.show()
     }
 
-
     private fun onSetLogged() {
         setsDone += 1
         updateHpFromSets(animate = true)
@@ -789,7 +796,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
                     ) { finish() }
                 }
             }
-
         }
     }
 
@@ -837,15 +843,15 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         val tvTitle = TextView(this).apply {
             text = title
-            setTextColor(Color.WHITE)   // ← white
-            textSize = 30f              // ← bigger
+            setTextColor(Color.WHITE)
+            textSize = 30f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             gravity = android.view.Gravity.CENTER
         }
         val tvMsg = TextView(this).apply {
             text = message
-            setTextColor(Color.WHITE)   // ← white
-            textSize = 24f              // ← bigger
+            setTextColor(Color.WHITE)
+            textSize = 24f
             gravity = android.view.Gravity.CENTER
             setPadding(0, (10 * d).toInt(), 0, 0)
         }
@@ -900,9 +906,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         dlg.show()
     }
-
-
-
 
     /* -------- Quest History helpers -------- */
 
@@ -976,9 +979,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         ivHpBg.setImageResource(if (pickedId != 0) pickedId else fallbackId)
     }
 
-
-
-
     /* --------- Monster frame helpers (single ImageView) --------- */
     /** Resolve first existing drawable id from a list of names; returns 0 if none found */
     private fun resolveFirstDrawable(vararg names: String): Int {
@@ -998,10 +998,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             "male"
         }
     }
-
-
-    /** (Re)build idle/fight animations for the current monster and provided sex. */
-    /** (Re)build idle/fight animations for the current monster and provided sex. */
 
     private fun initAnimationsForSex(
         sexRaw: String,
@@ -1045,7 +1041,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private suspend fun refreshLatestMonsterAndAnimations(
         restartIdle: Boolean = true,
-        fightSexOverride: String? = null // e.g., "female" to force female fight
+        fightSexOverride: String? = null
     ) {
         val latest = withContext(Dispatchers.IO) { db.monsterDao().getLatestOwnedForUser(userId) }
         val newCode = latest?.code ?: "slime"
@@ -1060,8 +1056,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             withContext(Dispatchers.Main) { showIdle() }
         }
     }
-
-
 
     private fun resolveDrawableId(name: String): Int {
         val id = resources.getIdentifier(name, "drawable", packageName)
@@ -1084,15 +1078,12 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private fun showIdle() {
         val idle = idleAnim ?: return
-        // If we're already on the idle animation, ensure it's running; else start it.
         if (currentAnim?.drawable === idle.drawable) {
             if (!idle.drawable.isRunning()) idle.drawable.start()
         } else {
             startAnim(idle)
         }
     }
-
-
 
     /**
      * Plays the non-loop 'fight' animation once, then returns to idle and calls onDone().
@@ -1103,7 +1094,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             onDone(); return
         }
 
-        // ✅ ensure the one-shot anim starts from frame 0 every time
         fight.drawable.resetToStart()
         startAnim(fight)
 
@@ -1114,8 +1104,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             onDone()
         }, durationMs)
     }
-
-
 
     private fun showSleep() { /* optional later */ }
 
@@ -1130,7 +1118,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         )
         if (pickedId != 0) cardBg.setImageResource(pickedId)
     }
-
 
     /* --------- Rest dialog --------- */
 
@@ -1148,7 +1135,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         tvCountdown.text = format(totalSec)
 
-
         val dlg = AlertDialog.Builder(this)
             .setView(view)
             .setCancelable(false)
@@ -1162,7 +1148,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             val dm = resources.displayMetrics
             val width = (dm.widthPixels * 0.92f).toInt()
             dlg.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
-            dlg.window?.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
+            dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         }
 
         dlg.setOnDismissListener { restBg.stop() }
@@ -1205,12 +1191,11 @@ class WorkoutSessionActivity : AppCompatActivity() {
         // Use current userSex; default to male if unknown
         val sex = if (userSex.equals("female", ignoreCase = true)) "female" else "male"
 
-        // Try sex-specific sheet first (bg_female_rest_spritesheet / bg_male_rest_spritesheet),
-        // then fall back to a generic sheet if present, then male as last resort.
+        // Try sex-specific sheet first, then fallbacks
         val resId = resolveFirstDrawable(
             "bg_${sex}_rest_spritesheet",
-            "bg_rest_spritesheet",          // optional generic fallback
-            "bg_male_rest_spritesheet"      // hard fallback
+            "bg_rest_spritesheet",
+            "bg_male_rest_spritesheet"
         ).let { id ->
             if (id != 0) id else R.drawable.bg_male_rest_spritesheet
         }
@@ -1226,8 +1211,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
         )
     }
-
-
 
     /* --------- Utils --------- */
 
@@ -1247,8 +1230,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
         } else {
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility =
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                        android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         }
     }
 

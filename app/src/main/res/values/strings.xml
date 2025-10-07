@@ -3,4 +3,8 @@
     <string name="enlist_text">New to the realm? <font color="#ff2d00">Enlist now</font></string>
     <string name="enter_the_realm">Already part of the guild? <font color="#ff2d00">Enter the Realm</font></string>
     <string name="close">Close</string>
+    <string name="start_workout">Start workout</string>
+    <string name="next">Next</string>
+    <string name="dont_show_again">Don’t show again</string>
+    <string name="warmup_tips_title">Warm-up Tips</string>
 </resources>
