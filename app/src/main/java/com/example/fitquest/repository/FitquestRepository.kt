@@ -3,8 +3,10 @@ package com.example.fitquest.repository
 import android.content.Context
 import android.util.Log
 import com.example.fitquest.database.AppDatabase
+import com.example.fitquest.database.MacroPlan
 import com.example.fitquest.database.User
 import com.example.fitquest.database.UserProfile
+import com.example.fitquest.utils.MacroCalculator
 
 class FitquestRepository(context: Context) {
 
@@ -13,6 +15,7 @@ class FitquestRepository(context: Context) {
 
     private val userDAO = db.userDAO()
     private val userProfileDAO = db.userProfileDAO()
+    private val macroPlanDao = db.macroPlanDao()
 
     // --- Users ---
 
@@ -53,4 +56,30 @@ class FitquestRepository(context: Context) {
         Log.d("FitquestDB", "Fetched profile($userId): $profile")
         return profile
     }
+
+    // Macro calculation
+    suspend fun computeAndSaveMacroPlan(userId: Int): MacroPlan {
+        val user = userDAO.getUserById(userId)
+            ?: error("User $userId not found")
+        val profile = userProfileDAO.getProfileByUserId(userId)
+            ?: error("UserProfile for $userId not found")
+
+        val input = MacroCalculator.Input(
+            userId = userId,
+            age = user.age,
+            sex = user.sex,
+            weightKg   = profile.weight.toDouble(),
+            heightCm   = profile.height.toDouble(),
+            activityLevel = profile.activityLevel ?: "sedentary",
+            goal          = profile.goal ?: "maintain"
+        )
+
+        val plan = MacroCalculator.calculatePlan(input)
+        macroPlanDao.upsert(plan)
+        Log.d("FitquestMacros", "Saved MacroPlan for $userId -> $plan")
+        return plan
+    }
+
+    suspend fun getMacroPlan(userId: Int): MacroPlan? =
+        macroPlanDao.getLatestForUser(userId)
 }

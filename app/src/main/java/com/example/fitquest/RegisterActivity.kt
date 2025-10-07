@@ -426,6 +426,9 @@ class RegisterActivity : AppCompatActivity() {
                         Log.d("FitquestDB", "Registering new user: $newUser")
                         Log.d("FitquestDB", "Adding new user profile: $newUserProfile")
 
+                        // Calculate macros
+                        repository.computeAndSaveMacroPlan(newUserId.toInt())
+
                         Toast.makeText(
                             this@RegisterActivity,
                             "Registration Successful!",

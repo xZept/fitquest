@@ -358,3 +358,12 @@ interface PortionDao {
     @Query("SELECT * FROM portion WHERE foodId = :foodId ORDER BY portionId ASC")
     fun getForFood(foodId: Long): List<Portion>
 }
+
+@Dao
+interface MacroPlanDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(plan: MacroPlan): Long
+
+    @Query("""SELECT * FROM macroPlan WHERE userId = :userId ORDER BY updatedAt DESC LIMIT 1""")
+    suspend fun getLatestForUser(userId: Int): MacroPlan?
+}

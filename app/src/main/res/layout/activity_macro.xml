@@ -82,8 +82,8 @@
         android:id="@+id/progress_bars"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="10dp"
         app:flexDirection="row"
+        android:padding="5sp"
         app:flexWrap="wrap"
         app:alignItems="center"
         app:justifyContent="space_between">
@@ -95,37 +95,48 @@
             android:layout_height="wrap_content"
             app:layout_flexBasisPercent="30%"
             app:layout_flexGrow="1"
-            android:padding="5dp"
             app:flexDirection="column"
             app:alignItems="center">
 
-            <ProgressBar
-                android:id="@+id/calories_progress"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="75dp"
-                android:layout_height="75dp"
-                app:layout_alignSelf="center"
-                android:indeterminate="false"/>
+            <FrameLayout
+                android:id="@+id/calories_circle"
+                android:layout_width="100dp"
+                android:layout_height="100dp"
+                android:gravity="center"
+                app:layout_alignSelf="center">
 
-            <TextView
-                android:id="@+id/calories_total"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Total Calories"
-                android:textColor="@color/white"
-                android:textSize="18sp"
-                app:layout_alignSelf="center" />
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/calories_progress"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    app:trackThickness="10dp"
+                    app:trackColor="@color/white_24"
+                    app:indicatorColor="@color/progress_ok"
+                    app:indicatorSize="100dp"
+                    app:indicatorInset="0dp" />
 
-            <TextView
+                <TextView
+                    android:id="@+id/calories_total"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="0"
+                    android:textStyle="bold"
+                    android:textSize="20sp"
+                    android:textColor="@color/white"/>
+            </FrameLayout>
+
+
+        <TextView
                 android:id="@+id/calories_label"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="Total Calories"
+                android:text="Calories"
                 android:textColor="@color/white"
-                android:textSize="18sp"
+                android:textSize="16sp"
                 app:layout_alignSelf="center" />
+
+
         </com.google.android.flexbox.FlexboxLayout>
 
         <!-- Right column -->
@@ -135,7 +146,7 @@
             android:layout_height="wrap_content"
             app:layout_flexBasisPercent="50%"
             app:layout_flexGrow="1"
-            android:padding="5dp"
+            android:padding="5sp"
             app:flexDirection="column"
             app:alignItems="center">
 

@@ -10,4 +10,8 @@
     <color name="primary">#61010f</color>
     <color name="gray">#B0B0B0</color>
     <color name="brown">#d1a582</color>
+    <color name="progress_ok">#66BB6A</color>
+    <color name="progress_over">#EF5350</color>
+    <color name="white_24">#3DFFFFFF</color>
+
 </resources>

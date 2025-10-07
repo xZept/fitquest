@@ -34,6 +34,7 @@ import android.view.ViewGroup
 import android.text.TextUtils
 import kotlin.math.roundToInt
 import android.graphics.BitmapFactory
+import com.example.fitquest.repository.FitquestRepository
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import android.view.MotionEvent
 
@@ -48,6 +49,9 @@ import android.view.MotionEvent
  * NOTE: AppDatabase must expose userSettingsDao() and include UserSettings entity.
  */
 class ProfileActivity : AppCompatActivity() {
+
+    // Declare repo field
+    private lateinit var repository: FitquestRepository
 
     private var userId: Int = -1
     private lateinit var tvName: TextView
@@ -106,6 +110,8 @@ class ProfileActivity : AppCompatActivity() {
         val opts = BitmapFactory.Options().apply { inScaled = false }
         val sheet = BitmapFactory.decodeResource(resources, R.drawable.bg_page_profile_spritesheet0, opts)
 
+        // Initialiuze repo
+        repository = FitquestRepository(this)
 
         bgSprite = SpriteSheetDrawable(
             sheet = sheet,
@@ -295,6 +301,15 @@ class ProfileActivity : AppCompatActivity() {
 
                 if (existing == null) db.userProfileDAO().insert(updated)
                 else db.userProfileDAO().update(updated)
+
+                val plan = repository.computeAndSaveMacroPlan(userId)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Macros updated: ${plan.calories} kcal |  P ${plan.protein}g • F ${plan.fat}g • C ${plan.carbs}g",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
 
                 withContext(Dispatchers.Main) {
                     Toast.makeText(this@ProfileActivity, "Profile updated!", Toast.LENGTH_SHORT).show()

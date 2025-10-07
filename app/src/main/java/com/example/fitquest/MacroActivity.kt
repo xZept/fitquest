@@ -2,12 +2,15 @@ package com.example.fitquest
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.text.TextUtils
 import android.util.Log
 import android.view.ContextThemeWrapper
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.animation.AnimationUtils
@@ -22,6 +25,7 @@ import com.example.fitquest.utils.TipsLoader
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.ImageButton
 import androidx.lifecycle.lifecycleScope
 import com.example.fitquest.database.AppDatabase
@@ -35,9 +39,15 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 import android.widget.ProgressBar
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
+import androidx.core.widget.CompoundButtonCompat
+import androidx.gridlayout.widget.GridLayout
+import com.example.fitquest.database.MacroPlan
+import com.example.fitquest.repository.FitquestRepository
 import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.google.android.material.textfield.TextInputLayout
 
 class MacroActivity : AppCompatActivity() {
 
@@ -48,6 +58,8 @@ class MacroActivity : AppCompatActivity() {
     private lateinit var snackContainer: LinearLayout
     private lateinit var lunchContainer: LinearLayout
     private lateinit var dinnerContainer: LinearLayout
+    private lateinit var repository: FitquestRepository
+    private var macroPlan: MacroPlan? = null
 
     private val foodRepo by lazy { (application as FitQuestApp).foodRepository }
 
@@ -68,6 +80,7 @@ class MacroActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        macroPlan = null
         if (currentUserId > 0) {
             refreshTodayMeals()
             refreshTodayTotals()
@@ -75,6 +88,10 @@ class MacroActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
+        // Initialize repo
+        repository = FitquestRepository(this)
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_macro)   // ← set the layout first
 
@@ -93,11 +110,32 @@ class MacroActivity : AppCompatActivity() {
             if (currentUserId > 0) {
                 ensureUserExists(currentUserId)
                 searchBtn.isEnabled = true
+
+                macroPlan = withContext(Dispatchers.IO) {
+                    repository.getMacroPlan(currentUserId)
+                }
+
                 refreshTodayMeals()
                 refreshTodayTotals()
             } else {
-                // show message or navigate to sign-in
+                // Navigate to sign-in if user is not found
+                Toast.makeText(this@MacroActivity, "User not found, navigating back to sign-in page.", Toast.LENGTH_SHORT).show()
+                startActivity(Intent(this@MacroActivity, LoginActivity::class.java))
+                finish()
             }
+
+
+        }
+
+        findViewById<ImageButton>(R.id.btn_diary)?.setOnClickListener {
+            it.startAnimation(pressAnim)
+            startActivity(Intent(this, FoodHistory::class.java))
+            overridePendingTransition(0, 0)
+        }
+
+        findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
+            it.startAnimation(pressAnim)
+            showMacroSettingsDialog()
         }
 
         searchBtn.setOnClickListener {
@@ -147,30 +185,6 @@ class MacroActivity : AppCompatActivity() {
         val dietType = intent.getStringExtra("DIET_TYPE") ?: ""
 
         Log.d("MacroDebug", "Raw Goal: $rawGoal | Mapped Goal: $userGoal | Split: $splitKey | Condition: $userCondition")
-
-/*      // ✅ Load meals filtered by user’s goal + diet type
-        val meals = loadMealsFromCSV(this).filter {
-            (rawGoal == "any" || it.goal.equals(userGoal, ignoreCase = true)) &&
-                    (dietType.isEmpty() || it.dietType.equals(dietType, ignoreCase = true))
-        }
-
-        fun pickRandomMeals(list: List<MealItem>): List<MealItem> {
-            if (list.isEmpty()) return emptyList()
-            val count = (4..7).random().coerceAtMost(list.size)
-            return list.shuffled().take(count)
-        }
-
-        pickRandomMeals(meals.filter { it.mealType.equals("Breakfast", true) })
-            .forEach { addMealToContainer(it, breakfastContainer) }
-
-        pickRandomMeals(meals.filter { it.mealType.equals("Snack", true) })
-            .forEach { addMealToContainer(it, snackContainer) }
-
-        pickRandomMeals(meals.filter { it.mealType.equals("Lunch", true) })
-            .forEach { addMealToContainer(it, lunchContainer) }
-
-        pickRandomMeals(meals.filter { it.mealType.equals("Dinner", true) })
-            .forEach { addMealToContainer(it, dinnerContainer) }*/
 
         // Load tips and debug
         val tips = TipsLoader.loadTips(this)
@@ -260,31 +274,62 @@ class MacroActivity : AppCompatActivity() {
     private fun refreshTodayTotals() {
         if (currentUserId <= 0) return
 
+
         lifecycleScope.launch(Dispatchers.IO) {
-            val totals = foodRepo.getTodayTotals(currentUserId)  // DayTotals from repo
+            val totals = foodRepo.getTodayTotals(currentUserId)
+            val plan = macroPlan ?: db.macroPlanDao().getLatestForUser(currentUserId)
+
             withContext(Dispatchers.Main) {
-                // 1) Show numbers
-                findViewById<TextView>(R.id.calories_total).text = totals.calories.roundToInt().toString()
-                findViewById<TextView>(R.id.protein_total).text  = totals.protein.roundToInt().toString()
-                findViewById<TextView>(R.id.carbs_total).text    = totals.carbohydrate.roundToInt().toString()
-                findViewById<TextView>(R.id.fat_total).text      = totals.fat.roundToInt().toString()
+                // Numbers
+                findViewById<TextView>(R.id.protein_total).text = totals.protein.roundToInt().toString()
+                findViewById<TextView>(R.id.carbs_total).text   = totals.carbohydrate.roundToInt().toString()
+                findViewById<TextView>(R.id.fat_total).text     = totals.fat.roundToInt().toString()
+                findViewById<TextView>(R.id.calories_total).text= totals.calories.roundToInt().toString()
 
-                // 2) Map to progress bars (0..100)
-                val goalCalories = 3010.0
-                val goalProtein  = 151.0   // g
-                val goalCarbs    = 376.0   // g
-                val goalFat      = 100.0    // g
+                // Goals (limits)
+                val goalCalories = (plan?.calories ?: 3010).toInt()
+                val goalProtein  = (plan?.protein  ?: 151 ).toInt()
+                val goalCarbs    = (plan?.carbs    ?: 376 ).toInt()
+                val goalFat      = (plan?.fat      ?: 100 ).toInt()
 
-                fun pct(done: Double, goal: Double) =
-                    if (goal <= 0.0) 0 else ((done / goal) * 100.0).roundToInt().coerceIn(0, 100)
+                // Done values (Int)
+                val doneCalories = totals.calories.roundToInt()
+                val doneProtein  = totals.protein.roundToInt()
+                val doneCarbs    = totals.carbohydrate.roundToInt()
+                val doneFat      = totals.fat.roundToInt()
 
-                findViewById<ProgressBar>(R.id.calories_progress).apply{ max = 100; progress = pct(totals.calories,goalCalories) }
-                findViewById<ProgressBar>(R.id.protein_progress).apply{ max = 100; progress = pct(totals.protein,goalProtein) }
-                findViewById<ProgressBar>(R.id.carbs_progress).apply{ max = 100; progress = pct(totals.carbohydrate,goalCarbs) }
-                findViewById<ProgressBar>(R.id.fat_progress).apply{ max = 100; progress = pct(totals.fat,goalFat) }
+                val ok   = ContextCompat.getColor(this@MacroActivity, R.color.progress_ok)
+                val over = ContextCompat.getColor(this@MacroActivity, R.color.progress_over)
+
+                // --- Calories
+                val caloriesPI = findViewById<com.google.android.material.progressindicator.CircularProgressIndicator>(
+                    R.id.calories_progress
+                )
+
+                caloriesPI.max = goalCalories.coerceAtLeast(1) // avoid 0 max
+                caloriesPI.setProgressCompat(
+                    doneCalories.coerceIn(0, caloriesPI.max),
+                    /*animated=*/true
+                )
+                caloriesPI.setIndicatorColor(if (doneCalories > goalCalories) over else ok)
+
+                // --- Protein/Carbs/Fat
+                fun setLimited(pbId: Int, done: Int, goal: Int) {
+                    val pb = findViewById<ProgressBar>(pbId)
+                    val limit = goal.coerceAtLeast(1)
+                    pb.max = limit
+                    pb.progress = done.coerceIn(0, limit)
+                    val tint = if (done > goal) over else ok
+                    pb.progressTintList = ColorStateList.valueOf(tint)
+                }
+
+                setLimited(R.id.protein_progress, doneProtein, goalProtein)
+                setLimited(R.id.carbs_progress,   doneCarbs,   goalCarbs)
+                setLimited(R.id.fat_progress,     doneFat,     goalFat)
             }
         }
     }
+
 
     private fun refreshTodayMeals() {
         if (currentUserId <= 0) return
@@ -441,38 +486,11 @@ class MacroActivity : AppCompatActivity() {
             .show()
     }
 
-
-
-
-//    private fun loadMealsFromCSV(context: Context): List<MealItem> {
-//        val meals = mutableListOf<MealItem>()
-//        try {
-//            val inputStream = context.assets.open("meal_dataset.csv")
-//            val reader = BufferedReader(InputStreamReader(inputStream))
-//            reader.readLine() // skip header
-//            var line: String?
-//            while (reader.readLine().also { line = it } != null) {
-//                val tokens = line!!.split(",")
-//                if (tokens.size >= 9) {
-//                    val meal = MealItem(
-//                        mealId = tokens[0].toInt(),
-//                        mealName = tokens[1],
-//                        mealType = tokens[2],
-//                        calories = tokens[3].toInt(),
-//                        protein = tokens[4].toInt(),
-//                        carbs = tokens[5].toInt(),
-//                        fat = tokens[6].toInt(),
-//                        goal = tokens[7],
-//                        dietType = tokens[8]
-//                    )
-//                    meals.add(meal)
-//                }
-//            }
-//            reader.close()
-//        } catch (e: Exception) {
-//            e.printStackTrace()
-//        }
-//        return meals
-//    }
+    private fun showMacroSettingsDialog() {
+        if (currentUserId == -1) {
+            Toast.makeText(this, "No user loaded", Toast.LENGTH_SHORT).show()
+            return
+        }
+    }
 }
 

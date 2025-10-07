@@ -242,10 +242,10 @@ data class FoodLog(
 )
 data class MacroPlan(
     @PrimaryKey(autoGenerate = true) val macroId: Long = 0L,
+    val userId : Int,
     val calories: Int,
-    val proteinG: Int,
-    val fatG: Int,
-    val carbsG: Int,
-    val bmr: Double,
-    val tdee: Double
+    val protein: Int,
+    val fat: Int,
+    val carbs: Int,
+    val updatedAt: Long = System.currentTimeMillis()
 )

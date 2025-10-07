@@ -42,6 +42,7 @@
             android:layout_weight="1" />
 
         <!-- Diary button (bottom-left, above nav). Kept simple to avoid disrupting UI -->
+        <!-- Diary button (bottom-left, above nav). Kept simple to avoid disrupting UI -->
         <ImageButton
             android:id="@+id/btn_diary"
             android:layout_width="40dp"
