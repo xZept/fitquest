@@ -130,7 +130,7 @@ class RegisterActivity : AppCompatActivity() {
             sheet = sheet,
             rows = 1,
             cols = 12,
-            fps = 18,
+            fps = 12,
             loop = true,
             scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
         )

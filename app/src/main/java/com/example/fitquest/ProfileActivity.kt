@@ -35,6 +35,8 @@ import android.text.TextUtils
 import kotlin.math.roundToInt
 import android.graphics.BitmapFactory
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
+import android.view.MotionEvent
+
 
 /**
  * Merged ProfileActivity
@@ -75,13 +77,30 @@ class ProfileActivity : AppCompatActivity() {
     private val MIN_WEIGHT_KG = 30.0
     private val MAX_WEIGHT_KG = 300.0
 
-    
+    private lateinit var tvSettingsHint: TextView
+    private var hintHideJob: kotlinx.coroutines.Job? = null
+
+    private val HINT_DEFAULT = "Manage rest timer and equipment in Settings"
+    private val HINT_HEIGHT  = "Height: enter 120–230 cm. Digits only."
+    private val HINT_WEIGHT  = "Weight: enter 30–300 kg. Decimals OK (e.g., 72.5)."
+    private val HINT_ACTIVITY = "Activity level: pick how active you are on non-workout days. It affects calorie estimates."
+    private val HINT_GOAL     = "Fitness goal: choose fat loss, maintenance, or muscle gain to shape your plan."
+
+    // Spinner interaction guards
+    private var activitySpinnerTouched = false
+    private var goalSpinnerTouched = false
+    private var suppressHint = false
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
 
         bgView = findViewById(R.id.bg_anim)
+
+        tvSettingsHint = findViewById(R.id.tv_settings_hint)
+        showHint(HINT_DEFAULT) // shows, then hides after 8s
+
 
         // Load your sheet without density scaling so frame math stays exact.
         val opts = BitmapFactory.Options().apply { inScaled = false }
@@ -134,10 +153,62 @@ class ProfileActivity : AppCompatActivity() {
         etWeight.filters = arrayOf(android.text.InputFilter.LengthFilter(6))
         etHeight.keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789")
         etWeight.keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789.")
-        etHeight.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) validateHeight() }
-        etWeight.setOnFocusChangeListener { _, hasFocus -> if (!hasFocus) validateWeight() }
-        etHeight.addTextChangedListener { validateHeight() }
-        etWeight.addTextChangedListener { validateWeight() }
+        etHeight.addTextChangedListener {
+            if (!suppressHint && etHeight.hasFocus()) showHint(HINT_HEIGHT)
+            validateHeight()
+        }
+        etWeight.addTextChangedListener {
+            if (!suppressHint && etWeight.hasFocus()) showHint(HINT_WEIGHT)
+            validateWeight()
+        }
+        etHeight.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) showHint(HINT_HEIGHT) else validateHeight()
+        }
+        etWeight.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) showHint(HINT_WEIGHT) else validateWeight()
+        }
+        etHeight.setOnClickListener { showHint(HINT_HEIGHT) }
+        etWeight.setOnClickListener { showHint(HINT_WEIGHT) }
+
+        // ---- Activity Level spinner ----
+        spActivityLevel.setOnTouchListener { _, ev ->
+            if (ev.action == MotionEvent.ACTION_DOWN && !suppressHint) {
+                showHint(HINT_ACTIVITY)   // show as soon as user taps to open
+            }
+            activitySpinnerTouched = true
+            false // allow dropdown to open
+        }
+        spActivityLevel.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
+                if (!suppressHint && activitySpinnerTouched) showHint(HINT_ACTIVITY)
+                activitySpinnerTouched = false
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) = Unit
+        }
+        spActivityLevel.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && !suppressHint) showHint(HINT_ACTIVITY)
+        }
+
+// ---- Fitness Goal spinner ----
+        spFitnessGoal.setOnTouchListener { _, ev ->
+            if (ev.action == MotionEvent.ACTION_DOWN && !suppressHint) {
+                showHint(HINT_GOAL)       // show on tap too
+            }
+            goalSpinnerTouched = true
+            false
+        }
+        spFitnessGoal.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
+                if (!suppressHint && goalSpinnerTouched) showHint(HINT_GOAL)
+                goalSpinnerTouched = false
+            }
+            override fun onNothingSelected(parent: AdapterView<*>) = Unit
+        }
+        spFitnessGoal.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && !suppressHint) showHint(HINT_GOAL)
+        }
+
+
 
         val activityOptions = resources.getStringArray(R.array.activity_levels)
         val goalOptions = resources.getStringArray(R.array.fitness_goals)
@@ -162,13 +233,19 @@ class ProfileActivity : AppCompatActivity() {
                         tvAge.text = "Age: ${user.age}"
                         tvSex.text = "Sex: ${user.sex}"
                         setSpriteForSex(user.sex)
+
+                        suppressHint = true
                         profile?.let {
                             etHeight.setText(it.height.toString())
                             etWeight.setText(it.weight.toString())
                             setSpinnerToValue(spActivityLevel, it.activityLevel)
                             setSpinnerToValue(spFitnessGoal, it.goal)
                         }
+                        suppressHint = false
+
+                        showHint(HINT_DEFAULT)   // <- show the default after prefill
                     }
+
                 }
             } else {
                 withContext(Dispatchers.Main) {
@@ -227,6 +304,28 @@ class ProfileActivity : AppCompatActivity() {
 
         setupNavigationBar()
     }
+
+    private fun showHint(text: String, durationMs: Long = 6000L, fadeMs: Long = 250L) {
+        tvSettingsHint.text = text
+        tvSettingsHint.alpha = 1f
+        tvSettingsHint.visibility = View.VISIBLE
+
+        hintHideJob?.cancel()
+        hintHideJob = lifecycleScope.launch {
+            kotlinx.coroutines.delay(durationMs)
+            withContext(kotlinx.coroutines.Dispatchers.Main) {
+                tvSettingsHint.animate()
+                    .alpha(0f)
+                    .setDuration(fadeMs)
+                    .withEndAction {
+                        tvSettingsHint.visibility = View.GONE
+                        tvSettingsHint.alpha = 1f
+                    }
+                    .start()
+            }
+        }
+    }
+
 
     // ---------- Repo sprite helpers ----------
 
