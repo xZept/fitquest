@@ -24,6 +24,11 @@ import com.example.fitquest.database.ActiveQuest
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
+import kotlinx.coroutines.delay
+import android.view.MotionEvent
+import android.widget.AdapterView
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 
 
 class QuestGeneratorActivity : AppCompatActivity() {
@@ -40,6 +45,13 @@ class QuestGeneratorActivity : AppCompatActivity() {
     private var lastAddableNames: List<String> = emptyList()
     private var bgSprite: SpriteSheetDrawable? = null
     private var bgBitmap: Bitmap? = null
+
+    private var bubbleJob: Job? = null
+
+    private val welcomeMsg = "Choose your quest, adventurer! Pick a split and a focus, then forge your path."
+    private val splitHelp  = "How your training days are grouped.\n• Push/Pull/Legs → muscles by movement\n• Upper/Legs →  body regions."
+    private val focusHelp  = "• General → balanced\n• Hypertrophy → ~8–12 reps for size\n• Strength → lower reps, heavier loads"
+
 
 
     private val previewLauncher = registerForActivityResult(
@@ -117,6 +129,31 @@ class QuestGeneratorActivity : AppCompatActivity() {
 
         root.background = bgSprite
 
+        showBubble(welcomeMsg)
+
+
+        val welcome = findViewById<View>(R.id.welcome_bubble)
+
+        // Show with a quick fade-in
+        welcome.alpha = 0f
+        welcome.visibility = View.VISIBLE
+        welcome.animate()
+            .alpha(1f)
+            .setDuration(250)
+            .start()
+
+        // Auto-hide after 6 seconds with a fade-out
+        lifecycleScope.launch {
+            delay(6000)
+            // If activity is still alive, fade out and hide
+            welcome.animate()
+                .alpha(0f)
+                .setDuration(250)
+                .withEndAction { welcome.visibility = View.GONE }
+                .start()
+        }
+
+
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
         hideSystemBars()
@@ -125,6 +162,29 @@ class QuestGeneratorActivity : AppCompatActivity() {
 
         spSplit = findViewById(R.id.sp_split)
         spFocus = findViewById(R.id.sp_focus)
+
+        // --- Split: show help on user tap, and after a user-driven selection ---
+        var splitTouched = false
+        spSplit.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                splitTouched = true
+                showBubble(splitHelp)
+            }
+            false // don't consume; let the spinner open
+        }
+
+
+        // --- Focus: show help on tap; detail after selection ---
+        var focusTouched = false
+        spFocus.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                focusTouched = true
+                showBubble(focusHelp)
+            }
+            false
+        }
+
+
 
         val splits: Array<String> = try { resources.getStringArray(R.array.splits) }
         catch (_: Exception) { arrayOf("Push", "Pull", "Legs", "Upper", "Lower", "Full Body") }
@@ -166,6 +226,30 @@ class QuestGeneratorActivity : AppCompatActivity() {
         bgSprite = null
         super.onDestroy()
     }
+
+    private fun showBubble(text: String, autoHideMs: Long = 6000L) {
+        val bubble = findViewById<View>(R.id.welcome_bubble)
+        val tv = findViewById<TextView>(R.id.tv_welcome)
+
+        bubbleJob?.cancel()
+        bubble.animate().cancel()
+
+        tv.text = text
+        bubble.alpha = 0f
+        bubble.visibility = View.VISIBLE
+
+        bubble.animate().alpha(1f).setDuration(200).start()
+
+        bubbleJob = lifecycleScope.launch {
+            delay(autoHideMs)
+            bubble.animate()
+                .alpha(0f)
+                .setDuration(200)
+                .withEndAction { bubble.visibility = View.GONE }
+                .start()
+        }
+    }
+
 
 
     /** Build one structured plan and go straight to preview (no Basic/Advanced dialog). */

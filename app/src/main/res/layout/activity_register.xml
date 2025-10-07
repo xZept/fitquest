@@ -230,7 +230,7 @@
         android:layout_marginHorizontal="20dp"
         android:paddingHorizontal="32dp"
         android:paddingVertical="8dp"
-        android:background="@drawable/container_handler_text"
+        android:background="@drawable/container_text_left"
         android:text="Welcome, Adventurer! Forge your profile above so we can match quests to your strength, skill, and goals. When you’re ready, tap Enlist to enter the realm."
         android:textColor="@color/black"
         android:textSize="16sp"

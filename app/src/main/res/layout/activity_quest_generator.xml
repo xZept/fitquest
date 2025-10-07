@@ -59,9 +59,33 @@
                     android:layout_marginTop="20dp"/>
             </LinearLayout>
         </FrameLayout>
-
     </LinearLayout>
 
+    <!-- Welcome message bubble -->
+    <FrameLayout
+        android:id="@+id/welcome_bubble"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="1dp"
+        android:background="@drawable/container_text_right"
+        android:paddingStart="20dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="20dp"
+        android:layout_marginHorizontal="20dp"
+        android:paddingBottom="12dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/tv_welcome"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Choose your quest, adventurer! Pick a split and a focus, then forge your path."
+            android:textSize="16sp"
+            android:paddingTop="5sp"
+            android:layout_gravity="center_vertical"
+            android:maxLines="5"
+            android:textColor="@android:color/black" />
+    </FrameLayout>
 
     <!-- Actions row -->
     <LinearLayout
