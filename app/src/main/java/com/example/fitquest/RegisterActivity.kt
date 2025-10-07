@@ -52,6 +52,9 @@ class RegisterActivity : AppCompatActivity() {
 
     private lateinit var welcomeBanner: TextView
 
+    private var bannerHideRunnable: Runnable? = null
+
+    private lateinit var help: Map<Int, String>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         repository = FitquestRepository(this)
@@ -63,6 +66,31 @@ class RegisterActivity : AppCompatActivity() {
 
         welcomeBanner = findViewById(R.id.tv_welcome_banner)
 
+        help = mapOf(
+            R.id.et_first_name to "First name — shown in your profile parchment.",
+            R.id.et_last_name to "Last name — shown in your profile parchment.",
+            R.id.et_birthday to "Birthday — we compute your age",
+            R.id.et_username to "Username — your in-realm name.",
+            R.id.et_email to "Email — used for login",
+            R.id.et_password to "Password — use 8+ chars with upper/lower, a number, and a symbol.",
+            R.id.et_confirm_password to "Confirm password — retype to avoid typos before we forge your account.",
+            R.id.et_height to "Height (cm) — helps size movements and compute metrics.",
+            R.id.et_weight to "Weight (kg) — tunes calorie estimates.",
+            R.id.spinner_activity_levels to "Activity level — your usual daily movement; we use this to compute calories (TDEE).",
+            R.id.spinner_fitness_goals to "Fitness goal — we tailor quests toward this.",
+            R.id.iv_male to "Avatar — choose your gender.",
+            R.id.iv_female to "Avatar — choose your gender."
+        )
+
+
+
+        fun wireSpinnerHint(spinner: Spinner, idForCopy: Int) {
+            spinner.setOnTouchListener { _, e ->
+                if (e.action == MotionEvent.ACTION_DOWN) showBanner(help[idForCopy] ?: "")
+                false
+            }
+        }
+
         // Show for a few seconds on entry
         lifecycleScope.launch {
             // prepare & fade in
@@ -71,7 +99,7 @@ class RegisterActivity : AppCompatActivity() {
             welcomeBanner.animate().alpha(1f).setDuration(200).withLayer().start()
 
             // stay visible for N ms
-            delay(2500)
+            delay(8000)
 
             // fade out, then hide
             welcomeBanner.animate()
@@ -116,14 +144,16 @@ class RegisterActivity : AppCompatActivity() {
         female = findViewById(R.id.iv_female)
 
         male.setOnClickListener {
+            showBanner(help[R.id.iv_male] ?: "")
             selectedSex = "Male"
             highlightSelected(male, female)
         }
-
         female.setOnClickListener {
+            showBanner(help[R.id.iv_female] ?: "")
             selectedSex = "Female"
             highlightSelected(female, male)
         }
+
 
         // Hide system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -142,7 +172,7 @@ class RegisterActivity : AppCompatActivity() {
             window.navigationBarColor = Color.TRANSPARENT
         }
 
-        setupInputFocusEffects()
+//        setupInputFocusEffects()
 
         val mainLayout = findViewById<View>(R.id.registerLayout)
         ViewCompat.setOnApplyWindowInsetsListener(mainLayout) { view, insets ->
@@ -170,14 +200,14 @@ class RegisterActivity : AppCompatActivity() {
 
         // Birthday (click-only field)
         val birthdayEditText = findViewById<EditText>(R.id.et_birthday).apply {
-            // Keep same selector bg
             background = ContextCompat.getDrawable(context, R.drawable.user_input_bg_selector)
             setOnClickListener {
-                // do your date picker...
+                showBanner(help[R.id.et_birthday] ?: "")   // ← add this
                 it.pulseThenSetActivated(text.isNotBlank())
+                // open date picker after…
             }
         }
-        wireEditText(birthdayEditText) // optional: keeps state by value if you later allow typing
+//        wireEditText(birthdayEditText) // optional: keeps state by value if you later allow typing
 
         // Form fields
         val firstNameEditText = findViewById<EditText>(R.id.et_first_name)
@@ -193,8 +223,10 @@ class RegisterActivity : AppCompatActivity() {
 
         val spinnerActivityLevel = findViewById<Spinner>(R.id.spinner_activity_levels)
         val spinnerGoal = findViewById<Spinner>(R.id.spinner_fitness_goals)
-        wireSpinner(spinnerActivityLevel, placeholderIndex = 0) // adjust index if no placeholder
-        wireSpinner(spinnerGoal, placeholderIndex = 0)
+//        wireSpinner(spinnerActivityLevel, placeholderIndex = 0) // adjust index if no placeholder
+//        wireSpinner(spinnerGoal, placeholderIndex = 0)
+        wireSpinnerHint(spinnerActivityLevel, R.id.spinner_activity_levels)
+        wireSpinnerHint(spinnerGoal, R.id.spinner_fitness_goals)
 
         // Constrain inputs
         heightEditText.applyNumericConstraints(MIN_HEIGHT_CM, MAX_HEIGHT_CM, maxDecimals = 1)
@@ -273,11 +305,14 @@ class RegisterActivity : AppCompatActivity() {
             })
         }
 
+
+
         setupCapitalization(firstNameEditText)
         setupCapitalization(lastNameEditText)
 
         // Date Picker & Age Calculation
         birthdayEditText.setOnClickListener {
+            showBanner(help[R.id.et_birthday] ?: "")
             val calendar = Calendar.getInstance()
             val year = calendar.get(Calendar.YEAR)
             val month = calendar.get(Calendar.MONTH)
@@ -426,11 +461,33 @@ class RegisterActivity : AppCompatActivity() {
         super.onStop()
     }
 
-
     override fun onDestroy() {
         bgSprite?.stop()
         bgSprite = null
         super.onDestroy()
+    }
+
+    private fun showBanner(text: String, holdMs: Long = 4000L) {
+        welcomeBanner.text = text
+
+        // cancel any pending hide
+        bannerHideRunnable?.let { welcomeBanner.removeCallbacks(it) }
+
+        if (welcomeBanner.visibility != View.VISIBLE) {
+            welcomeBanner.alpha = 0f
+            welcomeBanner.visibility = View.VISIBLE
+            welcomeBanner.animate().alpha(1f).setDuration(180).withLayer().start()
+        }
+
+        // schedule fade-out
+        bannerHideRunnable = Runnable {
+            welcomeBanner.animate()
+                .alpha(0f)
+                .setDuration(180)
+                .withEndAction { welcomeBanner.visibility = View.GONE }
+                .withLayer()
+                .start()
+        }.also { welcomeBanner.postDelayed(it, holdMs) }
     }
 
     private fun View.pulseThenSetActivated(activateAfter: Boolean, totalMs: Long = 360L) {
@@ -447,13 +504,14 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     private fun wireEditText(et: EditText) {
-        // initial bg + state
         et.background = ContextCompat.getDrawable(this, R.drawable.user_input_bg_selector)
         et.isActivated = et.text?.isNotBlank() == true
         et.isSelected  = et.isActivated
 
         et.setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) {
+                // 🔹 show the explanation for THIS field
+                showBanner(help[et.id] ?: "")
                 v.pulseThenSetActivated(et.text.isNotBlank())
             } else {
                 val active = et.text.isNotBlank()
@@ -472,6 +530,7 @@ class RegisterActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
     }
+
 
     private fun wireSpinner(sp: Spinner, placeholderIndex: Int = 0) {
         sp.background = ContextCompat.getDrawable(this, R.drawable.user_input_bg_selector)
@@ -497,6 +556,8 @@ class RegisterActivity : AppCompatActivity() {
             }
         }
     }
+
+    
 
 
     private fun highlightSelected(selected: ImageView, unselected: ImageView) {
