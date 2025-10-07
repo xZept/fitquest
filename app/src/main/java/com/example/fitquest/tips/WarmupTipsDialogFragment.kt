@@ -24,9 +24,14 @@ class WarmupTipsDialogFragment : DialogFragment() {
 
     companion object {
         private const val ARG_FOCUS = "focus"
-        fun newInstance(focus: String?): WarmupTipsDialogFragment =
+        private const val ARG_USER_ID = "user_id"
+
+        fun newInstance(focus: String?, userId: Int): WarmupTipsDialogFragment =
             WarmupTipsDialogFragment().apply {
-                arguments = Bundle().apply { putString(ARG_FOCUS, focus) }
+                arguments = Bundle().apply {
+                    putString(ARG_FOCUS, focus)
+                    putInt(ARG_USER_ID, userId)
+                }
             }
     }
 
@@ -66,7 +71,7 @@ class WarmupTipsDialogFragment : DialogFragment() {
 
         val panel = FrameLayout(ctx)
 
-        // Background art
+        // Background art (same container art as your other dialogs)
         val ivBg = ImageView(ctx).apply {
             setImageResource(R.drawable.container_handler)
             scaleType = ImageView.ScaleType.FIT_CENTER
@@ -130,7 +135,7 @@ class WarmupTipsDialogFragment : DialogFragment() {
         }
         content.addView(pager)
 
-        // ---------- Dots (clean bullets) ----------
+        // ---------- Dots (TabLayout; clickable + swipe sync) ----------
         val dots = TabLayout(ctx).apply {
             tabMode = TabLayout.MODE_FIXED
             tabGravity = TabLayout.GRAVITY_CENTER
@@ -150,7 +155,7 @@ class WarmupTipsDialogFragment : DialogFragment() {
             ).apply { bottomMargin = dp(74) } // ~60 bottom bar + gap
         )
 
-        // ---------- Bottom bar ----------
+        // ---------- Bottom bar (checkbox + Continue) ----------
         val bottomBar = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -169,11 +174,10 @@ class WarmupTipsDialogFragment : DialogFragment() {
             }
         )
 
-        // Make checkbox touch area just its own width (no weight)
+        // Tight hit area for checkbox (no weight)
         val cbDontShow = CheckBox(ctx).apply {
             text = "Don’t show again"
             setTextColor(Color.BLACK)
-            // remove any implicit extra padding/min size
             setPadding(0, 0, 0, 0)
             minWidth = 0
             minHeight = 0
@@ -186,15 +190,11 @@ class WarmupTipsDialogFragment : DialogFragment() {
             )
         )
 
-        // Spacer to push the button to the right (captures the free space instead of the checkbox)
+        // Spacer captures free space so the checkbox doesn’t
         val spacer = View(ctx)
         bottomBar.addView(
             spacer,
-            LinearLayout.LayoutParams(
-                0,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                1f
-            )
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         )
 
         val nextRes = resolveFirstDrawable("button_continue")
@@ -225,18 +225,23 @@ class WarmupTipsDialogFragment : DialogFragment() {
 
         // ---------- Data + adapter ----------
         val focus = arguments?.getString(ARG_FOCUS)
-        val pages = WarmupTipsContent.forFocus(focus)
-        pager.adapter = TipPageAdapter(pages)
+        val pages = WarmupTipsContent.forFocus(focus)  // your existing source
+        pager.adapter = TipPageAdapter(pages)          // your existing adapter
 
+        // Connect dots with pager and use "•" as labels
         TabLayoutMediator(dots, pager) { tab, _ -> tab.text = "•" }.attach()
 
+        // Style the dots (active=black, inactive=gray)
         fun styleDotTabs() {
             for (i in 0 until dots.tabCount) {
                 val t = dots.getTabAt(i) ?: continue
                 val tv = TextView(ctx).apply {
                     text = "•"
                     textSize = 18f
-                    setTextColor(if (i == dots.selectedTabPosition) Color.BLACK else Color.parseColor("#808080"))
+                    setTextColor(
+                        if (i == dots.selectedTabPosition) Color.BLACK
+                        else Color.parseColor("#808080")
+                    )
                 }
                 t.customView = tv
             }
@@ -252,7 +257,7 @@ class WarmupTipsDialogFragment : DialogFragment() {
             override fun onTabReselected(tab: TabLayout.Tab) {}
         })
 
-        // Gate Continue to the last page
+        // Only enable Continue on last page
         fun updateContinueState() {
             val last = pager.currentItem == ((pager.adapter?.itemCount ?: 1) - 1)
             btnContinue.isEnabled = last
@@ -263,11 +268,18 @@ class WarmupTipsDialogFragment : DialogFragment() {
             override fun onPageSelected(position: Int) = updateContinueState()
         })
 
+        // Persist per-user preference when finishing
+        val userId = arguments?.getInt(ARG_USER_ID) ?: -1
         btnContinue.setOnClickListener {
             val last = pager.currentItem == ((pager.adapter?.itemCount ?: 1) - 1)
             if (last) {
                 CoroutineScope(Dispatchers.IO).launch {
-                    DataStoreManager.setShowWarmupTips(requireContext(), !cbDontShow.isChecked)
+                    // “Don’t show again” => show=false
+                    DataStoreManager.setShowWarmupTips(
+                        requireContext(),
+                        userId,
+                        show = !cbDontShow.isChecked
+                    )
                 }
                 dismissAllowingStateLoss()
             }

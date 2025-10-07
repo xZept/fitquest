@@ -16,8 +16,12 @@ object DataStoreManager {
 
     private val USER_ID_KEY = intPreferencesKey("LOGGED_IN_USER_ID")
 
-    // Warm-up tips visibility flag (default true = show tips)
-    private val SHOW_WARMUP_TIPS_KEY = booleanPreferencesKey("SHOW_WARMUP_TIPS")
+    // Legacy (pre-user) warmup key – kept for backward compatibility
+    private val SHOW_WARMUP_TIPS_GLOBAL = booleanPreferencesKey("SHOW_WARMUP_TIPS")
+
+    // Per-user warmup key
+    private fun warmupKey(userId: Int) =
+        booleanPreferencesKey("SHOW_WARMUP_TIPS_U_$userId")
 
     /** Read userId (returns -1 when logged out) */
     fun getUserId(context: Context): Flow<Int> =
@@ -38,20 +42,33 @@ object DataStoreManager {
         context.dataStore.edit { it.clear() }
     }
 
-    // -------------------------
-    // Warm-up tips preference
-    // -------------------------
+    /* -------------------- Warmup tips (per-user) -------------------- */
 
-    /** Flow for whether we should show warm-up tips (default true). */
-    fun showWarmupTipsFlow(context: Context): Flow<Boolean> =
-        context.dataStore.data.map { prefs -> prefs[SHOW_WARMUP_TIPS_KEY] ?: true }
+    /**
+     * Observe whether to show warmup tips for a specific user.
+     * Defaults to TRUE (show). Falls back to the old global flag if present.
+     */
+    fun showWarmupTipsFlow(context: Context, userId: Int): Flow<Boolean> =
+        context.dataStore.data.map { prefs ->
+            prefs[warmupKey(userId)]
+                ?: prefs[SHOW_WARMUP_TIPS_GLOBAL]  // legacy fallback for old installs
+                ?: true
+        }
 
-    /** Get once (suspending) whether to show warm-up tips. */
-    suspend fun shouldShowWarmupTips(context: Context): Boolean =
-        showWarmupTipsFlow(context).first()
+    /** Convenience suspend getter. */
+    suspend fun shouldShowWarmupTips(context: Context, userId: Int): Boolean =
+        showWarmupTipsFlow(context, userId).first()
 
-    /** Persist whether to show warm-up tips going forward. */
-    suspend fun setShowWarmupTips(context: Context, show: Boolean) {
-        context.dataStore.edit { it[SHOW_WARMUP_TIPS_KEY] = show }
+    /**
+     * Set whether to show warmup tips for a specific user.
+     * Pass show=false when the user ticks "Don’t show again".
+     */
+    suspend fun setShowWarmupTips(context: Context, userId: Int, show: Boolean) {
+        context.dataStore.edit { prefs -> prefs[warmupKey(userId)] = show }
+    }
+
+    /** Optional: remove the per-user flag (forces default=true next time) */
+    suspend fun clearWarmupTipsForUser(context: Context, userId: Int) {
+        context.dataStore.edit { prefs -> prefs.remove(warmupKey(userId)) }
     }
 }

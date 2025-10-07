@@ -197,7 +197,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 supportFragmentManager.findFragmentByTag("warmup_tips") == null
             ) {
                 withContext(Dispatchers.IO) {
-                    maybeShowWarmupTips()
+                    maybeShowWarmupTips() // calls per-user DataStore & shows dialog
                 }
             }
         }
@@ -215,13 +215,18 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     /** Check DataStore and show WarmupTipsDialogFragment if enabled. */
     private suspend fun maybeShowWarmupTips() {
-        val shouldShow = DataStoreManager.shouldShowWarmupTips(this@WorkoutSessionActivity)
+        // 🔑 per-user read
+        val shouldShow = DataStoreManager.shouldShowWarmupTips(
+            this@WorkoutSessionActivity,
+            userId
+        )
         if (!shouldShow) return
 
         val focus = intent.getStringExtra("SESSION_FOCUS") ?: inferSessionFocus()
         withContext(Dispatchers.Main) {
+            // 🔑 pass userId into the dialog so it saves per-user
             WarmupTipsDialogFragment
-                .newInstance(focus)
+                .newInstance(focus, userId)
                 .show(supportFragmentManager, "warmup_tips")
         }
     }
@@ -254,9 +259,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         currentAnim = null
     }
 
-    private fun initAnimations() {
-        initAnimationsForSex(userSex)
-    }
+    private fun initAnimations() { initAnimationsForSex(userSex) }
 
     override fun onPause() {
         super.onPause()
@@ -1078,6 +1081,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private fun showIdle() {
         val idle = idleAnim ?: return
+        // If we're already on the idle animation, ensure it's running; else start it.
         if (currentAnim?.drawable === idle.drawable) {
             if (!idle.drawable.isRunning()) idle.drawable.start()
         } else {
@@ -1094,6 +1098,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             onDone(); return
         }
 
+        // ✅ ensure the one-shot anim starts from frame 0 every time
         fight.drawable.resetToStart()
         startAnim(fight)
 
