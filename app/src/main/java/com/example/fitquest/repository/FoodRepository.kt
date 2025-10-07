@@ -9,6 +9,9 @@ import com.example.fitquest.database.*
 import com.example.fitquest.database.MeasurementType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import retrofit2.http.GET
+import retrofit2.http.Path
+import retrofit2.http.Query
 import java.time.Instant
 import java.time.ZoneId
 
@@ -60,7 +63,7 @@ class FoodRepository(
             detail.debugDump()
 
             // ensure the food exists locally (for dedupe & logging)
-            val foodId = db.foodDao().upsert(detail.toFoodEntity())
+            val foodId = db.foodDao().upsertKeepId(detail.toFoodEntity())
             val existing = db.portionDao().getForFood(foodId)
             if (existing.isEmpty()) {
                 db.portionDao().insertAll(detail.toPortions(foodId))
@@ -137,9 +140,25 @@ class FoodRepository(
 
     suspend fun ensureLocalIdForFdc(fdcId: Long): Long = withContext(Dispatchers.IO) {
         val detail = api.getFood(fdcId)
-        detail.debugDump()
-        db.foodDao().upsert(detail.toFoodEntity()) // returns local foodId
+        ensureFood(detail)
     }
+
+    private suspend fun ensureFood(detail: FdcModels.FdcFoodDetail): Long =
+        withContext(Dispatchers.IO) { db.foodDao().upsertKeepId(detail.toFoodEntity()) }
+
+    suspend fun recentFoodsAsSearchItems(limit: Int = 20): List<FdcModels.FdcSearchFood> =
+        withContext(Dispatchers.IO) {
+            db.foodDao().recent(limit)
+                // only keep those that came from FDC so adapter can reuse preview logic
+                .mapNotNull { f ->
+                    val fdcId = f.sourceRef?.toLongOrNull() ?: return@mapNotNull null
+                    FdcModels.FdcSearchFood(
+                        fdcId = fdcId,
+                        description = f.foodName,
+                        dataType = f.source ?: "local"
+                    )
+                }
+        }
 
     private val previewCache = mutableMapOf<Long, PreviewMacros>()
 
@@ -189,4 +208,6 @@ fun FdcModels.FdcFoodDetail.debugDump(tag: String = "FDC.dump") {
         Log.d(tag, "foodNutrients(${foodNutrients.size}): $preview")
     }
 }
+
+
 

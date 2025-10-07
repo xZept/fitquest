@@ -34,6 +34,8 @@ class FoodSearchBottomSheet(
 
     private val queryFlow = MutableStateFlow("")
     private var searchJob: Job? = null
+    private var recentJob: Job? = null
+
 
     // Create adapter only after viewLifecycleOwner exists
     private lateinit var adapter: FoodSearchAdapter
@@ -56,36 +58,65 @@ class FoodSearchBottomSheet(
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        adapter = FoodSearchAdapter(
-            scope = viewLifecycleOwner.lifecycleScope,
-            repo = repo
-        ) { item ->
-            // ← this WILL be called on tap
+        adapter = FoodSearchAdapter(scope = viewLifecycleOwner.lifecycleScope, repo = repo) { item ->
             onPicked(item)
             dismiss()
         }
-
         binding.rvResults.layoutManager = LinearLayoutManager(requireContext())
         binding.rvResults.adapter = adapter
 
-        binding.etSearch.addTextChangedListener {
-            queryFlow.value = it?.toString().orEmpty()
-        }
+        // initial populate: show recent foods
+        showRecents(limit = 10)
+
+        binding.etSearch.addTextChangedListener { queryFlow.value = it?.toString().orEmpty() }
 
         queryFlow
-            .debounce(400)              // slow down a bit to reduce cancels
-            .filter { it.length >= 2 }
-            .onEach { performSearch(it) }
+            .debounce(400)
+            .onEach { term ->
+                if (term.length >= 2) {
+                    performSearch(term)
+                } else {
+                    showRecents()
+                }
+            }
             .launchIn(viewLifecycleOwner.lifecycleScope)
 
         binding.etSearch.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
-                performSearch(binding.etSearch.text?.toString().orEmpty())
+                val t = binding.etSearch.text?.toString().orEmpty()
+                if (t.length >= 2) performSearch(t) else showRecents()
                 true
             } else false
         }
 
         binding.etSearch.requestFocus()
+    }
+
+    private fun showRecents(limit: Int = 20) {
+        binding.progress.isVisible = true
+        binding.tvEmpty.isVisible = false
+        binding.rvResults.isVisible = false
+
+        // cancel any in-flight search, then load recents
+        searchJob?.cancel()
+        recentJob?.cancel()
+        recentJob = viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val items = withContext(Dispatchers.IO) { repo.recentFoodsAsSearchItems(limit) }
+                adapter.submit(items)
+                binding.rvResults.isVisible = items.isNotEmpty()
+                binding.tvEmpty.isVisible = items.isEmpty()
+                binding.tvEmpty.text = if (items.isEmpty()) "No recent foods yet." else ""
+            } catch (e: Exception) {
+                android.util.Log.e("FoodSearch", "Load recents failed", e)
+                adapter.submit(emptyList())
+                binding.rvResults.isVisible = false
+                binding.tvEmpty.isVisible = true
+                binding.tvEmpty.text = "Couldn't load recent foods."
+            } finally {
+                binding.progress.isVisible = false
+            }
+        }
     }
 
     private fun performSearch(term: String) {

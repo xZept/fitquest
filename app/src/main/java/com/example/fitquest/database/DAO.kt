@@ -175,11 +175,26 @@ interface WorkoutSetLogDao {
 // ----- Food -----
 @Dao
 interface FoodDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun upsert(food: Food): Long
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insert(food: Food): Long
+
+    @Update
+    fun update(food: Food)
 
     @Query("SELECT * FROM food WHERE foodId = :id")
     fun getById(id: Long): Food?
+
+    @Transaction
+    fun upsertKeepId(food: Food): Long {
+        val existing = getByNormalizedName(food.normalizedName)
+        return if (existing == null) {
+            insert(food)
+        } else {
+            // keep the same PK, just refresh fields
+            update(food.copy(foodId = existing.foodId, lastUpdated = java.time.Instant.now()))
+            existing.foodId
+        }
+    }
 
     @Query("SELECT * FROM food WHERE normalizedName = :norm LIMIT 1")
     fun getByNormalizedName(norm: String): Food?
