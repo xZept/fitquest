@@ -50,12 +50,19 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
     private lateinit var itemTouchHelper: ItemTouchHelper
     private lateinit var pressAnim: android.view.animation.Animation
 
+    private lateinit var tvBanner: TextView
+
+
     private lateinit var db: AppDatabase  // ← declare only
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_quest_preview)
         hideNavBar()
+
+        tvBanner = findViewById(R.id.tv_banner)
+        showBanner("Here is your quest, adventurer! You can reorder exercises; switch to Advanced to add or delete.", 8_000L)
+        tvBanner.setOnClickListener { hideBannerRunnable.run() }
 
         db = AppDatabase.getInstance(applicationContext)
 
@@ -193,6 +200,30 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
         super.finish()
         overridePendingTransition(0, 0)
     }
+
+    private fun showBanner(message: String, durationMs: Long) {
+        tvBanner.text = message
+        tvBanner.alpha = 1f
+        tvBanner.visibility = View.VISIBLE
+
+        tvBanner.animate().cancel() // reset any prior animations
+        tvBanner.removeCallbacks(hideBannerRunnable)
+
+        tvBanner.postDelayed(hideBannerRunnable, durationMs)
+    }
+
+    private val hideBannerRunnable = Runnable {
+        tvBanner.animate()
+            .alpha(0f)
+            .setDuration(400)
+            .withEndAction {
+                tvBanner.visibility = View.INVISIBLE   // ← was GONE
+                tvBanner.alpha = 1f
+            }
+            .start()
+    }
+
+
 
     private fun initAnimatedBg(rows: Int, cols: Int, fps: Int) {
         val bmp = BitmapFactory.decodeResource(resources, R.drawable.bg_page_dashboard_spritesheet0)
