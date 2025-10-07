@@ -11,7 +11,6 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 object FdcApi {
     private const val BASE_URL = "https://api.nal.usda.gov/fdc/"
 
-    // No default, always injected by the caller
     fun create(apiKeyProvider: () -> String): FdcService {
         val logger = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BASIC }
 

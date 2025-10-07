@@ -5,13 +5,11 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_diary_macro">
 
-    <!-- Main vertical content -->
     <LinearLayout
         android:orientation="vertical"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- Title image (flush left) -->
         <ImageView
             android:id="@+id/titleImage"
             android:layout_width="wrap_content"
@@ -23,7 +21,6 @@
             android:scaleType="centerInside"
             android:layout_marginBottom="8dp" />
 
-        <!-- Padded content -->
         <LinearLayout
             android:orientation="vertical"
             android:padding="16dp"
@@ -31,30 +28,26 @@
             android:layout_height="0dp"
             android:layout_weight="1">
 
-            <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tabLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="20dp"
-                android:background="@android:color/transparent"
-                app:tabIndicatorColor="@android:color/black"
-                app:tabRippleColor="@android:color/transparent"
-                app:tabSelectedTextColor="@android:color/black"
-                app:tabTextAppearance="@style/Widget.FitQuest.Tab.Text"
-                app:tabTextColor="@android:color/darker_gray" />
-
-            <androidx.viewpager2.widget.ViewPager2
-                android:id="@+id/pager"
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvDiary"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_marginTop="20dp"
-                android:layout_marginBottom="60dp"
                 android:layout_weight="1"
-                android:paddingHorizontal="25dp" />
+                android:layout_margin="16dp"
+                android:clipToPadding="false"
+                android:paddingBottom="16dp" />
+
+            <TextView
+                android:id="@+id/tvEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No entries yet."
+                android:gravity="center"
+                android:padding="24dp"
+                android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- Floating Back button (bottom-right) -->
     <ImageButton
         android:id="@+id/btnBack"
         android:layout_width="wrap_content"

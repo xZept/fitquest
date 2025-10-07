@@ -52,6 +52,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material)
     implementation("com.google.android.flexbox:flexbox:3.0.0")

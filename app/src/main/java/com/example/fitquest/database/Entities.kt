@@ -249,3 +249,25 @@ data class MacroPlan(
     val carbs: Int,
     val updatedAt: Long = System.currentTimeMillis()
 )
+
+@Entity(
+    tableName = "macroDiary",
+    indices = [Index(value = ["userId","dayKey"], unique = true)]
+)
+data class MacroDiary(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val userId: Int,
+    val dayKey: Int,              // YYYYMMDD in Asia/Manila
+    val calories: Int,
+    val protein: Int,
+    val carbs: Int,
+    val fat: Int,
+
+    val planCalories: Int = 0,
+    val planProtein: Int = 0,
+    val planCarbs: Int = 0,
+    val planFat: Int = 0,
+
+    val capturedAt: Long = System.currentTimeMillis()
+)
+

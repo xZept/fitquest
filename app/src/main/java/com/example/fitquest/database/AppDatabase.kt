@@ -21,9 +21,10 @@ import androidx.room.TypeConverters
         Food::class,
         Portion::class,
         FoodLog::class,
-        MacroPlan::class
+        MacroPlan::class,
+        MacroDiary::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -41,6 +42,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun portionDao(): PortionDao
     abstract fun foodLogDao(): FoodLogDao
     abstract fun macroPlanDao(): MacroPlanDao
+    abstract fun macroDiaryDao(): MacroDiaryDao
 
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null

@@ -48,6 +48,8 @@ import com.example.fitquest.database.MacroPlan
 import com.example.fitquest.repository.FitquestRepository
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textfield.TextInputLayout
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.slider.RangeSlider
 
 class MacroActivity : AppCompatActivity() {
 
@@ -78,12 +80,43 @@ class MacroActivity : AppCompatActivity() {
 
     private lateinit var pressAnim: android.view.animation.Animation
 
+
     override fun onResume() {
         super.onResume()
         macroPlan = null
         if (currentUserId > 0) {
             refreshTodayMeals()
             refreshTodayTotals()
+        }
+
+        // Catch up remaining days if the device was off for days
+        lifecycleScope.launch(Dispatchers.IO) {
+            val zone = java.time.ZoneId.of("Asia/Manila")
+            val userId = currentUserId
+            if (userId <= 0) return@launch
+
+            val todayKey = (java.time.LocalDate.now(zone).let { it.year*10000 + it.monthValue*100 + it.dayOfMonth })
+            val yesterdayKey = (java.time.LocalDate.now(zone).minusDays(1).let { it.year*10000 + it.monthValue*100 + it.dayOfMonth })
+
+            val existing = db.macroDiaryDao().get(userId, yesterdayKey)
+            if (existing == null) {
+                val totals = db.foodLogDao().totalsForDay(userId, yesterdayKey)
+                val plan = db.macroPlanDao().getLatestForUser(userId)
+                db.macroDiaryDao().upsert(
+                    com.example.fitquest.database.MacroDiary(
+                        userId = userId,
+                        dayKey = yesterdayKey,
+                        calories = totals.calories.roundToInt(),
+                        protein = totals.protein.roundToInt(),
+                        carbs = totals.carbohydrate.roundToInt(),
+                        fat = totals.fat.roundToInt(),
+                        planCalories = plan?.calories ?: 0,
+                        planProtein = plan?.protein ?: 0,
+                        planCarbs = plan?.carbs ?: 0,
+                        planFat = plan?.fat ?: 0
+                    )
+                )
+            }
         }
     }
 
@@ -131,6 +164,11 @@ class MacroActivity : AppCompatActivity() {
             it.startAnimation(pressAnim)
             startActivity(Intent(this, FoodHistory::class.java))
             overridePendingTransition(0, 0)
+        }
+
+        findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
+            it.startAnimation(pressAnim)
+            showMacroSettingsDialog()
         }
 
         findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
@@ -330,6 +368,32 @@ class MacroActivity : AppCompatActivity() {
         }
     }
 
+    private fun upsertTodayDiarySnapshot() {
+        if (currentUserId <= 0) return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val zone = java.time.ZoneId.of("Asia/Manila")
+            val todayKey = java.time.LocalDate.now(zone).let { it.year*10000 + it.monthValue*100 + it.dayOfMonth }
+
+            val totals = foodRepo.getTodayTotals(currentUserId)
+            val plan = macroPlan ?: db.macroPlanDao().getLatestForUser(currentUserId)
+
+            db.macroDiaryDao().upsert(
+                com.example.fitquest.database.MacroDiary(
+                    userId = currentUserId,
+                    dayKey = todayKey,
+                    calories = totals.calories.roundToInt(),
+                    protein  = totals.protein.roundToInt(),
+                    carbs    = totals.carbohydrate.roundToInt(),
+                    fat      = totals.fat.roundToInt(),
+                    planCalories = plan?.calories ?: 0,
+                    planProtein  = plan?.protein  ?: 0,
+                    planCarbs    = plan?.carbs    ?: 0,
+                    planFat      = plan?.fat      ?: 0
+                )
+            )
+        }
+    }
+
 
     private fun refreshTodayMeals() {
         if (currentUserId <= 0) return
@@ -487,10 +551,116 @@ class MacroActivity : AppCompatActivity() {
     }
 
     private fun showMacroSettingsDialog() {
-        if (currentUserId == -1) {
+        if (currentUserId <= 0) {
             Toast.makeText(this, "No user loaded", Toast.LENGTH_SHORT).show()
             return
         }
+
+        lifecycleScope.launch {
+            // Log yesterday's food entries
+            upsertTodayDiarySnapshot()
+
+            val plan = withContext(Dispatchers.IO) {
+                macroPlan ?: db.macroPlanDao().getLatestForUser(currentUserId)
+            }
+
+            // Inflate dialog view
+            val view = layoutInflater.inflate(R.layout.dialog_macro_settings, null)
+            val range = view.findViewById<RangeSlider>(R.id.rs_macro)
+            val tvSummary = view.findViewById<TextView>(R.id.tv_summary)
+            val tvCaloriesHint = view.findViewById<TextView>(R.id.tv_calories_hint)
+            val btnCancel = view.findViewById<ImageButton>(R.id.btn_cancel)
+            val btnSave = view.findViewById<ImageButton>(R.id.btn_save)
+
+            val goalCalories = (plan?.calories ?: 2000.0).toInt().coerceAtLeast(1)
+            val curP = (plan?.protein ?: 150.0).toInt()
+            val curF = (plan?.fat     ?: 60.0 ).toInt()
+            val curC = (plan?.carbs   ?: 250.0).toInt()
+
+            // derive starting % from grams + kcal
+            var pPct = ((curP * 4f / goalCalories) * 100f).roundToInt().coerceIn(0, 100)
+            var fPct = ((curF * 9f / goalCalories) * 100f).roundToInt().coerceIn(0, 100)
+            var cPct = 100 - pPct - fPct
+            if (cPct < 0) { fPct = (fPct + cPct).coerceAtLeast(0); cPct = 0 }
+
+            var left = pPct.coerceIn(0, 100)
+            var right = (pPct + fPct).coerceIn(left, 100)
+            range.values = mutableListOf(left.toFloat(), right.toFloat())
+
+            tvCaloriesHint.text = "Calories: $goalCalories kcal"
+
+            fun updateSummary() {
+                left = range.values[0].toInt()
+                right = range.values[1].toInt()
+
+                val proteinPct = left
+                val fatPct = (right - left).coerceAtLeast(0)
+                var carbsPct = (100 - right).coerceAtLeast(0)
+                val adjust = 100 - (proteinPct + fatPct + carbsPct) // rounding fix
+                carbsPct += adjust
+
+                val proteinG = ((goalCalories * proteinPct) / 100f / 4f).roundToInt()
+                val fatG     = ((goalCalories * fatPct)     / 100f / 9f).roundToInt()
+                val carbsG   = ((goalCalories * carbsPct)   / 100f / 4f).roundToInt()
+
+                tvSummary.text = "Protein $proteinPct% (${proteinG}g) • " +
+                        "Fat $fatPct% (${fatG}g) • " +
+                        "Carbs $carbsPct% (${carbsG}g)"
+
+                btnSave.isEnabled = (proteinPct + fatPct + carbsPct == 100)
+                btnSave.alpha = if (btnSave.isEnabled) 1f else 0.5f
+                btnSave.setTag(R.id.btn_save, Triple(proteinG, fatG, carbsG))
+            }
+
+            range.addOnChangeListener { _, _, _ -> updateSummary() }
+            updateSummary()
+
+            val dialog = MaterialAlertDialogBuilder(
+                ContextThemeWrapper(
+                    this@MacroActivity,
+                    com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog
+                )
+            ).setView(view).create()
+
+            btnCancel.setOnClickListener { it.startAnimation(pressAnim); dialog.dismiss() }
+            btnSave.setOnClickListener {
+                it.startAnimation(pressAnim)
+                val (proteinG, fatG, carbsG) =
+                    (btnSave.getTag(R.id.btn_save) as? Triple<Int, Int, Int>) ?: Triple(0, 0, 0)
+
+                val updated = (macroPlan ?: plan)?.copy(
+                    protein = proteinG,
+                    fat = fatG,
+                    carbs = carbsG,
+                    calories = goalCalories
+                ) ?: MacroPlan(
+                    userId = currentUserId,
+                    calories = goalCalories,
+                    protein = proteinG,
+                    carbs = carbsG,
+                    fat = fatG
+                )
+
+                macroPlan = updated
+
+                // persist off the main thread
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        db.macroPlanDao().upsert(updated) // replace with your DAO method if different
+                    } catch (t: Throwable) {
+                        Log.e("Macro", "Failed saving macro plan", t)
+                    }
+                    withContext(Dispatchers.Main) {
+                        refreshTodayTotals()
+                        dialog.dismiss()
+                        Toast.makeText(this@MacroActivity, "Macro plan saved", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+
+            dialog.show()
+        }
     }
+
 }
 

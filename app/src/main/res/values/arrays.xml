@@ -39,4 +39,9 @@
         <item>Strength</item>
     </string-array>
 
+    <string-array name="macro_initial_values">
+        <item>30</item> <!-- left thumb (Protein boundary) -->
+        <item>60</item> <!-- right thumb (Protein + Fat boundary) -->
+    </string-array>
+
 </resources>

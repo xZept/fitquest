@@ -1,0 +1,77 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:padding="12dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <com.google.android.flexbox.FlexboxLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:flexDirection="row"
+        app:alignItems="flex_start">
+
+        <!-- Date column -->
+        <TextView
+            android:id="@+id/tvDate"
+            android:textStyle="bold"
+            android:text="Date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp" />
+
+        <!-- Current values column -->
+        <com.google.android.flexbox.FlexboxLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:flexDirection="column"
+            app:layout_flexGrow="1">
+
+            <TextView
+                android:id="@+id/tvToday"
+                android:text="Calories and Macros"
+                android:textStyle="bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:id="@+id/tvCalories"
+                android:text="Calories"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:id="@+id/tvMacros"
+                android:text="Macros"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </com.google.android.flexbox.FlexboxLayout>
+
+        <!-- Goal values column -->
+        <com.google.android.flexbox.FlexboxLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:flexDirection="column"
+            app:layout_flexGrow="1">
+            <TextView
+                android:id="@+id/tvGoal"
+                android:text="Goal Calories and Macros"
+                android:textStyle="bold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:id="@+id/tvGoalCalories"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Goal calories" />
+
+            <TextView
+                android:id="@+id/tvGoalMacros"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Goal macros" />
+        </com.google.android.flexbox.FlexboxLayout>
+
+    </com.google.android.flexbox.FlexboxLayout>
+</LinearLayout>

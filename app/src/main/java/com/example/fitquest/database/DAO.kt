@@ -214,6 +214,18 @@ data class MonsterListItem(
 )
 
 @Dao
+interface MacroDiaryDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(row: MacroDiary): Long
+
+    @Query("SELECT * FROM macroDiary WHERE userId = :uid AND dayKey = :dk LIMIT 1")
+    suspend fun get(uid: Int, dk: Int): MacroDiary?
+
+    @Query("SELECT * FROM macroDiary WHERE userId = :uid ORDER BY dayKey DESC LIMIT :limit")
+    suspend fun recent(uid: Int, limit: Int = 30): List<MacroDiary>
+}
+
+@Dao
 interface MonsterDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)

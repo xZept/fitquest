@@ -1,12 +1,19 @@
 package com.example.fitquest
 
+import MidnightMacroSnapshotWorker
 import android.app.Application
 import androidx.core.view.WindowCompat
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.fitquest.fdc.FdcApi
 import com.example.fitquest.fdc.FdcService
 import com.example.fitquest.BuildConfig
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.data.repository.FoodRepository
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.util.concurrent.TimeUnit
 
 class FitQuestApp : Application() {
     lateinit var fdcService: FdcService
@@ -17,6 +24,9 @@ class FitQuestApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Log macros for the day every 12 MN
+        scheduleMidnightMacroSnapshot()
 
         // For debugging
         val key = BuildConfig.FDC_API_KEY
@@ -38,5 +48,27 @@ class FitQuestApp : Application() {
             override fun onActivitySaveInstanceState(a: android.app.Activity, outState: android.os.Bundle) {}
             override fun onActivityDestroyed(a: android.app.Activity) {}
         })
+    }
+
+
+    // Function for logging macros every 12 MN
+    private fun scheduleMidnightMacroSnapshot() {
+        val zone = ZoneId.of("Asia/Manila")
+        val now = ZonedDateTime.now(zone)
+        val nextRun = now.toLocalDate().plusDays(1).atTime(0, 0).atZone(zone)
+        val initialDelay = java.time.Duration.between(now, nextRun).toMinutes()
+
+        val request = PeriodicWorkRequestBuilder<MidnightMacroSnapshotWorker>(
+            1, TimeUnit.DAYS
+        )
+            .setInitialDelay(initialDelay, TimeUnit.MINUTES)
+            .addTag("macroSnapshotDaily")
+            .build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "macroSnapshotDaily",
+            ExistingPeriodicWorkPolicy.UPDATE,
+            request
+        )
     }
 }
