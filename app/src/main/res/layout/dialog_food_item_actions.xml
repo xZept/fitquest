@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/actions_root"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:minWidth="384dp"
+    android:minHeight="256dp"
+    android:background="@drawable/empty_plate_container"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/tv_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Food item"
+        android:textSize="25sp"
+        android:textAlignment="center"
+        android:textColor="#000000"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginBottom="6dp"/>
+
+    <ScrollView
+        android:id="@+id/contentScroll"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fadingEdgeLength="0dp"
+        android:overScrollMode="never"
+        app:layout_constraintTop_toBottomOf="@id/tv_title"
+        app:layout_constraintBottom_toTopOf="@id/footer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tv_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:text="Meal • 100 g • 300 kcal"
+            android:textSize="18sp"
+            android:textColor="#000000"/>
+    </ScrollView>
+
+    <LinearLayout
+        android:id="@+id/footer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_horizontal|center_vertical"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <ImageButton
+            android:id="@+id/btn_cancel_img"
+            android:layout_width="96dp"
+            android:layout_height="32dp"
+            android:background="@drawable/button_cancel"
+            android:contentDescription="Cancel"
+            android:padding="0dp"
+            android:adjustViewBounds="true"/>
+
+        <View
+            android:layout_width="12dp"
+            android:layout_height="0dp"/>
+
+        <ImageButton
+            android:id="@+id/btn_edit_img"
+            android:layout_width="96dp"
+            android:layout_height="32dp"
+            android:background="@drawable/button_save"
+            android:contentDescription="Edit serving"
+            android:padding="0dp"
+            android:adjustViewBounds="true"/>
+
+        <View
+            android:layout_width="12dp"
+            android:layout_height="0dp"/>
+
+        <ImageButton
+            android:id="@+id/btn_delete_img"
+            android:layout_width="96dp"
+            android:layout_height="32dp"
+            android:background="@drawable/button_delete"
+            android:contentDescription="Delete"
+            android:padding="0dp"
+            android:adjustViewBounds="true"/>
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

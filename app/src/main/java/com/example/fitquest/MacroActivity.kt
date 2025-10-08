@@ -51,7 +51,9 @@ import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.RangeSlider
 import android.graphics.drawable.ColorDrawable
-
+import androidx.appcompat.content.res.AppCompatResources
+import android.widget.EditText
+import com.example.fitquest.R
 
 class MacroActivity : AppCompatActivity() {
 
@@ -500,74 +502,133 @@ class MacroActivity : AppCompatActivity() {
 
 
     private fun showFoodItemActionsDialog(row: com.example.fitquest.database.FoodLogRow) {
-        val title   = row.foodName ?: "Food #${row.log.foodId}"
-        val message = "${row.log.mealType} • ${row.log.grams.roundToInt()} g • ${row.log.calories.roundToInt()} kcal"
+        val view = layoutInflater.inflate(R.layout.dialog_food_item_actions, null)
 
-        val builder = com.google.android.material.dialog.MaterialAlertDialogBuilder(
-            ContextThemeWrapper(
-                this,
-                com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog
-            )
-        )
-            .setTitle(title)
-            .setMessage(message)
-            .setPositiveButton("Edit serving") { _, _ -> showEditServingDialog(row) }
-            .setNeutralButton("Delete") { _, _ -> confirmDeleteRow(row) }
-            .setNegativeButton("Cancel", null)
+        view.findViewById<TextView>(R.id.tv_title).text =
+            row.foodName ?: "Food #${row.log.foodId}"
+        view.findViewById<TextView>(R.id.tv_message).text =
+            "${row.log.mealType} • ${row.log.grams.roundToInt()} g • ${row.log.calories.roundToInt()} kcal"
 
-        val dlg = builder.create()
-        dlg.setOnShowListener {
-            dlg.getButton(AlertDialog.BUTTON_NEUTRAL)
-                .setTextColor(ContextCompat.getColor(this, android.R.color.holo_red_dark))
+        // Optional: swap to button_edit.png if you have it
+        val editRes = resources.getIdentifier("button_edit", "drawable", packageName)
+        if (editRes != 0) {
+            view.findViewById<ImageButton>(R.id.btn_edit_img).setBackgroundResource(editRes)
         }
+
+        val dlg = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+
+        dlg.setOnShowListener {
+            dlg.window?.setBackgroundDrawable(
+                android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+            )
+            (view.parent as? ViewGroup)?.setPadding(0, 0, 0, 0)
+
+            view.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener { dlg.dismiss() }
+            view.findViewById<ImageButton>(R.id.btn_edit_img).setOnClickListener {
+                dlg.dismiss()
+                showEditServingDialog(row)
+            }
+            view.findViewById<ImageButton>(R.id.btn_delete_img).setOnClickListener {
+                dlg.dismiss()
+                confirmDeleteRow(row)
+            }
+        }
+
         dlg.show()
     }
 
+
+
+
     private fun confirmDeleteRow(row: com.example.fitquest.database.FoodLogRow) {
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Remove item?")
-            .setMessage("This will remove it from ${row.log.mealType}.")
-            .setPositiveButton("Delete") { _, _ ->
-                lifecycleScope.launch(Dispatchers.IO) {
-                    foodRepo.deleteLog(row.log.logId)    // use your primary key
-                    withContext(Dispatchers.Main) {
+        val view = layoutInflater.inflate(R.layout.dialog_confirm_delete, null)
+
+        // Set black title + message text
+        view.findViewById<TextView>(R.id.tv_title).text = "Remove item?"
+        view.findViewById<TextView>(R.id.tv_message).text =
+            "This will remove it from ${row.log.mealType}."
+
+        val dlg = AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+
+        dlg.setOnShowListener {
+            // Make the dialog window itself transparent; we use our PNG as the content background
+            dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+            // Remove default insets/padding the Builder adds around your custom view
+            (view.parent as? ViewGroup)?.setPadding(0, 0, 0, 0)
+
+            // Wire the image buttons
+            view.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener {
+                dlg.dismiss()
+            }
+            view.findViewById<ImageButton>(R.id.btn_delete_img).setOnClickListener {
+                // Do the delete
+                lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    foodRepo.deleteLog(row.log.logId)
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
                         refreshTodayMeals()
                         refreshTodayTotals()
+                        dlg.dismiss()
                     }
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+        }
+
+        dlg.show()
     }
 
     private fun showEditServingDialog(row: com.example.fitquest.database.FoodLogRow) {
-        val input = android.widget.EditText(this).apply {
-            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
-            setText(row.log.grams.toString())
-            setSelection(text.length)
-        }
+        val view = layoutInflater.inflate(R.layout.dialog_edit_serving, null)
+        val titleTv = view.findViewById<TextView>(R.id.tv_title)
+        val et = view.findViewById<EditText>(R.id.et_grams)
 
-        android.app.AlertDialog.Builder(this)
-            .setTitle("Edit serving (grams)")
-            .setView(input)
-            .setPositiveButton("Save") { _, _ ->
-                val newGrams = input.text.toString().toDoubleOrNull()
-                if (newGrams != null && newGrams > 0) {
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        val updated = foodRepo.updateLogServing(row.log.logId, newGrams)
-                        withContext(Dispatchers.Main) {
-                            if (updated == 0) {
-                                android.widget.Toast.makeText(this@MacroActivity, "Update failed", android.widget.Toast.LENGTH_SHORT).show()
-                            }
+        titleTv.text = "Edit serving (grams)"
+        et.setText(row.log.grams.toString())
+        et.setSelection(et.text?.length ?: 0)
+
+        val dlg = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setView(view)
+            .create()
+
+        dlg.setOnShowListener {
+            dlg.window?.setBackgroundDrawable(
+                android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
+            )
+            (view.parent as? ViewGroup)?.setPadding(0, 0, 0, 0)
+
+            view.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener { dlg.dismiss() }
+            view.findViewById<ImageButton>(R.id.btn_save_img).setOnClickListener {
+                val newGrams = et.text.toString().toDoubleOrNull()
+                if (newGrams == null || newGrams <= 0) {
+                    android.widget.Toast.makeText(this, "Enter a valid grams value", android.widget.Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    val updated = foodRepo.updateLogServing(row.log.logId, newGrams)
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        if (updated == 0) {
+                            android.widget.Toast.makeText(this@MacroActivity, "Update failed", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
                             refreshTodayMeals()
                             refreshTodayTotals()
                         }
+                        dlg.dismiss()
                     }
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+
+            // Optional: focus & show keyboard
+            et.requestFocus()
+            dlg.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        }
+
+        dlg.show()
     }
+
 
     private fun showMacroSettingsDialog() {
         if (currentUserId <= 0) {
@@ -640,6 +701,7 @@ class MacroActivity : AppCompatActivity() {
                     com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog
                 )
             ).setView(view).create()
+
 
             dialog.setOnShowListener {
                 // Make the dialog window fully transparent
