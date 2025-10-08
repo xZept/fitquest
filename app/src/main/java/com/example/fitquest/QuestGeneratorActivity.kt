@@ -63,6 +63,8 @@ class QuestGeneratorActivity : AppCompatActivity() {
         val split = res.data!!.getStringExtra("SPLIT") ?: "Push"
         val focus = res.data!!.getStringExtra("FOCUS") ?: "General"
 
+
+
         if (names.isEmpty()) {
             Toast.makeText(this, "Nothing selected.", Toast.LENGTH_SHORT).show()
             return@registerForActivityResult
@@ -97,8 +99,15 @@ class QuestGeneratorActivity : AppCompatActivity() {
 
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@QuestGeneratorActivity, "Quest saved!", Toast.LENGTH_SHORT).show()
+
+                // --> pass split/focus to WorkoutActivity so tips can filter correctly
+                startActivity(Intent(this@QuestGeneratorActivity, WorkoutActivity::class.java).apply {
+                    putExtra("SPLIT", split)   // e.g., "Push" | "Pull" | "Legs" | "Upper"
+                    putExtra("FOCUS", focus)   // "General" | "Hypertrophy" | "Strength"
+                })
                 finish()
             }
+
         }
     }
 
@@ -111,6 +120,8 @@ class QuestGeneratorActivity : AppCompatActivity() {
         val opts = BitmapFactory.Options().apply {
             inPreferredConfig = Bitmap.Config.ARGB_8888
         }
+
+
 
         bgBitmap = BitmapFactory.decodeResource(resources, R.drawable.bg_page_dashboard_spritesheet0, opts)
 
@@ -206,7 +217,11 @@ class QuestGeneratorActivity : AppCompatActivity() {
             finish()
             overridePendingTransition(0, 0)
         }
+
+
+
     }
+
 
     override fun onStart() {
         super.onStart()

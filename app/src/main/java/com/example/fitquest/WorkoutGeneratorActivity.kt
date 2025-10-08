@@ -17,7 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-class WorkoutGeneratorActivity : AppCompatActivity() {
+class  WorkoutGeneratorActivity : AppCompatActivity() {
 
     private lateinit var explanationContainer: LinearLayout
     private lateinit var explanationText: TextView

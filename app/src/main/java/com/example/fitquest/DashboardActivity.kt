@@ -31,7 +31,6 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var dashboardTip: TextView
     private lateinit var pressAnim: android.view.animation.Animation
     private var bgAnim: SpriteSheetDrawable? = null
-
     private lateinit var db: AppDatabase
     private lateinit var quickAction: ImageButton
     private var hasActiveQuest: Boolean = false

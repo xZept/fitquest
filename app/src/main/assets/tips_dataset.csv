@@ -1,51 +1,81 @@
-﻿id,category,goal,split,condition,tip
-1,general,any,any,any,Stay consistent! Progress takes time.
-2,general,any,any,any,Make sure to warm up before each workout.
-3,general,any,any,any,Sleep is just as important as training.
-4,general,any,any,any,Stay hydrated—water helps recovery and performance.
-5,general,any,any,any,Track your progress to stay motivated.
-6,general,any,any,any,"Rest days are part of the process, not a setback."
-7,workout,weight_loss,3_days,any,"For weight loss on a 3-day split, focus on full-body workouts."
-8,workout,weight_loss,5_days,any,Add HIIT sessions to maximize calorie burn.
-9,workout,muscle_gain,5_days,any,"For muscle gain on 5-day split, prioritize progressive overload."
-10,workout,muscle_gain,4_days,any,"Focus on compound lifts like squats, bench press, and deadlifts."
-11,workout,endurance,4_days,any,Include steady-state cardio to build stamina.
-12,workout,endurance,3_days,asthma,"If you have asthma, pace your cardio and focus on breathing."
-13,workout,muscle_gain,any,joint_pain,Use machines or resistance bands to reduce joint strain.
-14,workout,weight_loss,any,obesity,Start with low-impact exercises like cycling or swimming.
-15,workout,endurance,any,heart_issue,Prioritize doctor-approved moderate cardio over high intensity.
-16,macro,weight_loss,any,any,Focus on a calorie deficit with lean protein and veggies.
-17,macro,weight_loss,any,diabetes,Limit refined carbs and balance meals with fiber.
-18,macro,weight_loss,any,hypertension,Reduce sodium intake and prioritize whole foods.
-19,macro,muscle_gain,any,any,Aim for high protein intake (1.6–2.2g per kg bodyweight).
-20,macro,muscle_gain,any,underweight,"Add calorie-dense foods like nuts, oats, and dairy."
-21,macro,muscle_gain,any,lactose_intolerance,Choose lactose-free protein sources like soy or pea protein.
-22,macro,endurance,any,any,Carbs are key for endurance—fuel up before long sessions.
-23,macro,endurance,any,diabetes,Choose slow-digesting carbs like oats and sweet potatoes.
-24,macro,endurance,any,anemia,"Boost iron intake with lean meats, spinach, and legumes."
-25,recovery,any,any,any,Always stretch after workouts to reduce stiffness.
-26,recovery,any,any,joint_pain,Use proper warm-up and low-impact exercises to protect joints.
-27,recovery,any,any,back_pain,Strengthen your core and avoid heavy overhead lifts.
-28,recovery,any,any,shoulder_injury,Focus on rotator cuff strengthening and avoid pressing overhead.
-29,recovery,any,any,knee_pain,Prioritize proper squat form and avoid high-impact jumping.
-30,recovery,any,any,ankle_injury,Wear supportive shoes and use balance exercises for rehab.
-31,recovery,weight_loss,any,any,Prioritize sleep (7–9 hrs) to aid recovery and fat loss.
-32,recovery,weight_loss,any,obesity,"Choose low-impact cardio like cycling, swimming, or elliptical."
-33,recovery,weight_loss,any,any,Foam rolling can help reduce soreness after cardio sessions.
-34,recovery,muscle_gain,any,any,Take at least 48 hours before training the same muscle group again.
-35,recovery,muscle_gain,5_days,any,Alternate push/pull splits to reduce overuse injuries.
-36,recovery,muscle_gain,any,joint_pain,Use resistance machines or bands instead of heavy free weights.
-37,recovery,muscle_gain,any,shoulder_injury,Avoid dips and upright rows to protect your shoulders.
-38,recovery,endurance,any,shin_splints,Replace some runs with cycling/swimming to avoid shin stress.
-39,recovery,endurance,any,asthma,Practice controlled breathing during cool-down to recover faster.
-40,recovery,endurance,any,dehydration,Replenish electrolytes post-workout with water and fruits.
-41,recovery,endurance,any,any,Stretch calves and hamstrings to prevent cramps during runs.
-42,recovery,any,any,dehydration,"Drink water throughout the day, not just after workouts."
-43,recovery,any,any,any,Use foam rolling to improve blood flow and reduce soreness.
-44,recovery,any,any,stress,Include yoga or meditation to aid recovery and mental health.
-45,recovery,any,any,insomnia,Avoid late caffeine intake to improve sleep quality.
-46,recovery,any,any,fatigue,Take a deload week if fatigue persists for more than 2 weeks.
-47,recovery,any,any,any,Use contrast showers (hot/cold) to boost recovery circulation.
-48,recovery,any,any,any,Schedule at least 1–2 full rest days weekly.
-49,recovery,muscle_gain,any,any,Stretch tight muscles after lifting to improve flexibility.
-50,recovery,endurance,any,anemia,Prioritize iron-rich foods to support oxygen delivery.
+tips_id,category,tip,split,focus,goal,activity_level,tags
+1,general,"Sleep 7–9 hours; muscle grows during recovery, not the workout.",,,,,sleep;recovery;performance
+2,general,Warm up 5–10 minutes before heavy sets; ramp weight across sets.,,,,,warmup;injury-prevention
+3,general,Stop most sets with 1–2 reps in reserve (RIR) to sustain progress and form.,,,,,intensity;RIR
+4,general,"Progress ONE variable at a time—load, reps, or sets—to avoid burnout.",,,,,progression;overload
+5,general,Use the fullest range of motion you can control; quality beats quantity.,,,,,ROM;technique
+6,general,Log workouts and meals; what gets measured gets managed.,,,,,tracking;adherence
+7,general,Hydrate ~30–35 ml/kg/day; add extra water in heat or long sessions.,,,,,hydration
+8,general,Deload for ~1 week every 6–8 hard weeks to reduce accumulated fatigue.,,,,,deload;fatigue
+9,general,Place compound lifts early in the session; isolate when freshest.,,,,,programming;compounds
+10,general,"If pain is sharp or in the joint, stop and swap the movement.",,,,,injury-prevention;auto-regulation
+11,macro,Start with ~15% calorie deficit; hit 1.6–2.2 g/kg protein; walk daily.,,,lose fat,sedentary,deficit;protein;NEAT
+12,macro,Keep deficit 10–15%; aim 6–8k steps/day; fiber 25–35 g.,,,lose fat,lightly active,fiber;steps
+13,macro,Time carbs around training; higher-protein breakfast curbs snacking.,,,lose fat,moderately active,carb-timing;satiety
+14,macro,Avoid extreme deficits; fuel hard sessions with carbs; reduce fats first.,,,lose fat,very active,performance;fueling
+15,macro,Small surplus (~5–10%); protein 1.8–2.2 g/kg; target ≥6k steps.,,,build muscle,sedentary,surplus;protein
+16,macro,Distribute protein across 3–5 meals at 0.3–0.5 g/kg per meal.,,,build muscle,moderately active,protein-distribution;MPS
+17,macro,Carbs 3–6 g/kg depending on session length; add 20–40 g pre/post.,,,build muscle,very active,carbs;peri-workout
+18,macro,Hold calories near TDEE; protein 1.6–2.0 g/kg; 80/20 food rule.,,,maintain,lightly active,maintenance;balance
+19,macro,Match carbs to training days; rest days slightly higher fats.,,,maintain,very active,carb-cycling;flexibility
+20,macro,Anchor each meal with protein; limit liquid calories; set steps 5–7k.,,,maintain,sedentary,satiety;NEAT
+21,workout,"Push + hypertrophy: heavy press first, then 2–3 chest/shoulder accessories; 10–20 sets/wk per muscle.",push,hypertrophy,,,volume;push;hypertrophy
+22,workout,"Push + strength: bench 3–5×3–5 @ RPE 7–8, then low‑rep triceps/shoulder work.",push,strength,,,strength;bench
+23,workout,Pull + hypertrophy: start with a vertical pull then a row; add rear‑delt raises; 8–15 reps.,pull,hypertrophy,,,pull;back
+24,workout,Pull + strength: weighted chins 3–5 reps; accessories at RIR 2–3 to protect elbows.,pull,strength,,,strength;pull-ups
+25,workout,Legs + hypertrophy: anchor with squat or leg press; add RDL; finish calves & leg extensions.,legs,hypertrophy,,,legs;hypertrophy
+26,workout,Legs + strength: squat 3–5×3–5 @ RPE 7–8; RDL 3×5–6; rest 2–4 min.,legs,strength,,,legs;strength
+27,workout,Upper + general: alternate push/pull pairs (bench + row) to save time; 6–12 reps.,upper,general,,,upper;supersets
+28,workout,Push + general: use 30–45° incline if flat bench irritates shoulders.,push,general,,,shoulder-health;push
+29,workout,Pull + general: rotate grips (supinated/neutral) across weeks for elbow health and full back work.,pull,general,,,variation;pull
+30,workout,"Legs + general: include unilateral work (lunges, split squats) for balance and knee health.",legs,general,,,unilateral;knees
+31,recovery,After push hypertrophy: pec/lat doorway stretch 30–45s ×2 and band pull‑aparts 2×20.,push,hypertrophy,,,mobility;push
+32,recovery,After push strength: 5–10 min easy bike + 2 sets rotator‑cuff external rotations.,push,strength,,,rotator-cuff;shoulders
+33,recovery,After pull hypertrophy: thoracic extensions over foam roller + 20–30s passive hangs.,pull,hypertrophy,,,thoracic;hang
+34,recovery,After pull strength: optional brief cold exposure; prioritize 7–9 h sleep for CNS recovery.,pull,strength,,,sleep;cns
+35,recovery,After legs hypertrophy: next morning 10–15 min brisk walk/easy cycle to reduce DOMS.,legs,hypertrophy,,,DOMS;legs
+36,recovery,After legs strength: keep 48–72 h between heavy sessions; gentle 90/90 hips + hamstring flossing.,legs,strength,,,rest-spacing;mobility
+37,recovery,Upper + general off‑day: 15–20 min Zone 2 cardio to boost work capacity.,upper,general,,,zone2;capacity
+38,recovery,"Push + general: if shoulders cranky, swap barbell for DBs and drop volume ~20% for a week.",push,general,,,autoregulation;shoulders
+39,recovery,Pull + general: forearm care—rice bucket or extensor bands 2–3×/wk to balance gripping.,pull,general,,,tendons;forearms
+40,recovery,Legs + general: elevate legs 5–10 min post‑session and rehydrate; add electrolytes if very sweaty.,legs,general,,,hydration;legs
+41,general,Cool down 5–10 minutes after lifting to help your nervous system downshift.,any,any,any,any,general;basics
+42,general,"Use a steady tempo (e.g., 2–0–2) to control the eccentric and protect joints.",any,any,any,any,general;basics
+43,general,Microload pressing (0.5–1 kg) when progress stalls instead of large jumps.,any,any,any,any,general;basics
+44,general,"Keep a 3–5 cue checklist for big lifts (brace, lats down, bar path, foot pressure).",any,any,any,any,general;basics
+45,general,Prime technique with 1–2 light ramp sets before your first heavy compound.,any,any,any,any,general;basics
+46,general,Limit new exercises to 1–2 per block so you can track progress cleanly.,any,any,any,any,general;basics
+47,general,"Match rest to goal: ~60–90s hypertrophy, 2–4 min strength, 30–60s circuits.",any,any,any,any,general;basics
+48,general,Film one top set weekly to catch form drift and improve consistency.,any,any,any,any,general;basics
+49,general,"Use shoes that fit the task: flat soles for squats/deads, grippy soles for machines.",any,any,any,any,general;basics
+50,general,Plan PR attempts on weeks with good sleep and low stress; autoregulate on bad days.,any,any,any,any,general;basics
+51,macro,Front‑load protein (25–35g) at breakfast to reduce cravings; keep a 10–15% deficit.,any,any,lose fat,sedentary,lose fat;sedentary;nutrition
+52,macro,Batch‑cook lean proteins and veggies; anchor each plate with a palm‑size protein.,any,any,lose fat,lightly active,lose fat;lightly active;nutrition
+53,macro,Keep carbs around training; fiber 30–40g/day for fullness and digestion.,any,any,lose fat,moderately active,lose fat;moderately active;nutrition
+54,macro,Fuel long sessions: 20–40g carbs pre and post; keep deficit conservative to protect performance.,any,any,lose fat,very active,lose fat;very active;nutrition
+55,macro,Small surplus (5–10%); 4 protein feedings/day at 0.3–0.5 g/kg each.,any,any,build muscle,lightly active,build muscle;lightly active;nutrition
+56,macro,Carbs 4–6 g/kg on training days; add 1–2 fruit servings for easy fuel.,any,any,build muscle,moderately active,build muscle;moderately active;nutrition
+57,macro,Add a simple intra‑workout carb (15–30g/hour) for sessions >75 min.,any,any,build muscle,very active,build muscle;very active;nutrition
+58,macro,Hold near TDEE; protein 1.6–2.0 g/kg; bias whole foods to control calories.,any,any,maintain,sedentary,maintain;sedentary;nutrition
+59,macro,"On rest days, bump fats slightly and trim carbs; keep protein steady.",any,any,maintain,lightly active,maintain;lightly active;nutrition
+60,macro,"Use a 80/20 rule: 80% whole foods, 20% flexible to sustain adherence.",any,any,maintain,moderately active,maintain;moderately active;nutrition
+61,workout,"Prioritize bench/row pairings, then lateral raises and curls; 10–20 sets/wk per muscle.",upper,hypertrophy,any,any,upper;hypertrophy;training
+62,workout,Bench or weighted pull‑ups 3–5×3–5 @ RPE 7–8; long rests 2–4 min.,upper,strength,any,any,upper;strength;training
+63,workout,Finish with cable flyes and overhead triceps to hit shortened ranges; 12–15 reps.,push,hypertrophy,any,any,push;hypertrophy;training
+64,workout,Use a neutral‑grip DB press to reduce shoulder stress on high‑volume days.,push,general,any,any,push;general;training
+65,workout,Alternate vertical and horizontal pulls in the same session for complete back stimulus.,pull,hypertrophy,any,any,pull;hypertrophy;training
+66,workout,Add face pulls or band pull‑aparts 2–3×/wk to keep shoulders balanced.,pull,general,any,any,pull;general;training
+67,workout,Include both knee‑dominant (squat/leg press) and hip‑hinge (RDL) patterns each week.,legs,hypertrophy,any,any,legs;hypertrophy;training
+68,workout,"Use top‑set + back‑off model (e.g., 1×3 heavy, 3×5 lighter) to build strength and volume.",legs,strength,any,any,legs;strength;training
+69,workout,Superset push/pull to save time without sacrificing quality; 6–12 reps.,upper,general,any,any,upper;general;training
+70,workout,Heavy row 3–5×4–6; keep biceps curls at RIR 2 to protect elbows.,pull,strength,any,any,pull;strength;training
+71,recovery,"Post‑upper: pec stretch 30–45s ×2, wall slides 2×12, band pull‑aparts 2×20.",upper,hypertrophy,any,any,upper;hypertrophy;recovery
+72,recovery,After heavy bench/pulls: easy bike 8–12 min + rotator cuff ER 2×15.,upper,strength,any,any,upper;strength;recovery
+73,recovery,Sleeper stretch 2×30s each side + light rear‑delt raises 2×20.,push,hypertrophy,any,any,push;hypertrophy;recovery
+74,recovery,Thoracic openers (cat‑camel 1–2 min) + overhead band lat stretch 2×30s.,pull,hypertrophy,any,any,pull;hypertrophy;recovery
+75,recovery,Walk 10–15 min next morning; gentle quad/ham stretch 2×30s.,legs,hypertrophy,any,any,legs;hypertrophy;recovery
+76,recovery,Keep 48h before next heavy press; swap barbell for DBs if shoulders feel cranky.,push,strength,any,any,push;strength;recovery
+77,recovery,Forearm extensor work 2–3×/wk (rice bucket or bands) to balance gripping.,pull,strength,any,any,pull;strength;recovery
+78,recovery,Hip 90/90 transitions 2–3 min + calf raises 2×20 to keep ankles happy.,legs,strength,any,any,legs;strength;recovery
+79,recovery,"If elbows flare, drop triceps volume 20% for a week and re‑progress.",push,general,any,any,push;general;recovery
+80,recovery,15–20 min Zone 2 on off‑day to improve recovery and work capacity.,upper,general,any,any,upper;general;recovery

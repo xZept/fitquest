@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
+
 class WorkoutActivity : AppCompatActivity() {
 
     private lateinit var pressAnim: android.view.animation.Animation
@@ -107,26 +108,30 @@ class WorkoutActivity : AppCompatActivity() {
     // -------------------- Tips (repo) --------------------
 
     private fun displayTips() {
-        val rawGoal = intent.getStringExtra("GOAL") ?: "any"
-        val userGoal = mapGoalToCsv(rawGoal)
-        val userSplitDays = intent.getIntExtra("SPLIT_DAYS", 3)
-        val userCondition = intent.getStringExtra("HEALTH_CONDITION") ?: "any"
-        val splitKey = "${userSplitDays}_days"
+        val tips = TipsLoader.loadTips(this)
 
-        val tips: List<Tips> = TipsLoader.loadTips(this)
+        // Read from Intent (set these when you navigate from your split/focus selector)
+        val splitRaw = intent.getStringExtra("SPLIT")  // "push" | "pull" | "legs" | "upper"
+        val focusRaw = intent.getStringExtra("FOCUS")  // "general" | "hypertrophy" | "strength"
 
-        val workoutTips = TipsHelper.getWorkoutTips(tips, userGoal, splitKey, userCondition)
-        findViewById<TextView>(R.id.workoutTip).text =
-            workoutTips.randomOrNull()?.tip ?: "No workout tips available for your plan yet."
-
-        val recoveryTips = tips.filter {
-            it.category.equals("recovery", true) &&
-                    (it.goal.equals(userGoal, true) || it.goal.equals("any", true)) &&
-                    (it.split.equals(splitKey, true) || it.split.equals("any", true)) &&
-                    (it.condition.equals(userCondition, true) || it.condition.equals("any", true))
+        // If you allow combos, you can send "SPLITS" as comma-separated then:
+        val splitsCsv = intent.getStringExtra("SPLITS") // e.g., "push,pull,legs"
+        val workoutTips = if (!splitsCsv.isNullOrBlank()) {
+            TipsHelper.getWorkoutTips(tips, splitsCsv.split(',').map { it.trim() }, focusRaw)
+        } else {
+            TipsHelper.getWorkoutTips(tips, splitRaw, focusRaw)
         }
+        val recoveryTips = if (!splitsCsv.isNullOrBlank()) {
+            TipsHelper.getRecoveryTips(tips, splitsCsv.split(',').map { it.trim() }, focusRaw)
+        } else {
+            TipsHelper.getRecoveryTips(tips, splitRaw, focusRaw)
+        }
+
+        findViewById<TextView>(R.id.workoutTip).text =
+            (workoutTips.randomOrNull() ?: Tips(id=-1, category="workout", tip="No workout tips available.")).tip
+
         findViewById<TextView>(R.id.recoveryTip).text =
-            recoveryTips.randomOrNull()?.tip ?: "No recovery tips available for your plan yet."
+            (recoveryTips.randomOrNull() ?: Tips(id=-1, category="recovery", tip="No recovery tips available.")).tip
     }
 
     private fun mapGoalToCsv(userGoal: String): String = when (userGoal.lowercase()) {

@@ -18,8 +18,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.material3.Button
-import androidx.wear.compose.material.Button
 import com.example.fitquest.utils.TipsHelper
 import com.example.fitquest.utils.TipsLoader
 import java.io.BufferedReader
@@ -54,7 +52,6 @@ import android.graphics.drawable.ColorDrawable
 import androidx.appcompat.content.res.AppCompatResources
 import android.widget.EditText
 import com.example.fitquest.R
-
 class MacroActivity : AppCompatActivity() {
 
     private var currentUserId: Int = -1
@@ -218,36 +215,40 @@ class MacroActivity : AppCompatActivity() {
             window.navigationBarColor = Color.TRANSPARENT
         }
 
-        // ✅ Get extras (coming from Workout/Dashboard)
-        val rawGoal = intent.getStringExtra("GOAL") ?: "any"
-        val userGoal = TipsHelper.mapGoalToCsv(rawGoal) // normalize to match CSV ("weight_loss", "muscle_gain", "endurance")
-        val rawSplit = intent.getStringExtra("SPLIT") ?: "any"
-        val splitKey = TipsHelper.mapSplitToCsv(rawSplit)
-        val userCondition = intent.getStringExtra("HEALTH_CONDITION") ?: "any"
-        val dietType = intent.getStringExtra("DIET_TYPE") ?: ""
+        // --- Tips inputs for MACRO category ---
+        val goalRaw = intent.getStringExtra("GOAL")               // may be null; helper maps null → "any"
+        val activityRaw = intent.getStringExtra("ACTIVITY_LEVEL") // may be null; helper maps null → "any"
 
-        Log.d("MacroDebug", "Raw Goal: $rawGoal | Mapped Goal: $userGoal | Split: $splitKey | Condition: $userCondition")
+// For log clarity, also show normalized forms:
+        val goalNorm = TipsHelper.mapGoalToCsv(goalRaw)
+        val actNorm  = TipsHelper.mapActivityToCsv(activityRaw)
+        Log.d("MacroDebug", "Goal raw='$goalRaw' norm='$goalNorm' | Activity raw='$activityRaw' norm='$actNorm'")
 
-        // Load tips and debug
+// Load tips and filter
         val tips = TipsLoader.loadTips(this)
         Log.d("MacroDebug", "Loaded tips count=${tips.size}")
-        tips.take(10).forEach { Log.d("MacroDump", "id=${it.id} cat='${it.category}' goal='${it.goal}' split='${it.split}' cond='${it.condition}' tip='${it.tip}'") }
 
-// get macro tips using the helper (with fallback)
-        val macroTips = TipsHelper.getMacroTips(tips, userGoal, userCondition)
-        Log.d("MacroDebug", "Filtered macro tips count=${macroTips.size} for mappedGoal='$userGoal' condition='$userCondition'")
+        val macroTips = TipsHelper.getMacroTips(tips, goalRaw, activityRaw)
+        Log.d("MacroDebug", "Filtered macro tips count=${macroTips.size} goal='$goalNorm' activity='$actNorm'")
 
-        val macroTipText = findViewById<TextView>(R.id.macroTip)
-        if (macroTips.isNotEmpty()) {
-            val tipOfMacro = macroTips.random()
-            macroTipText.text = tipOfMacro.tip
-            Log.d("MacroDebug", "Showing macro tip: ${tipOfMacro.tip}")
-        } else {
-            macroTipText.text = "No macro tips available for your plan yet."
-            Log.d("MacroDebug", "No macro tips found for Goal='$userGoal', Condition='$userCondition'")
-        }
+// Show one macro tip (or a friendly fallback)
+        findViewById<TextView>(R.id.macroTip).text =
+            macroTips.randomOrNull()?.tip ?: "No macro tips available for your plan yet."
+
         setupNavigationBar()
     }
+
+
+    private fun displayMacroTip() {
+        val tips = TipsLoader.loadTips(this)
+        val goalRaw = intent.getStringExtra("GOAL")
+        val actRaw  = intent.getStringExtra("ACTIVITY_LEVEL")
+
+        val macro = TipsHelper.getMacroTips(tips, goalRaw, actRaw)
+        val fallback = "No macro tips available."
+        findViewById<TextView>(R.id.macroTip).text = (macro.randomOrNull()?.tip ?: fallback)
+    }
+
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
