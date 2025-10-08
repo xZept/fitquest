@@ -345,6 +345,18 @@ class MacroActivity : AppCompatActivity() {
                 val doneCarbs    = totals.carbohydrate.roundToInt()
                 val doneFat      = totals.fat.roundToInt()
 
+                // Set values for each label
+                val proteinValue = findViewById<TextView>(R.id.protein_total)
+                val carbsValue = findViewById<TextView>(R.id.carbs_total)
+                val fatsValue = findViewById<TextView>(R.id.fat_total)
+                val caloriesValue = findViewById<TextView>(R.id.calories_total)
+
+                proteinValue.text = calculateRemaining(goalProtein,doneProtein)
+                carbsValue.text = calculateRemaining(goalCarbs, doneCarbs)
+                fatsValue.text = calculateRemaining(goalFat, doneFat)
+                caloriesValue.text = calculateRemaining(goalCalories, doneCalories)
+
+
                 val ok   = ContextCompat.getColor(this@MacroActivity, R.color.progress_ok)
                 val over = ContextCompat.getColor(this@MacroActivity, R.color.progress_over)
 
@@ -751,6 +763,16 @@ class MacroActivity : AppCompatActivity() {
             }
 
             dialog.show()
+        }
+    }
+
+    private fun calculateRemaining(goal: Int, done: Int): String {
+        val remaining = goal - done
+        if (remaining >= 0) {
+            return "${remaining} left"
+        }
+        else {
+            return "${-remaining} over"
         }
     }
 

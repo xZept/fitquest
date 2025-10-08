@@ -55,7 +55,7 @@ class FitQuestApp : Application() {
     private fun scheduleMidnightMacroSnapshot() {
         val zone = ZoneId.of("Asia/Manila")
         val now = ZonedDateTime.now(zone)
-        val nextRun = now.toLocalDate().plusDays(1).atTime(0, 0).atZone(zone)
+        val nextRun = now.toLocalDate().plusDays(1).atTime(23, 59).atZone(zone)
         val initialDelay = java.time.Duration.between(now, nextRun).toMinutes()
 
         val request = PeriodicWorkRequestBuilder<MidnightMacroSnapshotWorker>(

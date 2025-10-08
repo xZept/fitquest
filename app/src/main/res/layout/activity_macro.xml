@@ -162,8 +162,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Calories"
+                        android:layout_margin="8sp"
                         android:textColor="@color/white"
-                        android:textSize="16sp"
+                        android:textSize="18sp"
                         app:layout_alignSelf="center" />
 
 
@@ -192,8 +193,8 @@
                         android:id="@+id/protein_total"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
                         android:text="-"
+                        android:textStyle="bold"
                         android:textColor="@color/white"
                         android:textSize="18sp" />
 
@@ -202,7 +203,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="8dp"
-                        android:text="Protein"
+                        android:text="Protein (g)"
                         android:textColor="@color/white"
                         android:textSize="18sp" />
 
@@ -216,8 +217,8 @@
                         android:id="@+id/carbs_total"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
                         android:text="-"
+                        android:textStyle="bold"
                         android:textColor="@color/white"
                         android:textSize="18sp" />
 
@@ -226,7 +227,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="8dp"
-                        android:text="Carbohydrate"
+                        android:text="Carbohydrate (g)"
                         android:textColor="@color/white"
                         android:textSize="18sp" />
 
@@ -240,8 +241,8 @@
                         android:id="@+id/fat_total"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="8dp"
                         android:text="-"
+                        android:textStyle="bold"
                         android:textColor="@color/white"
                         android:textSize="18sp" />
 
@@ -250,7 +251,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="8dp"
-                        android:text="Fat"
+                        android:text="Fat (g)"
                         android:textColor="@color/white"
                         android:textSize="18sp" />
                 </com.google.android.flexbox.FlexboxLayout>
