@@ -36,7 +36,7 @@ class FoodHistory : AppCompatActivity() {
     // Create the adapter
     private val diaryAdapter = MacroDiaryAdapter { item ->
         // Handle item click (toast for now)
-        Toast.makeText(this, "Clicked ${item.dayKey}", Toast.LENGTH_SHORT).show()
+//        Toast.makeText(this, "Clicked ${item.dayKey}", Toast.LENGTH_SHORT).show()
     }
 
     private lateinit var pressAnim: android.view.animation.Animation

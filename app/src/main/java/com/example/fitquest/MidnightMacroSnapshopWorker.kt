@@ -20,8 +20,10 @@ class MidnightMacroSnapshotWorker(
             ?: return Result.success() // no user yet
 
         val zone = ZoneId.of("Asia/Manila")
-        val yesterday = LocalDate.now(zone).minusDays(1)
-        val dayKey = yesterday.year * 10000 + yesterday.monthValue * 100 + yesterday.dayOfMonth
+        // Log daily macros every 11:59 PM
+        val targetDate = LocalDate.now(zone)
+        val dayKey = targetDate.year * 10000 + targetDate.monthValue * 100 + targetDate.dayOfMonth
+
 
         // Avoid duplicates
         db.macroDiaryDao().get(userId, dayKey)?.let { return Result.success() }
