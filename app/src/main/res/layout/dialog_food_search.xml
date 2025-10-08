@@ -1,13 +1,21 @@
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:padding="12dp"
-    app:cardCornerRadius="20dp">
+    android:layout_height="match_parent"
+    app:cardBackgroundColor="@android:color/transparent"
+    app:cardUseCompatPadding="false"
+    app:cardPreventCornerOverlap="false">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_food_search"
+        android:padding="12dp">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="match_parent"
         android:orientation="vertical">
 
         <!-- Search field -->
@@ -17,7 +25,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="Search foods"
-            app:endIconMode="clear_text">
+            app:endIconMode="clear_text"
+            app:boxStrokeColor="@color/til_outline_yellow"
+            app:boxStrokeErrorColor="@color/til_outline_yellow"
+            app:hintTextColor="@color/til_outline_yellow"
+            app:endIconTint="@color/til_outline_yellow"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="2dp">>
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_search"
@@ -40,7 +54,7 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_results"
             android:layout_width="match_parent"
-            android:layout_height="400dp"
+            android:layout_height="match_parent"
             android:overScrollMode="ifContentScrolls"
             android:paddingTop="8dp" />
 
@@ -53,5 +67,6 @@
             android:padding="16dp"
             android:gravity="center"
             android:visibility="gone" />
-    </LinearLayout>
+        </LinearLayout>
+    </FrameLayout>
 </com.google.android.material.card.MaterialCardView>
