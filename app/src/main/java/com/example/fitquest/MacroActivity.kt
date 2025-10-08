@@ -245,6 +245,8 @@ class MacroActivity : AppCompatActivity() {
         setupNavigationBar()
     }
 
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+
     private fun setupNavigationBar() {
         findViewById<ImageView>(R.id.nav_icon_workout).setOnClickListener {
             it.startAnimation(pressAnim)
@@ -268,46 +270,49 @@ class MacroActivity : AppCompatActivity() {
     private fun addMealToContainer(meal: MealItem, container: LinearLayout) {
         val mealView = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(16, 16, 16, 16)
-            setBackgroundResource(android.R.drawable.dialog_holo_light_frame)
+            setPadding(dp(18), dp(10), dp(18), dp(10))
+            setBackgroundResource(R.drawable.container_general)
+            isClickable = true
+            isFocusable = true
+
+            val attrs = intArrayOf(android.R.attr.selectableItemBackground)
+            val typed = obtainStyledAttributes(attrs)
+            foreground = typed.getDrawable(0)
+            typed.recycle()
         }
 
         val nameText = TextView(this).apply {
             text = meal.mealName
-            textSize = 16f
+            textSize = 20f
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
-
         val calorieText = TextView(this).apply {
             text = "${meal.calories} kcal"
-            textSize = 14f
+            textSize = 15f
         }
 
         mealView.addView(nameText)
         mealView.addView(calorieText)
 
-        val params = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        params.setMargins(0, 0, 0, 16)
-
         mealView.setOnLongClickListener {
-            val builder = android.app.AlertDialog.Builder(this)
-            builder.setTitle(meal.mealName)
-            builder.setMessage("What do you want to do?")
-            builder.setPositiveButton("Delete") { dialog, _ ->
-                container.removeView(mealView)
-                dialog.dismiss()
-            }
-            builder.setNegativeButton("Edit") { dialog, _ -> dialog.dismiss() }
-            builder.setNeutralButton("Cancel") { dialog, _ -> dialog.dismiss() }
-            builder.show()
+            android.app.AlertDialog.Builder(this)
+                .setTitle(meal.mealName)
+                .setMessage("What do you want to do?")
+                .setPositiveButton("Delete") { d, _ -> container.removeView(mealView); d.dismiss() }
+                .setNegativeButton("Edit") { d, _ -> d.dismiss() }
+                .setNeutralButton("Cancel") { d, _ -> d.dismiss() }
+                .show()
             true
         }
 
+        val params = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(8) }
+
         container.addView(mealView, params)
     }
+
 
     private fun refreshTodayTotals() {
         if (currentUserId <= 0) return
@@ -449,14 +454,18 @@ class MacroActivity : AppCompatActivity() {
         for (row in rows) {
             val v = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
-                setPadding(16, 16, 16, 16)
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                setBackgroundResource(R.drawable.container_general)   // 👈 your image
+                isClickable = true
+                isFocusable = true
 
-                // ripple on press
+                // ripple on press (keeps your image as background)
                 val attrs = intArrayOf(android.R.attr.selectableItemBackground)
                 val typed = obtainStyledAttributes(attrs)
                 foreground = typed.getDrawable(0)
                 typed.recycle()
             }
+
             val name = TextView(this).apply {
                 text = (row.foodName ?: "Food #${row.log.foodId}") + " • ${row.log.grams.toInt()}g"
                 textSize = 15f
@@ -466,19 +475,27 @@ class MacroActivity : AppCompatActivity() {
                 text = "${row.log.calories.toInt()} kcal"
                 textSize = 14f
             }
+
             v.addView(name)
             v.addView(kcal)
 
-            //  Long press
+            // Long press actions
             v.setOnLongClickListener {
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                 showFoodItemActionsDialog(row)
                 true
             }
 
-            container.addView(v)
+            // margin between items
+            val lp = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { topMargin = dp(8) }
+
+            container.addView(v, lp)
         }
     }
+
 
     private fun showFoodItemActionsDialog(row: com.example.fitquest.database.FoodLogRow) {
         val title   = row.foodName ?: "Food #${row.log.foodId}"
