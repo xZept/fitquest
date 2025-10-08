@@ -50,6 +50,8 @@ import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.slider.RangeSlider
+import android.graphics.drawable.ColorDrawable
+
 
 class MacroActivity : AppCompatActivity() {
 
@@ -638,6 +640,17 @@ class MacroActivity : AppCompatActivity() {
                     com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog
                 )
             ).setView(view).create()
+
+            dialog.setOnShowListener {
+                // Make the dialog window fully transparent
+                dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+                // The builder wraps your view in a FrameLayout with its own bg + paddings.
+                (view.parent as? ViewGroup)?.apply {
+                    setBackgroundColor(Color.TRANSPARENT)   // remove gray surface
+                    setPadding(0, 0, 0, 0)                  // remove default insets
+                }
+            }
 
             btnCancel.setOnClickListener { it.startAnimation(pressAnim); dialog.dismiss() }
             btnSave.setOnClickListener {

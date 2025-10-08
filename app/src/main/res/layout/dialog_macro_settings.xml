@@ -6,105 +6,104 @@
     android:layout_height="wrap_content"
     android:fillViewport="true"
     android:clickable="true"
-    android:focusableInTouchMode="true">
+    android:focusableInTouchMode="true"
+    android:fadingEdgeLength="0dp"
+    android:overScrollMode="never"
+    android:background="@android:color/transparent">
 
     <LinearLayout
         android:id="@+id/root"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="@drawable/bg_settings"
+        android:background="@drawable/bg_macro_plan"
         android:paddingHorizontal="40dp"
         android:paddingTop="60dp"
         android:paddingBottom="24dp">
 
-        <!-- Title -->
-        <TextView
-            android:id="@+id/tv_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Macro Plan"
-            android:textColor="#111827"
-            android:textStyle="bold"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+    <!-- Calories info (read-only hint) -->
+    <TextView
+        android:id="@+id/tv_calories_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Calories: —"
+        android:textColor="#6B7280"
+        android:textSize="12sp"
+        android:layout_marginBottom="12dp" />
 
-        <!-- Calories info (read-only hint) -->
+    <!-- Summary line (percent + grams) -->
+    <TextView
+        android:id="@+id/tv_summary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Protein —% (—g) • Fat —% (—g) • Carbs —% (—g)"
+        android:textColor="#111827"
+        android:textSize="14sp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Labels row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="2dp">
         <TextView
-            android:id="@+id/tv_calories_hint"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Calories: —"
-            android:textColor="#6B7280"
+            android:layout_weight="1"
+            android:text="Protein"
             android:textSize="12sp"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Summary line (percent + grams) -->
+            android:textColor="#6B7280"/>
         <TextView
-            android:id="@+id/tv_summary"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:text="Protein —% (—g) • Fat —% (—g) • Carbs —% (—g)"
-            android:textColor="#111827"
-            android:textSize="14sp"
-            android:layout_marginBottom="8dp" />
-
-        <!-- Labels row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="2dp">
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Protein"
-                android:textSize="12sp"
-                android:textColor="#6B7280"/>
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Fat"
-                android:gravity="center_horizontal"
-                android:textSize="12sp"
-                android:textColor="#6B7280"/>
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Carbs"
-                android:gravity="end"
-                android:textSize="12sp"
-                android:textColor="#6B7280"/>
-        </LinearLayout>
-
-        <!-- Two-thumb RangeSlider splitting 0..100 into P | F | C -->
-        <com.google.android.material.slider.RangeSlider
-            android:id="@+id/rs_macro"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="4dp"
-            android:valueFrom="0"
-            android:valueTo="100"
-            android:stepSize="1"
-            app:values="@array/macro_initial_values"/>
-
-        <!-- Helper -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Drag the two handles. The three segments always add to 100%."
-            android:textColor="#6B7280"
+            android:layout_weight="1"
+            android:text="Fat"
+            android:gravity="center_horizontal"
             android:textSize="12sp"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="16dp" />
+            android:textColor="#6B7280"/>
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Carbs"
+            android:gravity="end"
+            android:textSize="12sp"
+            android:textColor="#6B7280"/>
+    </LinearLayout>
 
-        <!-- Footer: reuse your image buttons -->
+    <!-- Two-thumb RangeSlider splitting 0..100 into P | F | C -->
+    <com.google.android.material.slider.RangeSlider
+        android:id="@+id/rs_macro"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="4dp"
+        android:valueFrom="0"
+        android:valueTo="100"
+        android:stepSize="1"
+        app:values="@array/macro_initial_values"/>
+
+    <!-- Helper -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Drag the two handles. The three segments always add to 100%."
+        android:textColor="#6B7280"
+        android:textSize="12sp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Footer: same pattern as dialog_settings -->
+    <LinearLayout
+        android:id="@+id/footer_buttons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        android:orientation="vertical">
+
+        <!-- Top row: Cancel + Save -->
         <LinearLayout
-            android:id="@+id/footer_buttons"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -133,5 +132,19 @@
                 android:padding="0dp" />
         </LinearLayout>
 
+        <!-- Optional second row like dialog_settings (remove if not needed) -->
+        <!--
+        <ImageButton
+            android:id="@+id/btn_reset"
+            android:layout_width="96dp"
+            android:layout_height="32dp"
+            android:layout_gravity="start"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/button_reset"
+            android:adjustViewBounds="true"
+            android:padding="0dp" />
+        -->
     </LinearLayout>
-</ScrollView>
+
+</LinearLayout>
+    </ScrollView>

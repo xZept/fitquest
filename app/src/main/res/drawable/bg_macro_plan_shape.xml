@@ -1,0 +1,18 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer border (maroon) -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#3B0F0F"/>
+            <corners android:radius="12dp"/>
+        </shape>
+    </item>
+
+    <!-- Inner panel -->
+    <item android:left="3dp" android:top="3dp" android:right="3dp" android:bottom="3dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#F3F4F6"/> <!-- your light fill -->
+            <stroke android:width="2dp" android:color="#3B0F0F"/>
+            <corners android:radius="10dp"/>
+        </shape>
+    </item>
+</layer-list>
