@@ -32,6 +32,12 @@ import kotlinx.coroutines.withContext
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.roundToInt
+import com.example.fitquest.repo.ExerciseHelpRepo
+import com.example.fitquest.repo.ExerciseHelp
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
+import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
+import com.example.fitquest.guides.ExerciseGuides
 
 class WorkoutSessionActivity : AppCompatActivity() {
 
@@ -99,6 +105,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
     // current monster identifiers
     private var currentMonsterSprite: String = "monster_slime"
     private var currentMonsterCode: String = "slime"
+    private lateinit var btnExerciseHelp: ImageButton
 
     private lateinit var pressAnim: android.view.animation.Animation
 
@@ -108,6 +115,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
         hideSystemBars()
 
         db = AppDatabase.getInstance(applicationContext)
+
+        ExerciseGuides.ensureLoaded(applicationContext)
 
         // bind (top)
         ivMonster = findViewById(R.id.iv_monster)
@@ -125,6 +134,12 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         cardBg = findViewById(R.id.card_bg)
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
+
+        tvExercise.setOnClickListener {
+            showExerciseGuideDialog(tvExercise.text?.toString().orEmpty())
+        }
+
+
 
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@WorkoutSessionActivity).first()
@@ -203,6 +218,61 @@ class WorkoutSessionActivity : AppCompatActivity() {
         }
     }
 
+    private fun showExerciseGuideDialog(exName: String) {
+        val guide = ExerciseGuides.findByName(exName)
+        if (guide == null) {
+            Toast.makeText(this, "No guide found for \"$exName\".", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val view = layoutInflater.inflate(R.layout.dialog_exercise_guide, null)
+        val youTubePlayerView = view.findViewById<YouTubePlayerView>(R.id.youtube_player_view)
+        val tvDesc = view.findViewById<TextView>(R.id.tv_desc)
+        val tvInstr = view.findViewById<TextView>(R.id.tv_instr)
+
+        tvDesc.text = guide.description?.takeIf { it.isNotBlank() } ?: "No description available."
+        tvInstr.text = guide.instructions?.takeIf { it.isNotBlank() } ?: "No instructions available."
+
+        // Extract video id safely
+        val videoId = extractYoutubeId(guide.youtube)
+        if (videoId == null) {
+            Toast.makeText(this, "No video found for \"$exName\".", Toast.LENGTH_SHORT).show()
+        } else {
+            lifecycle.addObserver(youTubePlayerView)
+            youTubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
+                override fun onReady(player: YouTubePlayer) {
+                    player.loadVideo(videoId, 0f)
+                }
+            })
+        }
+
+        val dlg = AlertDialog.Builder(this)
+            .setView(view)
+            .setPositiveButton("Close", null)
+            .create()
+
+        dlg.setOnDismissListener { youTubePlayerView.release() }
+        dlg.show()
+    }
+
+    private fun extractYoutubeId(url: String?): String? {
+        if (url.isNullOrBlank()) return null
+        return try {
+            val uri = android.net.Uri.parse(url)
+            val host = uri.host ?: return null
+            when {
+                host.contains("youtu.be", true) -> uri.lastPathSegment
+                host.contains("youtube.com", true) -> {
+                    uri.getQueryParameter("v")
+                        ?: uri.pathSegments.windowed(2, 1, true)
+                            .firstOrNull { it.size == 2 && it[0].equals("embed", true) }
+                            ?.get(1)
+                }
+                else -> null
+            }
+        } catch (_: Exception) { null }
+    }
+
     /** Try to infer a useful focus string for the tips dialog if caller didn't pass SESSION_FOCUS. */
     private fun inferSessionFocus(): String {
         val split = (activeQuest.split ?: "").lowercase(Locale.getDefault())
@@ -230,6 +300,77 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 .show(supportFragmentManager, "warmup_tips")
         }
     }
+
+    private fun showExerciseHelpDialog() {
+        if (exerciseIndex !in items.indices) return
+        val ex = items[exerciseIndex]
+
+        // Load from CSVs on a background thread
+        lifecycleScope.launch {
+            val help = withContext(Dispatchers.IO) {
+                // If your QuestExercise has an ID, pass it; otherwise pass null
+                val exId: String? = null // replace if you have one, e.g., ex.id?.toString()
+                ExerciseHelpRepo.find(this@WorkoutSessionActivity, exId, ex.name)
+            }
+
+            if (help == null || (help.youtubeUrl.isNullOrBlank() && help.description.isNullOrBlank() && help.instructions.isNullOrBlank())) {
+                Toast.makeText(this@WorkoutSessionActivity, "No guide found for ${ex.name}.", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            val view = layoutInflater.inflate(R.layout.dialog_exercise_help, null)
+            val youTubePlayerView = view.findViewById<YouTubePlayerView>(R.id.youtube_player_view)
+            val tvDescTitle = view.findViewById<TextView>(R.id.tv_desc_title)
+            val tvDescription = view.findViewById<TextView>(R.id.tv_description)
+            val tvInstrTitle = view.findViewById<TextView>(R.id.tv_instr_title)
+            val tvInstructions = view.findViewById<TextView>(R.id.tv_instructions)
+            val btnClose = view.findViewById<ImageButton>(R.id.btn_close_help)
+
+            // Description / instructions
+            if (help.description.isNullOrBlank()) {
+                tvDescTitle.visibility = View.GONE
+                tvDescription.visibility = View.GONE
+            } else {
+                tvDescription.text = help.description
+            }
+            if (help.instructions.isNullOrBlank()) {
+                tvInstrTitle.visibility = View.GONE
+                tvInstructions.visibility = View.GONE
+            } else {
+                tvInstructions.text = help.instructions
+            }
+
+            // YouTube video
+            lifecycle.addObserver(youTubePlayerView)
+
+            help.youtubeUrl?.let { url ->
+                val videoId = extractYoutubeId(url)
+                if (videoId != null) {
+                    youTubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
+                        override fun onReady(player: YouTubePlayer) {
+                            player.loadVideo(videoId, 0f)
+                        }
+                    })
+                } else {
+                    // no valid video id -> hide player if nothing to show
+                    youTubePlayerView.visibility = View.GONE
+                }
+            } ?: run {
+                youTubePlayerView.visibility = View.GONE
+            }
+
+            val dlg = androidx.appcompat.app.AlertDialog.Builder(this@WorkoutSessionActivity)
+                .setView(view)
+                .setCancelable(true)
+                .create()
+
+            dlg.setOnDismissListener { youTubePlayerView.release() }
+            btnClose.setOnClickListener { dlg.dismiss() }
+            dlg.show()
+        }
+    }
+
+
 
     private fun buildAnim(
         @DrawableRes resId: Int,

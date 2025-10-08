@@ -6,6 +6,12 @@
     android:background="@drawable/bg_workout">
 
     <!-- Main vertical content -->
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="tv_exercise" />
+
     <LinearLayout
         android:id="@+id/content_column"
         android:layout_width="match_parent"

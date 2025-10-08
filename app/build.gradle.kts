@@ -52,6 +52,7 @@ android {
 }
 
 dependencies {
+    implementation("com.opencsv:opencsv:5.9")
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material)
