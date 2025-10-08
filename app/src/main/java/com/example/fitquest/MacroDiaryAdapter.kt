@@ -35,9 +35,9 @@ class MacroDiaryAdapter(
         fun bind(item: MacroDiary) {
             tvDate.text = formatDayKey(item.dayKey).toString()
             tvCalories.text = "${item.calories} kcal"
-            tvMacros.text = "P ${item.protein}g • C ${item.carbs}g • F ${item.fat}g"
+            tvMacros.text = "P: ${item.protein}g | C: ${item.carbs}g | F: ${item.fat}g"
             tvGoalCalories.text = "${item.planCalories} kcal"
-            tvGoalMacros.text = "P ${item.planProtein}g • C ${item.planCarbs}g • F ${item.planFat}g"
+            tvGoalMacros.text = "P: ${item.planProtein}g | C: ${item.planCarbs}g | F: ${item.planFat}g"
 
             itemView.setOnClickListener { onClick(item) }
         }
