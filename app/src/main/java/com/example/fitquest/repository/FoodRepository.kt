@@ -174,6 +174,57 @@ class FoodRepository(
         previewCache[fdcId] = out
         out
     }
+
+    suspend fun availableApiPortions(fdcId: Long): List<ApiPortion> = withContext(Dispatchers.IO) {
+        val d = api.getFood(fdcId)
+
+        fun isBadLabel(raw: String): Boolean {
+            val t = raw.trim()
+            if (t.isEmpty()) return true
+            // Pure numeric FNDDS portion codes like 90000/62772/40016
+            if (t.all { it.isDigit() }) return true
+            return false
+        }
+        fun cleanLabel(raw: String) = raw.trim().replace(Regex("\\s+"), " ")
+
+        val portions = d.foodPortions
+            .mapNotNull { p ->
+                val g = p.gramWeight ?: return@mapNotNull null
+
+                val desc = p.portionDescription?.trim().orEmpty()
+                val mod  = p.modifier?.trim().orEmpty()
+
+                val label = when {
+                    desc.isNotBlank() && !isBadLabel(desc) -> cleanLabel(desc)
+                    mod.isNotBlank()  && !isBadLabel(mod)  -> cleanLabel(mod)
+                    else -> return@mapNotNull null
+                }
+
+                ApiPortion(label = label, gramsPerUnit = g)
+            }
+            .distinctBy { it.label.lowercase() to it.gramsPerUnit }
+            .sortedBy { it.label.lowercase() }
+
+        // --- Fallback: if the API has no household portions, offer grams ---
+        if (portions.isEmpty()) listOf(ApiPortion(label = "grams (g)", gramsPerUnit = 1.0))
+        else portions
+    }
+
+
+    suspend fun availableUnitsFor(fdcId: Long): List<MeasurementType> = withContext(Dispatchers.IO) {
+        // Ensure cached locally (same flow you use for getMacrosForMeasurement)
+        val detail = api.getFood(fdcId)
+        val foodId = db.foodDao().upsertKeepId(detail.toFoodEntity())  // persists food
+        var portions = db.portionDao().getForFood(foodId)
+        if (portions.isEmpty()) {
+            db.portionDao().insertAll(detail.toPortions(foodId))
+            portions = db.portionDao().getForFood(foodId)
+        }
+
+        // Only what API-derived portions gave us (+ GRAM baseline which is always present)
+        portions.map { it.measurementType }.distinct()
+    }
+
 }
 
 data class PreviewMacros(
@@ -184,6 +235,12 @@ data class PreviewMacros(
 
 // Simple holder for what the user typed/selected:
 data class MeasurementInput(val type: MeasurementType, val quantity: Double)
+
+// Keep/put this small DTO in the same file (near other small classes)
+data class ApiPortion(
+    val label: String,        // e.g., "1 leg", "1 oz yields", "cup, sliced"
+    val gramsPerUnit: Double  // grams for ONE unit of that label
+)
 
 data class PortionMacros(
     val calories: Double,

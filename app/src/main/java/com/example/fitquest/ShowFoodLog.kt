@@ -17,6 +17,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import androidx.lifecycle.lifecycleScope
 import com.example.fitquest.R
+import com.example.fitquest.data.repository.ApiPortion
 
 
 private val MEALS = listOf("Breakfast", "Lunch", "Dinner", "Snack")
@@ -32,12 +33,34 @@ fun Fragment.showLogFoodDialog(
 ) {
     val binding = DialogLogFoodBinding.inflate(LayoutInflater.from(requireContext()))
 
-    // dropdowns
-    val units = MeasurementType.entries.map { it.name }
-    binding.actvUnit.setAdapter(
-        ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, units)
-    )
-    binding.actvUnit.setText(defaultUnit.name, false)
+    var apiPortions: List<ApiPortion> = emptyList()
+
+
+    // Units: load only what the API actually provides for this food
+    binding.actvUnit.isEnabled = false
+    binding.actvUnit.setText("Loading units…", false)
+
+    viewLifecycleOwner.lifecycleScope.launch {
+        try {
+            apiPortions = repo.availableApiPortions(fdcId)
+            val labels: List<String> = apiPortions.map { it.label }
+
+            binding.actvUnit.setAdapter(
+                ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, labels)
+            )
+
+            val defaultLabel = labels.firstOrNull().orEmpty()
+            if (defaultLabel.isNotEmpty()) binding.actvUnit.setText(defaultLabel, false)
+
+            binding.tilUnit.error = if (labels.isEmpty()) "No available units for this food." else null
+            binding.actvUnit.isEnabled = labels.isNotEmpty()
+        } catch (t: Throwable) {
+            Log.e("LogFoodDialog", "Failed to load units", t)
+            binding.tilUnit.error = "Failed to load units."
+            binding.actvUnit.isEnabled = false
+        }
+    }
+
 
     binding.actvMeal.setAdapter(
         ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, MEALS)
@@ -80,21 +103,25 @@ fun Fragment.showLogFoodDialog(
             val mealText   = binding.actvMeal.text?.toString()?.trim().orEmpty()
 
             val amount = amountText.toDoubleOrNull()
-            val unit   = MeasurementType.tryParse(unitText)
+            val pickedApi = apiPortions.firstOrNull { ap -> ap.label.equals(unitText, ignoreCase = true) }
+            val enumUnit  = MeasurementType.tryParse(unitText)
 
             var ok = true
             if (amount == null || amount <= 0.0) { binding.tilAmount.error = "Enter a positive number"; ok = false } else binding.tilAmount.error = null
-            if (unit == null)                    { binding.tilUnit.error   = "Choose a unit"; ok = false }         else binding.tilUnit.error   = null
-            if (mealText.isBlank())              { binding.tilMeal.error   = "Choose a meal"; ok = false }         else binding.tilMeal.error   = null
+            if (pickedApi == null && enumUnit == null) { binding.tilUnit.error = "Choose a unit"; ok = false } else binding.tilUnit.error = null
+            if (mealText.isBlank()) { binding.tilMeal.error = "Choose a meal"; ok = false } else binding.tilMeal.error = null
             if (!ok) return@setOnClickListener
 
             addBtnImg.isEnabled = false
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
-                    val macros = repo.getMacrosForMeasurement(
-                        fdcId = fdcId,
-                        userInput = MeasurementInput(unit!!, amount!!)
-                    )
+                    val macros = if (pickedApi != null) {
+                        val grams = amount!! * pickedApi.gramsPerUnit
+                        repo.getMacrosForMeasurement(fdcId, MeasurementInput(MeasurementType.GRAM, grams))
+                    } else {
+                        repo.getMacrosForMeasurement(fdcId, MeasurementInput(enumUnit!!, amount!!))
+                    }
+
                     val foodId = repo.ensureLocalIdForFdc(fdcId)
                     val logId = repo.logIntake(
                         userId = userId,
@@ -102,19 +129,18 @@ fun Fragment.showLogFoodDialog(
                         grams = macros.resolvedGramWeight,
                         mealType = mealText.uppercase()
                     )
-                    onLogged(logId)
-                    dialog.dismiss()
+                    onLogged(logId); dialog.dismiss()
                 } catch (t: Throwable) {
                     addBtnImg.isEnabled = true
-                    android.util.Log.e("LogFoodDialog", "Failed to log", t)
+                    Log.e("LogFoodDialog", "Failed to log", t)
                 }
             }
         }
+
     }
 
     dialog.show()
 }
-
 
 // Overload activity
 fun FragmentActivity.showLogFoodDialog(
@@ -128,9 +154,33 @@ fun FragmentActivity.showLogFoodDialog(
 ) {
     val binding = DialogLogFoodBinding.inflate(LayoutInflater.from(this))
 
-    val units = MeasurementType.entries.map { it.name }
-    binding.actvUnit.setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, units))
-    binding.actvUnit.setText(defaultUnit.name, false)
+    // Units: load only what the API actually provides for this food
+    binding.actvUnit.isEnabled = false
+    binding.actvUnit.setText("Loading units…", false)
+
+    var apiPortions: List<ApiPortion> = emptyList()
+
+    lifecycleScope.launch {
+        try {
+            apiPortions = repo.availableApiPortions(fdcId)
+            val labels: List<String> = apiPortions.map { it.label }
+
+            binding.actvUnit.setAdapter(
+                ArrayAdapter<String>(this@showLogFoodDialog, android.R.layout.simple_list_item_1, labels)
+            )
+
+            val defaultLabel = labels.firstOrNull().orEmpty()
+            if (defaultLabel.isNotEmpty()) binding.actvUnit.setText(defaultLabel, false)
+
+            binding.tilUnit.error = if (labels.isEmpty()) "No available units for this food." else null
+            binding.actvUnit.isEnabled = labels.isNotEmpty()
+        } catch (t: Throwable) {
+            Log.e("LogFoodDialog", "Failed to load units", t)
+            binding.tilUnit.error = "Failed to load units."
+            binding.actvUnit.isEnabled = false
+        }
+    }
+
 
     binding.actvMeal.setAdapter(ArrayAdapter(this, android.R.layout.simple_list_item_1, MEALS))
     binding.actvMeal.setText(defaultMeal, false)
@@ -166,21 +216,25 @@ fun FragmentActivity.showLogFoodDialog(
             val mealText   = binding.actvMeal.text?.toString()?.trim().orEmpty()
 
             val amount = amountText.toDoubleOrNull()
-            val unit   = MeasurementType.tryParse(unitText)
+            val pickedApi = apiPortions.firstOrNull { ap -> ap.label.equals(unitText, ignoreCase = true) }
+            val enumUnit  = MeasurementType.tryParse(unitText)
 
             var ok = true
             if (amount == null || amount <= 0.0) { binding.tilAmount.error = "Enter a positive number"; ok = false } else binding.tilAmount.error = null
-            if (unit == null)                    { binding.tilUnit.error   = "Choose a unit"; ok = false }         else binding.tilUnit.error   = null
-            if (mealText.isBlank())              { binding.tilMeal.error   = "Choose a meal"; ok = false }         else binding.tilMeal.error   = null
+            if (pickedApi == null && enumUnit == null) { binding.tilUnit.error = "Choose a unit"; ok = false } else binding.tilUnit.error = null
+            if (mealText.isBlank()) { binding.tilMeal.error = "Choose a meal"; ok = false } else binding.tilMeal.error = null
             if (!ok) return@setOnClickListener
 
             addBtnImg.isEnabled = false
             lifecycleScope.launch {
                 try {
-                    val macros = repo.getMacrosForMeasurement(
-                        fdcId = fdcId,
-                        userInput = MeasurementInput(unit!!, amount!!)
-                    )
+                    val macros = if (pickedApi != null) {
+                        val grams = amount!! * pickedApi.gramsPerUnit
+                        repo.getMacrosForMeasurement(fdcId, MeasurementInput(MeasurementType.GRAM, grams))
+                    } else {
+                        repo.getMacrosForMeasurement(fdcId, MeasurementInput(enumUnit!!, amount!!))
+                    }
+
                     val foodId = repo.ensureLocalIdForFdc(fdcId)
                     val logId = repo.logIntake(
                         userId = userId,
@@ -188,11 +242,10 @@ fun FragmentActivity.showLogFoodDialog(
                         grams = macros.resolvedGramWeight,
                         mealType = mealText.uppercase()
                     )
-                    onLogged(logId)
-                    dialog.dismiss()
+                    onLogged(logId); dialog.dismiss()
                 } catch (t: Throwable) {
                     addBtnImg.isEnabled = true
-                    android.util.Log.e("LogFoodDialog", "Failed to log", t)
+                    Log.e("LogFoodDialog", "Failed to log", t)
                 }
             }
         }

@@ -73,10 +73,21 @@
                 "tsp" in mod  || "teaspoon" in mod -> PortionSpec(MeasurementType.TEASPOON,   1.0, g, false)
                 "fl oz" in mod                     -> PortionSpec(MeasurementType.FL_OUNCE,   1.0, g, false)
                 mod == "oz" || "ounce" in mod      -> PortionSpec(MeasurementType.OUNCE,      1.0, g, false)
-                "piece" in mod || "slice" in mod   -> PortionSpec(MeasurementType.PIECE,      1.0, g, true)
+
+                // Countable items (bananas, buns, eggs) often come as "1 small/medium/large", "1 whole", or "1 each"
+                "piece" in mod || "slice" in mod
+                        || "each" in mod
+                        || "whole" in mod
+                        || " small" in mod || " medium" in mod || " large" in mod
+                    -> PortionSpec(MeasurementType.PIECE, 1.0, g, true)
+
                 mod == "ml" || "ml" in mod         -> PortionSpec(MeasurementType.MILLILITER, 1.0, g, false)
-                else                                -> PortionSpec(MeasurementType.GRAM,     100.0, 100.0, false)
+
+                // Keep a safe fallback to GRAM so ambiguous things like "serving" DO NOT become PIECE
+                else                               -> PortionSpec(MeasurementType.GRAM, 100.0, 100.0, false)
             }
+
+
 
             portions += Portion(
                 portionId = 0L,
@@ -86,11 +97,6 @@
                 gramWeight = spec.grams,
                 isApproximate = spec.approx
             )
-        }
-
-        // Optional: default SANDOK for cooked rice
-        if (description.contains("rice", true) && description.contains("cooked", true)) {
-            portions += Portion(0L, foodId, MeasurementType.SANDOK, 1.0, 150.0, true)
         }
 
         return portions.distinctBy { Triple(it.measurementType, it.quantity, it.gramWeight) }
