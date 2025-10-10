@@ -49,7 +49,9 @@ data class UserProfile(
 data class UserSettings(
     @PrimaryKey val userId: Int,
     val restTimerSec: Int = 180,
-    val equipmentCsv: String = "" // pipe-joined names e.g. "dumbbell|bench"
+    val equipmentCsv: String = "", // pipe-joined names e.g. "dumbbell|bench"
+
+    val mandatoryRest: Boolean = false
 )
 
 // ----- User Wallet -----

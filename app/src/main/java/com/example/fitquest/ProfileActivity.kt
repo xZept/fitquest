@@ -442,7 +442,10 @@ class ProfileActivity : AppCompatActivity() {
         val tilTimer = view.findViewById<TextInputLayout>(R.id.til_timer)
         val etTimer = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.et_timer)
         val eqContainer = view.findViewById<GridLayout>(R.id.equipment_container)
+        val cbMandatory = view.findViewById<CheckBox>(R.id.cb_mandatory_rest)
 
+
+        CompoundButtonCompat.setButtonTintList(cbMandatory, checkboxTint())
 
         tilTimer.setDefaultHintTextColor(
             ContextCompat.getColorStateList(this, R.color.hint_label)!!
@@ -453,7 +456,10 @@ class ProfileActivity : AppCompatActivity() {
         // preload timer
         lifecycleScope.launch {
             val existing = db.userSettingsDao().getByUserId(userId)
-            withContext(Dispatchers.Main) { etTimer.setText(formatDuration(existing?.restTimerSec ?: 180)) }
+            withContext(Dispatchers.Main) {
+                etTimer.setText(formatDuration(existing?.restTimerSec ?: 180))
+                cbMandatory.isChecked = existing?.mandatoryRest ?: false
+            }
         }
 
         // build equipment list from CSV (canonicalized)
@@ -509,6 +515,8 @@ class ProfileActivity : AppCompatActivity() {
             val btnSave   = view.findViewById<ImageButton>(R.id.btn_save)
             val btnCancel = view.findViewById<ImageButton>(R.id.btn_cancel)
             val btnLogout = view.findViewById<ImageButton>(R.id.btn_logout)
+            val chosenCanon = checks.filter { it.isChecked }.map { it.tag as String }
+
 
             btnSave.setOnClickListener {
                 val seconds = parseDurationToSeconds(etTimer.text?.toString()?.trim() ?: "")
@@ -523,7 +531,8 @@ class ProfileActivity : AppCompatActivity() {
                         UserSettings(
                             userId = userId,
                             restTimerSec = seconds,
-                            equipmentCsv = chosenCanon.joinToString("|")
+                            equipmentCsv = chosenCanon.joinToString("|"),
+                            mandatoryRest = cbMandatory.isChecked
                         )
                     )
                     withContext(Dispatchers.Main) {

@@ -59,8 +59,14 @@
             android:text="Accepts seconds (180) or mm:ss (3:00). Range: 15s–20m."
             android:textColor="#6B7280"
             android:textSize="12sp"
-            android:layout_marginTop="6dp"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginTop="6dp" />
+
+        <CheckBox
+            android:id="@+id/cb_mandatory_rest"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Mandatory rest — you cannot skip rest periods"
+            android:textColor="#111827" />
 
         <TextView
             android:layout_width="wrap_content"

@@ -24,7 +24,7 @@ import androidx.room.TypeConverters
         MacroPlan::class,
         MacroDiary::class
     ],
-    version = 6,
+    version = 1,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

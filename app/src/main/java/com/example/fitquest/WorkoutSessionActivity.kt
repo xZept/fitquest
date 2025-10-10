@@ -69,6 +69,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private var restSeconds = 60
     private var isResting = false
 
+    private var mandatoryRest: Boolean = false
+
     // Sprite sheet animations
     private data class SpriteAnim(
         val drawable: com.example.fitquest.ui.widgets.SpriteSheetDrawable,
@@ -155,9 +157,11 @@ class WorkoutSessionActivity : AppCompatActivity() {
             withContext(Dispatchers.IO) { db.userWalletDao().ensure(userId) }
 
             // load user settings (rest timer) from Room
-            restSeconds = withContext(Dispatchers.IO) {
-                db.userSettingsDao().getByUserId(userId)?.restTimerSec ?: 180
+            val settings = withContext(Dispatchers.IO) {
+                db.userSettingsDao().getByUserId(userId)
             }
+            restSeconds   = settings?.restTimerSec   ?: 180
+            mandatoryRest = settings?.mandatoryRest ?: false
 
             // ----- Load the monster to display + set multiplier -----
             val latestMonster = withContext(Dispatchers.IO) {
@@ -1274,6 +1278,12 @@ class WorkoutSessionActivity : AppCompatActivity() {
         val ivBg = view.findViewById<ImageView>(R.id.iv_rest_bg)
         val tvCountdown = view.findViewById<TextView>(R.id.tv_rest_countdown)
         val btnSkip = view.findViewById<ImageButton>(R.id.btn_skip_rest)
+
+        if (mandatoryRest) {
+            btnSkip.visibility = View.GONE
+        } else {
+            btnSkip.visibility = View.VISIBLE
+        }
 
         // Build the looping spritesheet background (tweak rows/cols/fps to your sheet)
         val restBg = buildRestBgAnim(rows = 1, cols = 20, fps = 12)
