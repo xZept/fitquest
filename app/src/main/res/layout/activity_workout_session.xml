@@ -6,12 +6,6 @@
     android:background="@drawable/bg_workout">
 
     <!-- Main vertical content -->
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="tv_exercise" />
-
     <LinearLayout
         android:id="@+id/content_column"
         android:layout_width="match_parent"
@@ -30,18 +24,17 @@
             <!-- Monster HP bar -->
             <LinearLayout
                 android:id="@+id/hp_bar_container"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="top"
-                android:layout_marginTop="20dp"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
+                android:layout_gravity="top|end"
+                android:layout_marginTop="60dp"
+                android:layout_marginEnd="16dp"
                 android:orientation="vertical">
 
-                <!-- Background + progress + label stacked -->
+                <!-- Background + progress + label stacked, fixed width -->
                 <FrameLayout
                     android:id="@+id/hp_bar_frame"
-                    android:layout_width="match_parent"
+                    android:layout_width="@dimen/hp_bar_width"
                     android:layout_height="wrap_content">
 
                     <ImageView
@@ -52,7 +45,6 @@
                         android:scaleType="fitCenter"
                         android:adjustViewBounds="true" />
 
-                    <!-- progress sits inside the art's inner gutter -->
                     <ProgressBar
                         android:id="@+id/hp_bar"
                         style="?android:attr/progressBarStyleHorizontal"
@@ -66,7 +58,6 @@
                         android:progressTint="#EF4444"
                         android:progressBackgroundTint="#552222" />
 
-                    <!-- HP label over the background -->
                     <TextView
                         android:id="@+id/tv_hp"
                         android:layout_width="wrap_content"
@@ -82,8 +73,6 @@
                         android:shadowRadius="3" />
                 </FrameLayout>
             </LinearLayout>
-
-
 
             <!-- animation -->
             <ImageView

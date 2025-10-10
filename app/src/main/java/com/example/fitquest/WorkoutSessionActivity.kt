@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.util.Log
+import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
@@ -38,6 +39,8 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.YouTubePlayer
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.AbstractYouTubePlayerListener
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import com.example.fitquest.guides.ExerciseGuides
+import androidx.core.widget.addTextChangedListener
+
 
 class WorkoutSessionActivity : AppCompatActivity() {
 
@@ -71,6 +74,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private var mandatoryRest: Boolean = false
 
+
+
     // Sprite sheet animations
     private data class SpriteAnim(
         val drawable: com.example.fitquest.ui.widgets.SpriteSheetDrawable,
@@ -83,6 +88,9 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private var currentAnim: SpriteAnim? = null
 
     private var userSex: String = "male"
+
+    private var userWeightKg: Int? = null
+
 
     // HP
     private var totalSets = 1
@@ -162,6 +170,9 @@ class WorkoutSessionActivity : AppCompatActivity() {
             }
             restSeconds   = settings?.restTimerSec   ?: 180
             mandatoryRest = settings?.mandatoryRest ?: false
+
+            val profile = withContext(Dispatchers.IO) { db.userProfileDAO().getProfileByUserId(userId) }
+            userWeightKg = profile?.weight
 
             // ----- Load the monster to display + set multiplier -----
             val latestMonster = withContext(Dispatchers.IO) {
@@ -585,8 +596,9 @@ class WorkoutSessionActivity : AppCompatActivity() {
         btnComplete.alpha = if (resting) 0.5f else 1f
     }
 
-    /* ------------ logging dialog ------------ */
 
+
+    /* ------------ logging dialog ------------ */
     private fun promptLogThenCompleteSet() {
         val types = listOf("Bodyweight", "External load (kg)", "Assisted (-kg)", "Band level")
 
@@ -695,14 +707,81 @@ class WorkoutSessionActivity : AppCompatActivity() {
             setHintTextColor(Color.parseColor("#66000000"))
         }
 
+        val tvNudge = TextView(this).apply {
+            text = "Logging weight will help us track your progress."
+            setTextColor(Color.BLACK)
+            textSize = 12f
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            setPadding(0, (12 * d).toInt(), 0, 0)
+        }
+
+        val btnSave = ImageButton(this).apply {
+            contentDescription = "Save"
+            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_save))
+            setBackgroundColor(Color.TRANSPARENT)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                (56 * d).toInt()
+            )
+        }
+        // --- Enable/disable Save cleanly ---
+        fun setSaveEnabled(enabled: Boolean) {
+            btnSave.isEnabled = enabled
+            btnSave.isClickable = enabled
+            btnSave.alpha = if (enabled) 1f else 0.4f
+        }
+
+        // Validate required input per type
+        fun updateSaveEnabled() {
+            when (spType.selectedItem.toString()) {
+                "Bodyweight" -> {
+                    // uses profile weight; require it to exist and be > 0
+                    setSaveEnabled(userWeightKg != null && userWeightKg!! > 0)
+                }
+                "External load (kg)" -> {
+                    val n = etNumber.text.toString().trim().toDoubleOrNull()
+                    setSaveEnabled(n != null && n > 0.0)
+                }
+                "Assisted (-kg)" -> {
+                    val n = etNumber.text.toString().trim().toDoubleOrNull()
+                    setSaveEnabled(n != null && n > 0.0)
+                }
+                "Band level" -> {
+                    val label = etText.text.toString().trim()
+                    setSaveEnabled(label.isNotEmpty())   // kg estimate optional
+                }
+                else -> setSaveEnabled(false)
+            }
+        }
+
+        val btnRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_HORIZONTAL
+            setPadding(0, (8 * d).toInt(), 0, 0)
+            addView(btnSave)
+        }
+
+        etNumber.addTextChangedListener { updateSaveEnabled() }
+        etText.addTextChangedListener   { updateSaveEnabled() }
+        etBandKg.addTextChangedListener { updateSaveEnabled() } // optional, but harmless
+
+
+
         fun refreshUiForType() {
             when (spType.selectedItem.toString()) {
                 "Bodyweight" -> {
-                    etNumber.visibility = View.VISIBLE
-                    etNumber.hint = "Enter your body weight (kg) — optional"
+                    etNumber.visibility = View.GONE
                     etText.visibility = View.GONE
                     etBandKg.visibility = View.GONE
-                    tvHelp.text = "You can leave this blank if you don’t want to track bodyweight."
+
+                    // message + bigger size
+                    val msg = userWeightKg?.let {
+                        "We'll log your current profile weight: $it kg."
+                    } ?: "No profile weight set. We’ll log as ‘Bodyweight’ without a number."
+                    tvHelp.text = msg
+                    tvHelp.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)   // <-- change size here
                 }
                 "External load (kg)" -> {
                     etNumber.visibility = View.VISIBLE
@@ -726,40 +805,17 @@ class WorkoutSessionActivity : AppCompatActivity() {
                     tvHelp.text = "Band resistance varies by brand. Enter a label (color/level). Optional: add an estimated kg."
                 }
             }
+            updateSaveEnabled()
         }
         spType.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) = refreshUiForType()
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                refreshUiForType()
+                updateSaveEnabled()
+            }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-
         // ---------- Buttons INSIDE the container — as ImageButtons ----------
-        val btnRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, (16 * d).toInt(), 0, 0)
-        }
 
-        val btnSave = ImageButton(this).apply {
-            contentDescription = "Save"
-            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_save))
-            setBackgroundColor(Color.TRANSPARENT)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            adjustViewBounds = true
-            layoutParams = LinearLayout.LayoutParams(0, (56 * d).toInt(), 1f).apply {
-                marginEnd = (8 * d).toInt()
-            }
-        }
-
-        val btnSkip = ImageButton(this).apply {
-            contentDescription = "Skip"
-            setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_skip))
-            setBackgroundColor(Color.TRANSPARENT)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            adjustViewBounds = true
-            layoutParams = LinearLayout.LayoutParams(0, (56 * d).toInt(), 1f)
-        }
-
-        btnRow.addView(btnSave)
-        btnRow.addView(btnSkip)
 
         // Assemble content
         content.addView(lblHeader)
@@ -769,15 +825,18 @@ class WorkoutSessionActivity : AppCompatActivity() {
         content.addView(etNumber)
         content.addView(etText)
         content.addView(etBandKg)
+        content.addView(tvNudge)
         content.addView(btnRow)
-
         refreshUiForType()
+        updateSaveEnabled()
 
         // ---------- Dialog ----------
         val dlg = AlertDialog.Builder(this)
             .setView(panel)
-            .setCancelable(true)
+            .setCancelable(false)
             .create()
+
+        dlg.setCanceledOnTouchOutside(false)
 
         dlg.setOnShowListener {
             dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
@@ -791,8 +850,13 @@ class WorkoutSessionActivity : AppCompatActivity() {
             val type = spType.selectedItem.toString()
             val valueText: String = when (type) {
                 "Bodyweight" -> {
-                    val n = etNumber.text.toString().trim()
-                    if (n.isEmpty()) "Bodyweight" else "Bodyweight $n kg"
+                    val w = userWeightKg
+                    if (w != null && w > 0) {
+                        "Bodyweight $w kg"
+                    } else {
+                        Toast.makeText(this, "No profile weight set. Logged as ‘Bodyweight’.", Toast.LENGTH_SHORT).show()
+                        "Bodyweight"
+                    }
                 }
                 "External load (kg)" -> {
                     val n = etNumber.text.toString().trim()
@@ -843,28 +907,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 )
             }
 
-            dlg.dismiss()
-            onSetLogged()
-        }
-
-        btnSkip.setOnClickListener {
-            it.startAnimation(pressAnim)
-            lifecycleScope.launch(Dispatchers.IO) {
-                val ex = items[exerciseIndex]
-                val setNum = setIndex + 1
-                db.workoutSetLogDao().insert(
-                    WorkoutSetLog(
-                        sessionId = sessionRowId,
-                        exerciseName = ex.name,
-                        setNumber = setNum,
-                        repsMin = ex.repsMin,
-                        repsMax = ex.repsMax,
-                        loadType = "Skipped log",
-                        loadValueText = "",
-                        loggedAt = System.currentTimeMillis()
-                    )
-                )
-            }
             dlg.dismiss()
             onSetLogged()
         }
@@ -1038,7 +1080,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         val dlg = AlertDialog.Builder(this)
             .setView(panel)
-            .setCancelable(true)
+            .setCancelable(false)
             .create()
 
         dlg.setOnShowListener {
