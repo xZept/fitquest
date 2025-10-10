@@ -8,6 +8,11 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.map
 
 // Single app-wide DataStore instance
 val Context.dataStore by preferencesDataStore("user_prefs")
@@ -71,4 +76,16 @@ object DataStoreManager {
     suspend fun clearWarmupTipsForUser(context: Context, userId: Int) {
         context.dataStore.edit { prefs -> prefs.remove(warmupKey(userId)) }
     }
+
+    // ---- Generic string helpers ----
+    fun getString(context: Context, key: String): Flow<String?> {
+        val prefKey = stringPreferencesKey(key)
+        return context.dataStore.data.map { prefs -> prefs[prefKey] }
+    }
+
+    suspend fun setString(context: Context, key: String, value: String) {
+        val prefKey = stringPreferencesKey(key)
+        context.dataStore.edit { prefs -> prefs[prefKey] = value }
+    }
+
 }

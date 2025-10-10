@@ -82,14 +82,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:background="@drawable/container_user_info">
+                android:background="@drawable/container_user_fitness">
 
                 <!-- LEFT: profile image / illustration -->
                 <ImageView
                     android:id="@+id/iv_profile_photo"
                     android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:adjustViewBounds="true"
+                    android:layout_gravity="center_vertical"
                     android:contentDescription="Profile image"
                     android:src="@drawable/user_icon_male_sprite" />
 
@@ -98,7 +99,6 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:baselineAligned="false"
-                        android:gravity="center_vertical"
                         android:orientation="horizontal"
                         android:padding="12dp"
                         android:layout_marginStart="120dp">
@@ -108,7 +108,8 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:orientation="vertical"
+                        android:layout_gravity="center_vertical">
 
                         <!-- Name -->
                         <TextView
@@ -150,77 +151,6 @@
                                 android:textSize="20sp" />
                         </LinearLayout>
 
-                        <!-- Row 2: Height & Weight (inline like Age/Sex) -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:baselineAligned="false"
-                            android:orientation="horizontal">
-
-                            <!-- Column: Height -->
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="vertical"
-                                android:paddingEnd="8dp">
-
-                                <TextView
-                                    android:id="@+id/label_height"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginBottom="6dp"
-                                    android:labelFor="@id/et_height"
-                                    android:text="Height"
-                                    android:textColor="@color/white"
-                                    android:textSize="20sp" />
-
-                                <EditText
-                                    android:id="@+id/et_height"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="40dp"
-                                    android:background="@drawable/bg_edit_text"
-                                    android:hint="Height (cm)"
-                                    android:imeOptions="actionNext"
-                                    android:inputType="number"
-                                    android:padding="8dp"
-                                    android:textColor="@color/white"
-                                    android:textColorHint="#B3FFFFFF"
-                                    android:textSize="16sp" />
-                            </LinearLayout>
-
-                            <!-- Column: Weight -->
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="vertical"
-                                android:paddingStart="8dp">
-
-                                <TextView
-                                    android:id="@+id/label_weight"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginBottom="6dp"
-                                    android:labelFor="@id/et_weight"
-                                    android:text="Weight"
-                                    android:textColor="@color/white"
-                                    android:textSize="20sp" />
-
-                                <EditText
-                                    android:id="@+id/et_weight"
-                                    android:layout_width="match_parent"
-                                    android:layout_height="40dp"
-                                    android:background="@drawable/bg_edit_text"
-                                    android:hint="Weight (kg)"
-                                    android:imeOptions="actionDone"
-                                    android:inputType="numberDecimal"
-                                    android:padding="8dp"
-                                    android:textColor="@color/white"
-                                    android:textColorHint="#B3FFFFFF"
-                                    android:textSize="16sp" />
-                            </LinearLayout>
-                        </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </FrameLayout>
@@ -232,13 +162,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:background="@drawable/container_user_fitness">
+                android:background="@drawable/container_user_info">
 
                 <!-- Left image + Right content -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
+                    android:orientation="vertical"
                     android:padding="12dp"
                     android:gravity="center_vertical"
                     android:baselineAligned="false">
@@ -310,6 +240,151 @@
                                 android:popupBackground="@drawable/bg_spinner_popup"
                                 android:dropDownWidth="match_parent"
                                 android:dropDownVerticalOffset="8dp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Row 2: Height & Weight (inline like Age/Sex) -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp"
+                        android:paddingHorizontal="12dp">
+
+                        <!-- Column: Height -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:paddingEnd="8dp">
+
+                            <TextView
+                                android:id="@+id/label_height"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="6dp"
+                                android:labelFor="@id/et_height"
+                                android:text="Height"
+                                android:textColor="@color/white"
+                                android:textSize="20sp" />
+
+                            <EditText
+                                android:id="@+id/et_height"
+                                android:layout_width="match_parent"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_edit_text"
+                                android:hint="Height (cm)"
+                                android:imeOptions="actionNext"
+                                android:inputType="number"
+                                android:padding="8dp"
+                                android:textColor="@color/white"
+                                android:textColorHint="#B3FFFFFF"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+
+                        <!-- Column: Weight -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:paddingStart="8dp">
+
+                            <TextView
+                                android:id="@+id/label_weight"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="6dp"
+                                android:labelFor="@id/et_weight"
+                                android:text="Weight"
+                                android:textColor="@color/white"
+                                android:textSize="20sp" />
+
+                            <EditText
+                                android:id="@+id/et_weight"
+                                android:layout_width="match_parent"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_edit_text"
+                                android:hint="Weight (kg)"
+                                android:imeOptions="actionDone"
+                                android:inputType="numberDecimal"
+                                android:padding="8dp"
+                                android:textColor="@color/white"
+                                android:textColorHint="#B3FFFFFF"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- Row 3: BMI (calculated) & Goal Weight -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp"
+                        android:paddingHorizontal="12dp">
+
+                        <!-- Column: BMI (calculated, read-only) -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:paddingEnd="8dp">
+
+                            <TextView
+                                android:id="@+id/label_bmi"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="6dp"
+                                android:text="BMI"
+                                android:textColor="@color/white"
+                                android:textSize="20sp" />
+
+                            <!-- Read-only box style to match your inputs -->
+                            <TextView
+                                android:id="@+id/tv_bmi_value"
+                                android:layout_width="match_parent"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_edit_text"
+                                android:gravity="center_vertical"
+                                android:padding="8dp"
+                                android:text="—"
+                                android:textColor="@color/white"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+
+                        <!-- Column: Goal Weight (kg) -->
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical"
+                            android:paddingStart="8dp">
+
+                            <TextView
+                                android:id="@+id/label_goal_weight"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginBottom="6dp"
+                                android:text="Goal Weight"
+                                android:textColor="@color/white"
+                                android:textSize="20sp" />
+
+                            <EditText
+                                android:id="@+id/et_goal_weight"
+                                android:layout_width="match_parent"
+                                android:layout_height="40dp"
+                                android:background="@drawable/bg_edit_text"
+                                android:hint="Goal (kg)"
+                                android:imeOptions="actionDone"
+                                android:inputType="numberDecimal"
+                                android:padding="8dp"
+                                android:textColor="@color/white"
+                                android:textColorHint="#B3FFFFFF"
+                                android:textSize="16sp" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
