@@ -150,6 +150,18 @@ interface WorkoutSessionDao {
 
     @Query("SELECT * FROM workoutSession WHERE userId = :userId AND coinsEarned > 0 ORDER BY startedAt DESC")
     suspend fun getCompletedByUser(userId: Int): List<WorkoutSession>
+
+    data class BasicSession(
+        val id: Long,
+        val title: String?
+    )
+
+    @Query("""
+        SELECT id, title
+        FROM workoutSession
+        WHERE userId = :userId AND endedAt > 0
+    """)
+    suspend fun getCompletedSessionsForUser(userId: Int): List<BasicSession>
 }
 
 // ----- Workout Set Log -----

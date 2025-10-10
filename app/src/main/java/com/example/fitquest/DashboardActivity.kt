@@ -25,6 +25,19 @@ import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import com.example.fitquest.utils.TipsLoader
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
+import com.example.fitquest.database.WorkoutSessionDao
+import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Locale
 
 class DashboardActivity : AppCompatActivity() {
 
@@ -32,6 +45,9 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var pressAnim: android.view.animation.Animation
     private var bgAnim: SpriteSheetDrawable? = null
     private lateinit var db: AppDatabase
+    private lateinit var chart: BarChart
+
+    private val splits = listOf("Push", "Pull", "Legs", "Upper")
     private lateinit var quickAction: ImageButton
     private var hasActiveQuest: Boolean = false
 
@@ -40,6 +56,10 @@ class DashboardActivity : AppCompatActivity() {
         setContentView(R.layout.activity_dashboard)
 
         db = AppDatabase.getInstance(applicationContext)
+        chart = findViewById(R.id.chart_splits)
+
+        setupChartAppearance()
+        loadDataAndRender()
 
         // Animated spritesheet background (repo)
         val bgView = findViewById<ImageView>(R.id.dashboard_bg)
@@ -134,6 +154,134 @@ class DashboardActivity : AppCompatActivity() {
         bgAnim?.stop()
         super.onStop()
     }
+
+    private fun setupChartAppearance() {
+        chart.description.isEnabled = false
+        chart.legend.isEnabled = false
+        chart.axisRight.isEnabled = false
+        chart.setTouchEnabled(false)          // disables all touch: drag, scale, highlight
+        chart.setDragEnabled(false)
+        chart.setScaleEnabled(false)
+        chart.setScaleXEnabled(false)
+        chart.setScaleYEnabled(false)
+        chart.setPinchZoom(false)
+        chart.setDoubleTapToZoomEnabled(false)
+        chart.setHighlightPerTapEnabled(false)
+        // For safety on BarLineChartBase charts:
+        chart.setHighlightPerDragEnabled(false)
+
+        chart.axisLeft.apply {
+            axisMinimum = 0f
+            granularity = 1f
+
+            textColor = Color.WHITE     //  label color
+            textSize  = 12f             // label size
+            gridColor = Color.parseColor("#22FFFFFF") // optional light grid
+            axisLineColor = Color.TRANSPARENT
+        }
+
+        chart.xAxis.apply {
+            position = XAxis.XAxisPosition.BOTTOM
+            granularity = 1f
+            setDrawGridLines(false)
+            valueFormatter = IndexAxisValueFormatter(splits)
+            labelRotationAngle = 0f
+
+
+            textColor = Color.WHITE     //  label color
+            textSize  = 12f
+        }
+
+        chart.data?.let { data ->
+            data.setValueTextColor(Color.WHITE)  // 👈 bar value color
+            data.setValueTextSize(12f)           // 👈 bar value size
+            chart.invalidate()
+        }
+
+        // If you keep a legend:
+//        chart.legend.apply {
+//            isEnabled = true
+//            textColor = Color.WHITE     // 👈 legend color
+//            textSize  = 12f             // 👈 legend size
+//        }
+
+        chart.setNoDataText("No completed sets yet.")
+        chart.setFitBars(true)
+
+        // Space between the chart content and its edges (left, top, right, bottom) in px
+        chart.setExtraOffsets(12f, 12f, 12f, 12f)
+
+//// Or, if you want to fully override auto-calculated offsets:
+//        chart.setViewPortOffsets(32f, 24f, 32f, 32f)
+
+
+
+    }
+
+    private fun loadDataAndRender() {
+        lifecycleScope.launch {
+            val userId = DataStoreManager.getUserId(this@DashboardActivity).first()
+            if (userId == -1) return@launch
+
+            val sessions = withContext(Dispatchers.IO) {
+                db.workoutSessionDao().getCompletedSessionsForUser(userId)
+            }
+
+            // ✅ Count sessions per split (NOT sets)
+            val counts = mutableMapOf("Push" to 0, "Pull" to 0, "Legs" to 0, "Upper" to 0)
+            sessions.forEach { s ->
+                extractSplitFromTitle(s.title)?.let { split ->
+                    if (split in counts) counts[split] = counts[split]!! + 1
+                }
+            }
+
+            val entries = splits.mapIndexed { idx, label ->
+                com.github.mikephil.charting.data.BarEntry(idx.toFloat(), (counts[label] ?: 0).toFloat())
+            }
+
+            val dataSet = BarDataSet(entries, "Splits").apply {
+                setDrawValues(true)
+                color = Color.parseColor("#593A07")   // ← set bar color here
+                valueTextColor = Color.WHITE
+                valueTextSize = 12f
+            }
+
+            val data = com.github.mikephil.charting.data.BarData(dataSet).apply {
+                barWidth = 0.6f
+                setValueTextSize(12f)
+                // show integers on bar labels
+                setValueFormatter(object : com.github.mikephil.charting.formatter.ValueFormatter() {
+                    override fun getBarLabel(e: com.github.mikephil.charting.data.BarEntry?): String {
+                        return e?.y?.toInt()?.toString() ?: "0"
+                    }
+                })
+            }
+            chart.axisLeft.granularity = 1f
+            chart.xAxis.valueFormatter = com.github.mikephil.charting.formatter.IndexAxisValueFormatter(splits)
+            chart.data = data
+            chart.invalidate()
+            chart.animateY(700)
+
+        }
+
+    }
+
+    /** Extracts the split ("Push","Pull","Legs","Upper") from a title like "Push • General". */
+    private fun extractSplitFromTitle(title: String?): String? {
+        if (title.isNullOrBlank()) return null
+        val head = title.split("•").first().trim().lowercase()
+        return when {
+            head.startsWith("push")  -> "Push"
+            head.startsWith("pull")  -> "Pull"
+            head.startsWith("legs")  -> "Legs"
+            head.startsWith("upper") -> "Upper"
+            // if you sometimes use "lower", map it if needed:
+            // head.startsWith("lower") -> "Legs"
+            else -> null
+        }
+    }
+
+
 
     private fun setupNavigationBar() {
         findViewById<ImageView>(R.id.nav_icon_workout).setOnClickListener {

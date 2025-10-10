@@ -45,6 +45,7 @@ import androidx.core.widget.addTextChangedListener
 class WorkoutSessionActivity : AppCompatActivity() {
 
     private lateinit var db: AppDatabase
+
     private var userId: Int = -1
 
     // UI (top)
