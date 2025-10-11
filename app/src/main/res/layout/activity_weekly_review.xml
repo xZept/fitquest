@@ -11,14 +11,40 @@
         android:padding="16dp"
         android:background="@drawable/container_user_info">
 
-        <TextView
-            android:id="@+id/tv_range"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/row_week_nav"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Week range"
-            android:textSize="18sp"
-            android:textColor="@color/white"
-            android:paddingBottom="8dp"/>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingBottom="8dp">
+
+            <ImageButton
+                android:id="@+id/btn_prev_week"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="Previous week"
+                android:src="@android:drawable/ic_media_previous" />
+
+            <TextView
+                android:id="@+id/tv_range"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="Week range"
+                android:textSize="18sp"
+                android:textColor="@color/white" />
+
+            <ImageButton
+                android:id="@+id/btn_next_week"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:contentDescription="Next week"
+                android:src="@android:drawable/ic_media_next" />
+        </LinearLayout>
 
         <!-- Kcal deviation row -->
         <TextView
