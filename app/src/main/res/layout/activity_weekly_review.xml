@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:background="@drawable/container_user_info">
+
+        <TextView
+            android:id="@+id/tv_range"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Week range"
+            android:textSize="18sp"
+            android:textColor="@color/white"
+            android:paddingBottom="8dp"/>
+
+        <!-- Kcal deviation row -->
+        <TextView
+            android:id="@+id/tv_week_kcal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Avg kcal deviation: ±0"
+            android:textColor="@color/white"/>
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/pb_week_kcal"
+            android:layout_width="match_parent"
+            android:layout_height="10dp"
+            android:layout_marginTop="6dp"
+            app:trackThickness="10dp" />
+
+        <!-- Protein row -->
+        <TextView
+            android:id="@+id/tv_week_protein"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Avg protein hit: 0%"
+            android:textColor="@color/white"
+            android:layout_marginTop="12dp"/>
+
+        <com.google.android.material.progressindicator.LinearProgressIndicator
+            android:id="@+id/pb_week_protein"
+            android:layout_width="match_parent"
+            android:layout_height="10dp"
+            android:layout_marginTop="6dp"
+            app:trackThickness="10dp" />
+
+        <TextView
+            android:id="@+id/tv_week_workouts"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Workouts: 0 this week"
+            android:textColor="@color/white"
+            android:layout_marginTop="12dp"/>
+    </LinearLayout>
+</ScrollView>

@@ -38,6 +38,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import com.example.fitquest.repository.ProgressRepository
+import kotlinx.coroutines.flow.first
+import java.time.ZoneId
+
 
 class DashboardActivity : AppCompatActivity() {
 
@@ -51,6 +55,14 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var quickAction: ImageButton
     private var hasActiveQuest: Boolean = false
 
+    private lateinit var tvKcal: TextView
+    private lateinit var tvProtein: TextView
+    private lateinit var tvWorkouts: TextView
+    private lateinit var cardDaily: View
+    private lateinit var pbKcal: com.google.android.material.progressindicator.LinearProgressIndicator
+    private lateinit var pbProtein: com.google.android.material.progressindicator.LinearProgressIndicator
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dashboard)
@@ -60,6 +72,8 @@ class DashboardActivity : AppCompatActivity() {
 
         setupChartAppearance()
         loadDataAndRender()
+        refreshDailySummary()
+
 
         // Animated spritesheet background (repo)
         val bgView = findViewById<ImageView>(R.id.dashboard_bg)
@@ -79,6 +93,22 @@ class DashboardActivity : AppCompatActivity() {
         bgView.setImageDrawable(bgAnim)
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
+
+        tvKcal = findViewById(R.id.tv_kcal)
+        tvProtein = findViewById(R.id.tv_protein)
+        tvWorkouts = findViewById(R.id.tv_workouts)
+        cardDaily = findViewById(R.id.card_daily_summary)
+        pbKcal = findViewById(R.id.pb_kcal)
+        pbProtein = findViewById(R.id.pb_protein)
+
+
+        attachMiniSeeder()
+
+        cardDaily.setOnClickListener {
+            startActivity(Intent(this@DashboardActivity, WeeklyReviewActivity::class.java))
+        }
+
+
 
         // Hide system navigation (repo)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -155,6 +185,10 @@ class DashboardActivity : AppCompatActivity() {
         super.onStop()
     }
 
+
+
+
+
     private fun setupChartAppearance() {
         chart.description.isEnabled = false
         chart.legend.isEnabled = false
@@ -197,14 +231,6 @@ class DashboardActivity : AppCompatActivity() {
             data.setValueTextSize(12f)           // 👈 bar value size
             chart.invalidate()
         }
-
-        // If you keep a legend:
-//        chart.legend.apply {
-//            isEnabled = true
-//            textColor = Color.WHITE     // 👈 legend color
-//            textSize  = 12f             // 👈 legend size
-//        }
-
         chart.setNoDataText("No completed sets yet.")
         chart.setFitBars(true)
 
@@ -265,6 +291,117 @@ class DashboardActivity : AppCompatActivity() {
         }
 
     }
+
+    private fun todayDayKey(): Int {
+        val z = ZoneId.of("Asia/Manila")
+        val now = java.time.ZonedDateTime.now(z)
+        return now.year * 10_000 + now.monthValue * 100 + now.dayOfMonth
+    }
+
+
+    private fun attachMiniSeeder() {
+        if (!BuildConfig.DEBUG) return
+        cardDaily.setOnLongClickListener {
+            lifecycleScope.launch(Dispatchers.IO) {
+                val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
+                if (uid == -1) return@launch
+                val dk = todayDayKey()
+
+                // ⚠️ Adjust MacroDiary fields to match your entity exactly
+                db.macroDiaryDao().upsert(
+                    com.example.fitquest.database.MacroDiary(
+                        id = 0, userId = uid, dayKey = dk,
+                        calories = 2100, planCalories = 2000,
+                        protein = 140,  planProtein = 130,
+                        carbs = 0, planCarbs = 0,
+                        fat = 0,  planFat = 0
+                    )
+                )
+
+                // Optional: seed one finished workout today (adjust to your entity/DAO)
+                // Optional: seed one finished workout today (adjust to your entity/DAO)
+                try {
+                    val now = System.currentTimeMillis()
+                    db.workoutSessionDao().insert(
+                        com.example.fitquest.database.WorkoutSession(
+                            id = 0,                       // <-- use the actual PK name (likely 'id')
+                            userId = uid,
+                            title = "Push • General",
+                            startedAt = now - 55*60_000L,
+                            endedAt = now,
+                            totalSets = 12,               // <-- required by your entity
+                            completedSets = 12,           // <-- required by your entity
+                            coinsEarned = 10
+                            // add any other required non-null fields your entity has (e.g., notes = null)
+                        )
+                    )
+                } catch (_: Throwable) { /* if your DAO uses upsert/other signature, adjust the call */ }
+
+            }
+            lifecycleScope.launch {
+                Toast.makeText(this@DashboardActivity, "Seeded today", Toast.LENGTH_SHORT).show()
+                refreshDailySummary()
+            }
+            true
+        }
+    }
+
+
+
+    private fun fmtDev(dev: Int): String = when {
+        dev == 0 -> "±0"
+        dev > 0  -> "+$dev"
+        else     -> dev.toString()
+    }
+
+
+
+    private fun refreshDailySummary() {
+        lifecycleScope.launch {
+            try {
+                val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
+                if (uid == -1) return@launch
+
+                // NOTE: use the package where you actually put ProgressRepository
+                // You imported: com.example.fitquest.repository.ProgressRepository (keep that)
+                val repo = ProgressRepository(db)
+
+                val daily = repo.dailySummary(uid, todayDayKey())
+                tvKcal.text = "${daily.calories} / ${daily.planCalories} kcal (${fmtDev(daily.kcalDeviation)})"
+                tvProtein.text = "Protein: ${daily.protein} / ${daily.planProtein} g (${daily.proteinHitPct}%)"
+                tvWorkouts.text = "Workouts: ${daily.workoutsCompletedToday} today"
+                val ok   = androidx.core.content.ContextCompat.getColor(this@DashboardActivity, R.color.progress_ok)
+                val over = androidx.core.content.ContextCompat.getColor(this@DashboardActivity, R.color.progress_over)
+
+// Calories bar
+                if (daily.planCalories > 0) {
+                    pbKcal.max = daily.planCalories.coerceAtLeast(1)
+                    pbKcal.setProgressCompat(daily.calories.coerceIn(0, pbKcal.max), true)
+                    pbKcal.setIndicatorColor(if (daily.calories > daily.planCalories) over else ok)
+                    pbKcal.visibility = View.VISIBLE
+                } else {
+                    pbKcal.visibility = View.GONE
+                }
+
+// Protein bar
+                if (daily.planProtein > 0) {
+                    pbProtein.max = daily.planProtein.coerceAtLeast(1)
+                    pbProtein.setProgressCompat(daily.protein.coerceIn(0, pbProtein.max), true)
+                    pbProtein.setIndicatorColor(if (daily.protein > daily.planProtein) over else ok)
+                    pbProtein.visibility = View.VISIBLE
+                } else {
+                    pbProtein.visibility = View.GONE
+                }
+
+            } catch (t: Throwable) {
+                // Fail quietly so dashboard never crashes
+                tvKcal.text = "—"
+                tvProtein.text = "—"
+                tvWorkouts.text = "—"
+            }
+        }
+    }
+
 
     /** Extracts the split ("Push","Pull","Legs","Upper") from a title like "Push • General". */
     private fun extractSplitFromTitle(title: String?): String? {

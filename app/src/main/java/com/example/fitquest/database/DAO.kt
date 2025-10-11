@@ -162,6 +162,17 @@ interface WorkoutSessionDao {
         WHERE userId = :userId AND endedAt > 0
     """)
     suspend fun getCompletedSessionsForUser(userId: Int): List<BasicSession>
+
+    // NEW: count completed sessions in a time range (endedAt>0 and coinsEarned>0)
+    @Query("""
+        SELECT COUNT(*) FROM workoutSession
+        WHERE userId = :uid
+          AND endedAt > 0
+          AND coinsEarned > 0
+          AND endedAt BETWEEN :startMs AND :endMs
+    """)
+
+    suspend fun countCompletedBetween(uid: Int, startMs: Long, endMs: Long): Int
 }
 
 // ----- Workout Set Log -----
@@ -230,11 +241,21 @@ interface MacroDiaryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(row: MacroDiary): Long
 
+    // Single day
     @Query("SELECT * FROM macroDiary WHERE userId = :uid AND dayKey = :dk LIMIT 1")
     suspend fun get(uid: Int, dk: Int): MacroDiary?
 
+
     @Query("SELECT * FROM macroDiary WHERE userId = :uid ORDER BY dayKey DESC LIMIT :limit")
     suspend fun recent(uid: Int, limit: Int = 30): List<MacroDiary>
+
+    @Query("""
+        SELECT * FROM macroDiary
+        WHERE userId = :uid AND dayKey BETWEEN :fromDayKey AND :toDayKey
+        ORDER BY dayKey ASC
+    """)
+
+    suspend fun between(uid: Int, fromDayKey: Int, toDayKey: Int): List<MacroDiary>
 }
 
 @Dao

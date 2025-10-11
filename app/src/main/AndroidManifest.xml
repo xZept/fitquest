@@ -45,6 +45,8 @@
         <activity android:name=".WorkoutSessionActivity" />
         <activity android:name=".DiaryActivity" />
         <activity android:name=".SessionDetailActivity" />
+        <activity android:name="com.example.fitquest.WeeklyReviewActivity" />
+
     </application>
 
 </manifest>

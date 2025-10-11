@@ -44,6 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun macroPlanDao(): MacroPlanDao
     abstract fun macroDiaryDao(): MacroDiaryDao
 
+
     companion object {
         @Volatile private var INSTANCE: AppDatabase? = null
 
