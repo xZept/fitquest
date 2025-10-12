@@ -83,7 +83,6 @@ interface QuestHistoryDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertIgnore(row: QuestHistory): Long
 
-    // backticked `key`
     @Query("UPDATE questHistory SET lastUsedAt = :ts WHERE userId = :userId AND `key` = :questKey")
     suspend fun touch(userId: Int, questKey: String, ts: Long = System.currentTimeMillis())
 
@@ -100,18 +99,28 @@ interface QuestHistoryDao {
     @Query("""
         DELETE FROM questHistory
         WHERE userId = :userId AND pinned = 0
-        AND id NOT IN (
-            SELECT id FROM questHistory
-            WHERE userId = :userId AND pinned = 0
-            ORDER BY lastUsedAt DESC
-            LIMIT 10
-        )
+          AND id NOT IN (
+              SELECT id FROM questHistory
+              WHERE userId = :userId AND pinned = 0
+              ORDER BY lastUsedAt DESC
+              LIMIT 10
+          )
     """)
     suspend fun pruneUnpinned(userId: Int)
 
     @Query("SELECT * FROM questHistory WHERE id = :id AND userId = :userId LIMIT 1")
     suspend fun getById(userId: Int, id: Long): QuestHistory?
+
+    // Fixed: use lastUsedAt and correct table name
+    @Query("""
+        SELECT * FROM questHistory
+        WHERE userId = :uid AND title = :title
+        ORDER BY lastUsedAt DESC
+        LIMIT 1
+    """)
+    suspend fun getLastByTitle(uid: Int, title: String): QuestHistory?
 }
+
 
 // ----- Workout Session -----
 @Dao
@@ -173,6 +182,16 @@ interface WorkoutSessionDao {
     """)
 
     suspend fun countCompletedBetween(uid: Int, startMs: Long, endMs: Long): Int
+
+    @Query("""
+        SELECT * FROM workoutSession
+        WHERE userId = :uid AND endedAt <> 0
+        ORDER BY pinned DESC, startedAt DESC
+    """)
+    suspend fun getCompletedByUserOrdered(uid: Int): List<WorkoutSession>
+
+    @Query("UPDATE workoutSession SET pinned = :pinned WHERE id = :id")
+    suspend fun setPinned(id: Long, pinned: Boolean)
 }
 
 // ----- Workout Set Log -----

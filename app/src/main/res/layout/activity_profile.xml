@@ -155,7 +155,6 @@
                 </LinearLayout>
             </FrameLayout>
 
-            <!-- Card: Activity + Goal (editable with Spinners) -->
             <!-- Fitness container (PNG shows correctly) -->
             <FrameLayout
                 android:id="@+id/user_fitness_container"
@@ -209,7 +208,10 @@
                                 android:spinnerMode="dropdown"
                                 android:popupBackground="@drawable/bg_spinner_popup"
                                 android:dropDownWidth="match_parent"
-                                android:dropDownVerticalOffset="8dp" />
+                                android:dropDownVerticalOffset="8dp"
+                                android:enabled="false"
+                                android:clickable="false"
+                                android:focusable="false"/>
                         </LinearLayout>
 
                         <!-- Col 2: Fitness Goal -->
@@ -239,7 +241,10 @@
                                 android:spinnerMode="dropdown"
                                 android:popupBackground="@drawable/bg_spinner_popup"
                                 android:dropDownWidth="match_parent"
-                                android:dropDownVerticalOffset="8dp" />
+                                android:dropDownVerticalOffset="8dp"
+                                android:enabled="false"
+                                android:clickable="false"
+                                android:focusable="false"/>
                         </LinearLayout>
                     </LinearLayout>
 
@@ -281,7 +286,14 @@
                                 android:padding="8dp"
                                 android:textColor="@color/white"
                                 android:textColorHint="#B3FFFFFF"
-                                android:textSize="16sp" />
+                                android:textSize="16sp"
+                                android:focusable="false"
+                                android:focusableInTouchMode="false"
+                                android:clickable="false"
+                                android:cursorVisible="false"
+                                android:longClickable="false"
+                                android:enabled="false"
+                                android:importantForAutofill="no" />
                         </LinearLayout>
 
                         <!-- Column: Weight -->
@@ -313,7 +325,14 @@
                                 android:padding="8dp"
                                 android:textColor="@color/white"
                                 android:textColorHint="#B3FFFFFF"
-                                android:textSize="16sp" />
+                                android:textSize="16sp"
+                                android:focusable="false"
+                                android:focusableInTouchMode="false"
+                                android:clickable="false"
+                                android:cursorVisible="false"
+                                android:longClickable="false"
+                                android:enabled="false"
+                                android:importantForAutofill="no" />
                         </LinearLayout>
                     </LinearLayout>
 
@@ -384,7 +403,13 @@
                                 android:padding="8dp"
                                 android:textColor="@color/white"
                                 android:textColorHint="#B3FFFFFF"
-                                android:textSize="16sp" />
+                                android:textSize="16sp"
+                                android:focusable="false"
+                                android:focusableInTouchMode="false"
+                                android:clickable="false"
+                                android:cursorVisible="false"
+                                android:longClickable="false"
+                                android:importantForAutofill="no" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>

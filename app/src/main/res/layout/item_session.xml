@@ -1,31 +1,81 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:background="@drawable/container_general"
     android:padding="12dp"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content">
+    android:layout_height="wrap_content"
+    android:descendantFocusability="blocksDescendants"
+    android:focusable="false"
+    android:focusableInTouchMode="false">
 
+
+    <!-- Title -->
     <TextView
         android:id="@+id/tv_title"
         android:textColor="@android:color/white"
         android:textStyle="bold"
         android:textSize="16sp"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content" />
 
+    <!-- Time -->
     <TextView
         android:id="@+id/tv_time"
         android:textColor="@android:color/darker_gray"
         android:textSize="12sp"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content" />
 
+    <!-- Meta -->
     <TextView
         android:id="@+id/tv_meta"
         android:textColor="@android:color/darker_gray"
         android:textSize="12sp"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content" />
 
+    <!-- Buttons (same style as item_quest_history) -->
+    <LinearLayout
+        android:id="@+id/actions_row"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:layout_marginTop="8dp"
+        android:clickable="false"
+        android:focusable="false"
+        android:focusableInTouchMode="false">
+
+
+    <ImageButton
+            android:id="@+id/btn_take_again"
+            android:layout_width="wrap_content"
+            android:layout_height="35dp"
+            android:adjustViewBounds="true"
+            android:background="@android:color/transparent"
+            android:scaleType="fitCenter"
+            android:src="@drawable/button_take_again"
+            android:contentDescription="@string/app_name"
+            android:layout_gravity="left"
+            android:focusable="false"
+            android:focusableInTouchMode="false" />
+
+        <Space
+            android:layout_width="12dp"
+            android:layout_height="1dp" />
+
+        <ImageButton
+            android:id="@+id/btn_pin"
+            android:layout_width="wrap_content"
+            android:layout_height="35dp"
+            android:src="@drawable/selector_pin"
+            android:background="@android:color/transparent"
+            android:adjustViewBounds="true"
+            android:scaleType="fitCenter"
+            android:contentDescription="@string/app_name"
+            android:focusable="false"
+            android:focusableInTouchMode="false" />
+    </LinearLayout>
 </LinearLayout>

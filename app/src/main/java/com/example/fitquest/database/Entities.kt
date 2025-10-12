@@ -109,7 +109,8 @@ data class WorkoutSession(
     val endedAt: Long,         // 0 until finished/abandoned
     val totalSets: Int,
     val completedSets: Int,
-    val coinsEarned: Int       // 0 if abandoned
+    val coinsEarned: Int,       // 0 if abandoned
+    val pinned: Boolean = false
 )
 
 // ----- Workout Set Log -----

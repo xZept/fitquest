@@ -148,6 +148,23 @@ class ProfileActivity : AppCompatActivity() {
         tvBmiValue = findViewById(R.id.tv_bmi_value)
         etGoalWeight = findViewById(R.id.et_goal_weight)
 
+        // Lock spinners
+        spActivityLevel.isEnabled = false
+        spActivityLevel.isClickable = false
+        spFitnessGoal.isEnabled = false
+        spFitnessGoal.isClickable = false
+
+        // Lock EditTexts but keep their styling
+        listOf(etHeight, etWeight, etGoalWeight).forEach { et ->
+            et.keyListener = null        // disables typing without graying out
+            et.isFocusable = false
+            et.isFocusableInTouchMode = false
+            et.isClickable = false
+            et.isLongClickable = false
+            et.setTextIsSelectable(false)
+        }
+
+
         etGoalWeight.addTextChangedListener {
             if (etGoalWeight.hasFocus()) goalWeightEditedManually = true
         }

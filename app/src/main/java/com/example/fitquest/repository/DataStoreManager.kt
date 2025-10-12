@@ -8,11 +8,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.flow.map
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+
 
 // Single app-wide DataStore instance
 val Context.dataStore by preferencesDataStore("user_prefs")
@@ -86,6 +84,21 @@ object DataStoreManager {
     suspend fun setString(context: Context, key: String, value: String) {
         val prefKey = stringPreferencesKey(key)
         context.dataStore.edit { prefs -> prefs[prefKey] = value }
+    }
+    private fun pinnedKey(userId: Int) =
+        stringSetPreferencesKey("pinned_sessions_$userId")
+
+    suspend fun getPinnedSessionIds(context: Context, userId: Int): Set<Long> {
+        val raw = context.dataStore.data
+            .map { it[pinnedKey(userId)] ?: emptySet() }
+            .first()
+        return raw.mapNotNull { it.toLongOrNull() }.toSet()
+    }
+
+    suspend fun setPinnedSessionIds(context: Context, userId: Int, ids: Set<Long>) {
+        context.dataStore.edit { prefs ->
+            prefs[pinnedKey(userId)] = ids.map { it.toString() }.toSet()
+        }
     }
 
 }
