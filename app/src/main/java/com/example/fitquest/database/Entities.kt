@@ -39,6 +39,7 @@ data class UserProfile(
     @ColumnInfo(name = "userId") val userId: Int,
     @ColumnInfo(name = "height") val height: Int, // cm
     @ColumnInfo(name = "weight") val weight: Int, // kg
+    @ColumnInfo(name = "goal_weight") val goalWeight: Int? = null, // NEW: kg
     @ColumnInfo(name = "activity_level") val activityLevel: String? = null,
     @ColumnInfo(name = "goal") val goal: String? = null,
     @ColumnInfo(name = "equipment") val equipment: String? = null

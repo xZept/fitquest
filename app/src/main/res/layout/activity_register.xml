@@ -151,6 +151,34 @@
                 android:textColor="@color/white"
                 android:layout_marginBottom="12dp" />
 
+            <!-- Goal Weight -->
+            <EditText
+                android:id="@+id/et_goal_weight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Goal Weight (kg)"
+                android:inputType="numberDecimal"
+                android:padding="12dp"
+                android:background="@drawable/user_input_bg_selector"
+                android:textColorHint="@color/white"
+                android:textColor="@color/white"
+                android:layout_marginBottom="12dp" />
+
+
+            <!-- Fitness Goal (auto, read-only) -->
+            <TextView
+                android:id="@+id/tv_fitness_goal"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/user_input_bg_selector"
+                android:paddingTop="22dp"
+                android:paddingHorizontal="12dp"
+                android:text="Fitness Goal: —"
+                android:layout_gravity="center_vertical"
+                android:textColor="@color/white"
+                android:textSize="16dp"
+                android:layout_marginBottom="12dp" />
+
             <!-- Activity Level -->
             <Spinner
                 android:id="@+id/spinner_activity_levels"
@@ -160,14 +188,6 @@
                 android:spinnerMode="dropdown"
                 android:layout_marginBottom="12dp" />
 
-            <!-- Fitness Goal -->
-            <Spinner
-                android:id="@+id/spinner_fitness_goals"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/user_input_bg_selector"
-                android:spinnerMode="dropdown"
-                android:layout_marginBottom="12dp" />
 
             <!-- Username -->
             <EditText

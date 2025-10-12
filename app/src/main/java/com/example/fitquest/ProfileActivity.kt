@@ -173,13 +173,11 @@ class ProfileActivity : AppCompatActivity() {
             if (!suppressHint && etHeight.hasFocus()) showHint(HINT_HEIGHT)
             validateHeight()
             updateBmi()
-            updateSuggestedGoalWeight()   // <—
         }
         etWeight.addTextChangedListener {
             if (!suppressHint && etWeight.hasFocus()) showHint(HINT_WEIGHT)
             validateWeight()
             updateBmi()
-            updateSuggestedGoalWeight()   // <—
         }
 
         etHeight.setOnFocusChangeListener { _, hasFocus ->
@@ -203,7 +201,6 @@ class ProfileActivity : AppCompatActivity() {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
                 if (!suppressHint && activitySpinnerTouched) showHint(HINT_ACTIVITY)
                 activitySpinnerTouched = false
-                updateSuggestedGoalWeight()
             }
             override fun onNothingSelected(parent: AdapterView<*>) = Unit
         }
@@ -223,7 +220,6 @@ class ProfileActivity : AppCompatActivity() {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
                 if (!suppressHint && goalSpinnerTouched) showHint(HINT_GOAL)
                 goalSpinnerTouched = false
-                updateSuggestedGoalWeight(force = true)
             }
             override fun onNothingSelected(parent: AdapterView<*>) = Unit
         }
@@ -247,53 +243,38 @@ class ProfileActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@ProfileActivity).first()
-            if (userId != -1) {
-                loggedInUser = db.userDAO().getUserById(userId)
-                loggedInUser?.let { user ->
-                    val profile = db.userProfileDAO().getProfileByUserId(userId)
 
-                    val savedGoal = DataStoreManager
-                        .getString(this@ProfileActivity, "goal_weight_$userId")
-                        .first()
+            val (user, profile) = withContext(Dispatchers.IO) {
+                db.userDAO().getUserById(userId) to db.userProfileDAO().getProfileByUserId(userId)
+            }
 
-                    withContext(Dispatchers.Main) {
-                        tvName.text = "${user.firstName} ${user.lastName}"
-                        tvAge.text = "Age: ${user.age}"
-                        tvSex.text = "Sex: ${user.sex}"
-                        setSpriteForSex(user.sex)
-
-                        suppressHint = true
-                        etGoalWeight.setText(savedGoal.orEmpty())
-                        profile?.let {
-                            etHeight.setText(it.height.toString())
-                            etWeight.setText(it.weight.toString())
-                            updateBmi()
-                            setSpinnerToValue(spActivityLevel, it.activityLevel)
-                            setSpinnerToValue(spFitnessGoal, it.goal)
-
-                            etGoalWeight.setText(savedGoal.orEmpty())
-                        }
-                        if (!savedGoal.isNullOrBlank()) {
-                            etGoalWeight.setText(savedGoal)
-                            goalWeightEditedManually = true        // respect the user’s saved custom goal
-                        } else {
-                            updateSuggestedGoalWeight(force = true) // no saved value → auto-suggest now
-                        }
-                        suppressHint = false
-                        showHint(HINT_DEFAULT)   // <- show the default after prefill
-                    }
-                    suppressHint = false
-                    showHint(HINT_DEFAULT)
-                    updateSuggestedGoalWeight(force = true)
-                }
-            } else {
-                withContext(Dispatchers.Main) {
+            withContext(Dispatchers.Main) {
+                if (user == null) {
                     Toast.makeText(this@ProfileActivity, "No user found", Toast.LENGTH_SHORT).show()
                     startActivity(Intent(this@ProfileActivity, LoginActivity::class.java))
                     finish()
+                    return@withContext
                 }
+                loggedInUser = user
+                tvName.text = "${user.firstName} ${user.lastName}"
+                tvAge.text = "Age: ${user.age}"
+                tvSex.text = "Sex: ${user.sex}"
+                setSpriteForSex(user.sex)
+
+                suppressHint = true
+                etGoalWeight.setText(profile?.goalWeight?.toString().orEmpty())
+                profile?.let {
+                    etHeight.setText(it.height.toString())
+                    etWeight.setText(it.weight.toString())
+                    updateBmi()
+                    setSpinnerToValue(spActivityLevel, it.activityLevel)
+                    setSpinnerToValue(spFitnessGoal, it.goal)
+                }
+                suppressHint = false
+                showHint(HINT_DEFAULT)
             }
         }
+
 
         btnSave.setOnClickListener {
             it.startAnimation(pressAnim)
@@ -305,56 +286,33 @@ class ProfileActivity : AppCompatActivity() {
             }
 
             lifecycleScope.launch {
-                val existing = db.userProfileDAO().getProfileByUserId(userId)
-                val newHeight = etHeight.text.toString().toIntOrNull() ?: existing?.height ?: 0
-                val newWeight = etWeight.text.toString()
-                    .toDoubleOrNull()?.roundToInt()           // <- round, don’t truncate
-                    ?: existing?.weight ?: 0
-                val newActivity = spActivityLevel.selectedItem?.toString()
-                    ?: existing?.activityLevel ?: "Lightly Active"
-                val newGoal = spFitnessGoal.selectedItem?.toString()
-                    ?: existing?.goal ?: "Build Muscle"
+                val plan = withContext(Dispatchers.IO) {
+                    val existing = db.userProfileDAO().getProfileByUserId(userId)
+                    val updated = (existing?.copy(
+                        height = etHeight.text.toString().toIntOrNull() ?: existing.height,
+                        weight = etWeight.text.toString().toDoubleOrNull()?.roundToInt() ?: existing.weight,
+                        goalWeight = etGoalWeight.text.toString().toDoubleOrNull()?.roundToInt(),
+                        activityLevel = spActivityLevel.selectedItem?.toString(),
+                        goal = spFitnessGoal.selectedItem?.toString()
+                    ) ?: UserProfile(
+                        profileId = 0, userId = userId,
+                        height = etHeight.text.toString().toInt(),
+                        weight = etWeight.text.toString().toDouble().roundToInt(),
+                        goalWeight = etGoalWeight.text.toString().toDoubleOrNull()?.roundToInt(),
+                        activityLevel = spActivityLevel.selectedItem?.toString(),
+                        goal = spFitnessGoal.selectedItem?.toString(),
+                        equipment = null
+                    ))
 
-                val updated = if (existing == null) {
-                    UserProfile(
-                        profileId = 0,
-                        userId = userId,
-                        height = newHeight,
-                        weight = newWeight,
-                        activityLevel = newActivity,
-                        goal = newGoal,
-                        equipment = null // managed in Settings via UserSettings
-                    )
-                } else {
-                    existing.copy(
-                        height = newHeight,
-                        weight = newWeight,
-                        activityLevel = newActivity,
-                        goal = newGoal
-                    )
+                    if (existing == null) db.userProfileDAO().insert(updated) else db.userProfileDAO().update(updated)
+                    repository.computeAndSaveMacroPlan(userId) // IO-safe here
                 }
 
-                DataStoreManager.setString(
-                    this@ProfileActivity,
-                    "goal_weight_$userId",
-                    etGoalWeight.text?.toString()?.trim().orEmpty()
-                )
-
-                if (existing == null) db.userProfileDAO().insert(updated)
-                else db.userProfileDAO().update(updated)
-
-                val plan = repository.computeAndSaveMacroPlan(userId)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        this@ProfileActivity,
-                        "Macros updated: ${plan.calories} kcal |  P ${plan.protein}g • F ${plan.fat}g • C ${plan.carbs}g",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ProfileActivity, "Profile updated!", Toast.LENGTH_SHORT).show()
-                }
+                Toast.makeText(this@ProfileActivity,
+                    "Macros updated: ${plan.calories} kcal | P ${plan.protein}g • F ${plan.fat}g • C ${plan.carbs}g",
+                    Toast.LENGTH_LONG
+                ).show()
+                Toast.makeText(this@ProfileActivity, "Profile updated!", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -380,93 +338,6 @@ class ProfileActivity : AppCompatActivity() {
         val m = heightCm / 100.0
         return weightKg / (m * m)
     }
-
-    private fun suggestedGoalWeightKg(
-        heightCm: Int?,
-        currentKg: Double?,
-        goalRaw: String?,
-        age: Int?,
-        sex: String?,
-        activity: String?
-    ): Int? {
-        if (heightCm == null || heightCm <= 0) return null
-        if (currentKg == null || currentKg <= 0.0) return null
-
-        val m = heightCm / 100.0
-        val m2 = m * m
-        val bmi = currentKg / m2
-
-        val healthyLo = 18.5
-        val healthyHi = 24.9
-
-        var targetMid = 22.5
-        if (age != null) {
-            targetMid += when {
-                age >= 60 -> 0.7
-                age >= 40 -> 0.4
-                else      -> 0.0
-            }
-        }
-        if (sex?.equals("male", true) == true) {
-            if (goalRaw?.contains("gain", true) == true || goalRaw?.contains("build", true) == true) {
-                targetMid += 0.3
-            }
-        }
-        if (sex?.equals("female", true) == true) {
-            if (goalRaw?.contains("loss", true) == true || goalRaw?.contains("lose", true) == true || goalRaw?.contains("cut", true) == true) {
-                targetMid -= 0.3
-            }
-        }
-        targetMid = targetMid.coerceIn(healthyLo, healthyHi)
-
-        val goal = goalRaw?.lowercase()?.trim()
-        val targetKg = when {
-            // Fat loss
-            goal?.contains("loss") == true || goal?.contains("lose") == true || goal?.contains("cut") == true -> {
-                if (bmi > healthyHi) healthyHi * m2
-                else maxOf(healthyLo * m2, minOf(currentKg, targetMid * m2))
-            }
-            // Muscle gain
-            goal?.contains("gain") == true || goal?.contains("build") == true || goal?.contains("bulk") == true -> {
-                val add = maxOf(2.0, currentKg * 0.03)
-                maxOf(targetMid * m2, currentKg + add)
-            }
-            // Maintenance
-            else -> when {
-                bmi < healthyLo -> healthyLo * m2
-                bmi > healthyHi -> healthyHi * m2
-                else            -> targetMid * m2
-            }
-        }
-
-        return targetKg.roundToInt()
-    }
-
-
-    private fun updateSuggestedGoalWeight(force: Boolean = false) {
-        val hCm = etHeight.text?.toString()?.trim()?.toIntOrNull()
-        val wKg = etWeight.text?.toString()?.trim()?.toDoubleOrNull()
-        val goal = spFitnessGoal.selectedItem?.toString()
-        val activity = spActivityLevel.selectedItem?.toString()
-        val age = loggedInUser?.age
-        val sex = loggedInUser?.sex
-
-        val suggested = suggestedGoalWeightKg(
-            heightCm = hCm,
-            currentKg = wKg,
-            goalRaw = goal,
-            age = age,
-            sex = sex,
-            activity = activity
-        )
-
-        suggested?.let {
-            // overwrite if: forced, or user hasn't manually edited, or the field is blank
-            val shouldWrite = force || !goalWeightEditedManually || etGoalWeight.text.isNullOrBlank()
-            if (shouldWrite) etGoalWeight.setText(it.toString())
-        }
-    }
-
 
 
     // when calling, pass existing Int as Double: computeBmi(h, w?.toDouble())

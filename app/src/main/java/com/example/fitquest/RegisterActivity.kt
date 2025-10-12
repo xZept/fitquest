@@ -76,10 +76,12 @@ class RegisterActivity : AppCompatActivity() {
             R.id.et_confirm_password to "Confirm password — retype to avoid typos before we forge your account.",
             R.id.et_height to "Height (cm) — helps size movements and compute metrics.",
             R.id.et_weight to "Weight (kg) — tunes calorie estimates.",
+            R.id.et_goal_weight to "Goal weight — we’ll save exactly what you enter here.",
             R.id.spinner_activity_levels to "Activity level — your usual daily movement; we use this to compute calories (TDEE).",
-            R.id.spinner_fitness_goals to "Fitness goal — we tailor quests toward this.",
             R.id.iv_male to "Avatar — choose your gender.",
-            R.id.iv_female to "Avatar — choose your gender."
+            R.id.iv_female to "Avatar — choose your gender.",
+            R.id.tv_fitness_goal to "Fitness goal is auto-set from your weight and goal weight."
+
         )
 
 
@@ -219,24 +221,48 @@ class RegisterActivity : AppCompatActivity() {
         val confirmPasswordEditText = findViewById<EditText>(R.id.et_confirm_password)
         val heightEditText = findViewById<EditText>(R.id.et_height)
         val weightEditText = findViewById<EditText>(R.id.et_weight)
+        val goalWeightEditText = findViewById<EditText>(R.id.et_goal_weight)
         val registerButton = findViewById<ImageButton>(R.id.btn_register)
-
+        val tvFitnessGoal = findViewById<TextView>(R.id.tv_fitness_goal)
         val spinnerActivityLevel = findViewById<Spinner>(R.id.spinner_activity_levels)
-        val spinnerGoal = findViewById<Spinner>(R.id.spinner_fitness_goals)
 //        wireSpinner(spinnerActivityLevel, placeholderIndex = 0) // adjust index if no placeholder
 //        wireSpinner(spinnerGoal, placeholderIndex = 0)
         wireSpinnerHint(spinnerActivityLevel, R.id.spinner_activity_levels)
-        wireSpinnerHint(spinnerGoal, R.id.spinner_fitness_goals)
-
         // Constrain inputs
         heightEditText.applyNumericConstraints(MIN_HEIGHT_CM, MAX_HEIGHT_CM, maxDecimals = 1)
         weightEditText.applyNumericConstraints(MIN_WEIGHT_KG, MAX_WEIGHT_KG, maxDecimals = 1)
+        goalWeightEditText.applyNumericConstraints(MIN_WEIGHT_KG, MAX_WEIGHT_KG, maxDecimals = 1)
+
+        // After you define goalWeightEditText:
+        wireEditText(goalWeightEditText) // add this
+
+        // Small helper to compare decimals
+        fun nearlyEqual(a: Float, b: Float, eps: Float = 0.5f) = kotlin.math.abs(a - b) < eps
+
+        // Compute goal from weight & goal weight
+        fun deriveFitnessGoal(): String? {
+            val w = weightEditText.text.toString().toFloatOrNull() ?: return null
+            val gw = goalWeightEditText.text.toString().toFloatOrNull() ?: return null
+            return when {
+                nearlyEqual(w, gw) -> "Maintain Weight"
+                gw < w             -> "Lose Weight"
+                else               -> "Build Muscle"
+            }
+        }
+
+        // Update the label whenever inputs change
+        fun updateFitnessGoalUI() {
+            val goal = deriveFitnessGoal()
+            tvFitnessGoal.text = "Fitness Goal: " + (goal ?: "—")
+        }
 
         // Disable register when invalid
         fun formIsValid(): Boolean {
             val h = heightEditText.text.toString().toFloatOrNull()
             val w = weightEditText.text.toString().toFloatOrNull()
-            return h != null && w != null && isHeightValid(h) && isWeightValid(w)
+            val gw = goalWeightEditText.text.toString().toFloatOrNull()
+            return h != null && w != null && gw != null &&
+                    isHeightValid(h) && isWeightValid(w) && isWeightValid(gw)
         }
 
         fun updateRegisterEnabled() {
@@ -250,10 +276,23 @@ class RegisterActivity : AppCompatActivity() {
             override fun afterTextChanged(s: Editable?) {}
         })
         weightEditText.addTextChangedListener(object : TextWatcher {
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                updateRegisterEnabled()
+                updateFitnessGoalUI()
+            }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { updateRegisterEnabled() }
             override fun afterTextChanged(s: Editable?) {}
         })
+
+        goalWeightEditText.addTextChangedListener(object : TextWatcher {
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                updateRegisterEnabled()
+                updateFitnessGoalUI()
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
         updateRegisterEnabled()
 
 
@@ -265,15 +304,6 @@ class RegisterActivity : AppCompatActivity() {
         ).also { adapter ->
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
             spinnerActivityLevel.adapter = adapter
-        }
-
-        ArrayAdapter.createFromResource(
-            this,
-            R.array.fitness_goals,
-            android.R.layout.simple_spinner_item
-        ).also { adapter ->
-            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            spinnerGoal.adapter = adapter
         }
 
         // Filter: Allow only letters, space, and hyphen
@@ -362,7 +392,6 @@ class RegisterActivity : AppCompatActivity() {
             val heightVal = heightEditText.text.toString().toFloatOrNull()
             val weightVal = weightEditText.text.toString().toFloatOrNull()
             val activityLevel = spinnerActivityLevel.selectedItem.toString()
-            val goal = spinnerGoal.selectedItem.toString()
 
             when {
                 firstName.isEmpty() || lastName.isEmpty() || birthday.isEmpty() || username.isEmpty() ||
@@ -414,10 +443,14 @@ class RegisterActivity : AppCompatActivity() {
                         )
                         val newUserId = repository.insertUser(newUser)
                         Log.d("FitquestDB", "Inserted user id: $newUserId")
+                        val goalWeightVal = goalWeightEditText.text.toString().toFloatOrNull()
+                        val goal = deriveFitnessGoal()!!
+
                         val newUserProfile = UserProfile(
                             userId = newUserId.toInt(),
                             height = heightVal.roundToInt(),
                             weight = weightVal.roundToInt(),
+                            goalWeight = goalWeightVal?.roundToInt(), // NEW
                             activityLevel = activityLevel,
                             goal = goal
                         )

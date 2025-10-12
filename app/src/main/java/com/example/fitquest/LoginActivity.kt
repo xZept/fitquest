@@ -26,6 +26,8 @@ import kotlinx.coroutines.launch
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.addTextChangedListener
+import com.example.fitquest.database.AppDatabase
+import kotlinx.coroutines.withContext
 
 class LoginActivity : AppCompatActivity() {
 
@@ -114,18 +116,28 @@ class LoginActivity : AppCompatActivity() {
         }
 
         // Auto-skip login if a user is already stored
+        // Auto-skip login only if userId exists AND user still exists in DB
         lifecycleScope.launch {
             val existing = DataStoreManager.getUserId(this@LoginActivity).first()
             if (existing != -1) {
-                startActivity(
-                    Intent(this@LoginActivity, DashboardActivity::class.java).apply {
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                    }
-                )
-                finish()
-                return@launch
+                val existsInDb = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    AppDatabase.getInstance(applicationContext).userDAO().getUserById(existing) != null
+                }
+                if (existsInDb) {
+                    startActivity(
+                        Intent(this@LoginActivity, DashboardActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        }
+                    )
+                    finish()
+                    return@launch
+                } else {
+                    // Stale userId (e.g., DB wiped after migration) → clear it and show Login
+                    DataStoreManager.clearUserId(this@LoginActivity)
+                }
             }
         }
+
 
         val edtUsername = findViewById<EditText>(R.id.editUsername)
         val edtPassword = findViewById<EditText>(R.id.editPassword)
