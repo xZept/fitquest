@@ -25,6 +25,8 @@ class FitQuestApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
+        WeightReminderScheduler.scheduleNext6am(this)
+
         // Log macros for the day every 12 MN
         scheduleMidnightMacroSnapshot()
 

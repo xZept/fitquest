@@ -97,6 +97,7 @@ dependencies {
     kapt("com.github.bumptech.glide:compiler:4.16.0")
     implementation("androidx.gridlayout:gridlayout:1.0.0")
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.6")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

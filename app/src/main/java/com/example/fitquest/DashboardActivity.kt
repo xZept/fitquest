@@ -1,4 +1,3 @@
-// app/src/main/java/com/example/fitquest/DashboardActivity.kt
 package com.example.fitquest
 
 import android.content.Intent
@@ -41,6 +40,7 @@ import java.util.Locale
 import com.example.fitquest.repository.ProgressRepository
 import kotlinx.coroutines.flow.first
 import java.time.ZoneId
+import android.content.pm.PackageManager
 
 
 class DashboardActivity : AppCompatActivity() {
@@ -67,12 +67,45 @@ class DashboardActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dashboard)
 
+
+        if (BuildConfig.DEBUG) {
+            // Long-press the daily summary card to fire a test reminder in 1 minute
+            findViewById<View>(R.id.card_daily_summary)?.setOnLongClickListener {
+                WeightReminderScheduler.scheduleInMinutes(this, 1)
+                Toast.makeText(this, "Test: reminder in 1 minute", Toast.LENGTH_SHORT).show()
+                true
+            }
+
+            // (Optional) another trigger: long-press the quick action button
+            findViewById<View>(R.id.btn_quick_action)?.setOnLongClickListener {
+                WeightReminderScheduler.scheduleInMinutes(this, 1)
+                Toast.makeText(this, "Test weight reminder in 1 minute", Toast.LENGTH_SHORT).show()
+                true
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 42)
+            }
+        }
+
+
+
         db = AppDatabase.getInstance(applicationContext)
         chart = findViewById(R.id.chart_splits)
 
         setupChartAppearance()
         loadDataAndRender()
         refreshDailySummary()
+
+        // e.g., a hidden debug button or a quick line after login:
+        WeightReminderScheduler.scheduleInMinutes(this, 1) // fires in ~60s
+        Toast.makeText(this, "Test weight reminder set for ~1 minute", Toast.LENGTH_SHORT).show()
+
+
 
 
         // Animated spritesheet background (repo)
@@ -100,6 +133,8 @@ class DashboardActivity : AppCompatActivity() {
         cardDaily = findViewById(R.id.card_daily_summary)
         pbKcal = findViewById(R.id.pb_kcal)
         pbProtein = findViewById(R.id.pb_protein)
+
+
 
 
         attachMiniSeeder()
@@ -438,4 +473,6 @@ class DashboardActivity : AppCompatActivity() {
             startActivity(Intent(this, MacroActivity::class.java)); overridePendingTransition(0, 0)
         }
     }
+
+
 }

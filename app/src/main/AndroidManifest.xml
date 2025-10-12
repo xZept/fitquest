@@ -5,6 +5,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" tools:targetApi="31"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
 
     <application
@@ -46,6 +48,17 @@
         <activity android:name=".DiaryActivity" />
         <activity android:name=".SessionDetailActivity" />
         <activity android:name="com.example.fitquest.WeeklyReviewActivity" />
+
+        <!-- Weight reminder broadcast receiver (explicit internal receiver) -->
+        <receiver
+            android:name=".WeightReminderReceiver"
+            android:exported="false" />
+
+        <!-- The prompt activity you want to show -->
+        <activity
+            android:name=".WeightPromptActivity"
+            android:exported="false" />
+
 
     </application>
 
