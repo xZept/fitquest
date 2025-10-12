@@ -363,7 +363,8 @@ interface FoodLogDao {
         carbohydrate = :carbohydrate,
         fat = :fat,
         inputUnit = :inputUnit,
-        inputQuantity = :inputQuantity
+        inputQuantity = :inputQuantity,
+        inputLabel = :inputLabel
     WHERE logId = :logId
     """)
     suspend fun updateServing(
@@ -374,7 +375,8 @@ interface FoodLogDao {
         carbohydrate: Double,
         fat: Double,
         inputUnit: MeasurementType?,
-        inputQuantity: Double?
+        inputQuantity: Double?,
+        inputLabel: String?
     ): Int
 
 

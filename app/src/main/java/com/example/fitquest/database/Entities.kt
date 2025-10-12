@@ -226,16 +226,11 @@ data class FoodLog(
     val protein: Double,
     val carbohydrate: Double,
     val fat: Double,
-
-    // timestamps
     val loggedAt: Long,
     val dayKey: Int,
-
-    // NEW: remember how the user entered this serving
     val inputUnit: MeasurementType? = null,
     val inputQuantity: Double? = null,
-
-    // optional: group the UI by meals
+    val inputLabel: String? = null,
     val mealType: String
 )
 

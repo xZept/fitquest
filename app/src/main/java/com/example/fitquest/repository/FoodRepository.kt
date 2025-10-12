@@ -32,7 +32,8 @@ class FoodRepository(
         logId: Long,
         newGrams: Double,
         inputUnit: MeasurementType? = null,
-        inputQuantity: Double? = null
+        inputQuantity: Double? = null,
+        inputLabel: String? = null
     ): Int = withContext(Dispatchers.IO) {
         val log  = db.foodLogDao().getById(logId) ?: return@withContext 0
         val food = db.foodDao().getById(log.foodId) ?: return@withContext 0
@@ -44,7 +45,7 @@ class FoodRepository(
         val fat  = food.fatPer100g * factor
 
         db.foodLogDao().updateServing(
-            logId, newGrams, cals, pro, carb, fat, inputUnit, inputQuantity
+            logId, newGrams, cals, pro, carb, fat, inputUnit, inputQuantity, inputLabel
         )
     }
 
@@ -103,7 +104,8 @@ class FoodRepository(
         grams: Double,
         mealType: String,
         inputUnit: MeasurementType? = null,
-        inputQuantity: Double? = null
+        inputQuantity: Double? = null,
+        inputLabel: String? = null
     ): Long = withContext(Dispatchers.IO) {
         val f = db.foodDao().getById(foodId) ?: error("Food not found")
         val factor = grams / 100.0
@@ -120,7 +122,8 @@ class FoodRepository(
             dayKey  = dayKeyFor(System.currentTimeMillis()),
             mealType = mealType.uppercase(),
             inputUnit = inputUnit,
-            inputQuantity = inputQuantity
+            inputQuantity = inputQuantity,
+            inputLabel = inputLabel
         )
         db.foodLogDao().insert(log)
     }

@@ -229,6 +229,7 @@ fun FragmentActivity.showLogFoodDialog(
             val amount = amountText.toDoubleOrNull()
             val pickedApi = apiPortions.firstOrNull { ap -> ap.label.equals(unitText, ignoreCase = true) }
             val enumUnit  = MeasurementType.tryParse(unitText)
+            val inputLabel = pickedApi?.label ?: enumUnit?.displayName
 
             var ok = true
             if (amount == null || amount <= 0.0) { binding.tilAmount.error = "Enter a positive number"; ok = false } else binding.tilAmount.error = null
@@ -253,7 +254,8 @@ fun FragmentActivity.showLogFoodDialog(
                         grams = macros.resolvedGramWeight,
                         mealType = mealText.uppercase(),
                         inputUnit =     enumUnit,
-                        inputQuantity = amount
+                        inputQuantity = amount,
+                        inputLabel = inputLabel
                     )
 
 

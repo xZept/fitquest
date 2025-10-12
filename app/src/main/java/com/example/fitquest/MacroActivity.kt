@@ -1,57 +1,46 @@
 package com.example.fitquest
 
-import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Build
 import android.os.Bundle
-import android.text.TextUtils
 import android.util.Log
+import android.util.TypedValue
 import android.view.ContextThemeWrapper
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.animation.AnimationUtils
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.example.fitquest.data.repository.ApiPortion
+import com.example.fitquest.data.repository.FoodRepository
+import com.example.fitquest.database.AppDatabase
+import com.example.fitquest.database.MacroPlan
+import com.example.fitquest.database.MeasurementType
+import com.example.fitquest.database.User
+import com.example.fitquest.databinding.DialogEditServingBinding
+import com.example.fitquest.datastore.DataStoreManager
+import com.example.fitquest.repository.FitquestRepository
 import com.example.fitquest.utils.TipsHelper
 import com.example.fitquest.utils.TipsLoader
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.ImageButton
-import androidx.lifecycle.lifecycleScope
-import com.example.fitquest.database.AppDatabase
-import com.example.fitquest.database.User
-import com.example.fitquest.datastore.DataStoreManager
-import com.example.fitquest.models.Food
-import com.example.fitquest.showLogFoodDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.google.android.material.slider.RangeSlider
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
-import android.widget.ProgressBar
-import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContextCompat
-import androidx.core.widget.CompoundButtonCompat
-import androidx.gridlayout.widget.GridLayout
-import com.example.fitquest.database.MacroPlan
-import com.example.fitquest.repository.FitquestRepository
-import com.google.android.material.progressindicator.CircularProgressIndicator
-import com.google.android.material.textfield.TextInputLayout
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.slider.RangeSlider
-import android.graphics.drawable.ColorDrawable
-import androidx.appcompat.content.res.AppCompatResources
-import android.widget.EditText
-import com.example.fitquest.R
+
 class MacroActivity : AppCompatActivity() {
 
     private var currentUserId: Int = -1
@@ -65,6 +54,7 @@ class MacroActivity : AppCompatActivity() {
     private var macroPlan: MacroPlan? = null
 
     private val foodRepo by lazy { (application as FitQuestApp).foodRepository }
+    private val TAG = "MacroActivity"
 
 
     data class MealItem(
@@ -81,7 +71,6 @@ class MacroActivity : AppCompatActivity() {
 
     private lateinit var pressAnim: android.view.animation.Animation
 
-
     override fun onResume() {
         super.onResume()
         macroPlan = null
@@ -96,8 +85,8 @@ class MacroActivity : AppCompatActivity() {
             val userId = currentUserId
             if (userId <= 0) return@launch
 
-            val todayKey = (java.time.LocalDate.now(zone).let { it.year*10000 + it.monthValue*100 + it.dayOfMonth })
-            val yesterdayKey = (java.time.LocalDate.now(zone).minusDays(1).let { it.year*10000 + it.monthValue*100 + it.dayOfMonth })
+            val todayKey = (java.time.LocalDate.now(zone).let { it.year * 10000 + it.monthValue * 100 + it.dayOfMonth })
+            val yesterdayKey = (java.time.LocalDate.now(zone).minusDays(1).let { it.year * 10000 + it.monthValue * 100 + it.dayOfMonth })
 
             val existing = db.macroDiaryDao().get(userId, yesterdayKey)
             if (existing == null) {
@@ -127,14 +116,17 @@ class MacroActivity : AppCompatActivity() {
         repository = FitquestRepository(this)
 
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_macro)   // ← set the layout first
+        setContentView(R.layout.activity_macro)
+
+        // INIT FIRST so any early clicks won’t crash
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         breakfastContainer = findViewById(R.id.breakfastContainer)
-        snackContainer     = findViewById(R.id.snackContainer)
-        lunchContainer     = findViewById(R.id.lunchContainer)
-        dinnerContainer    = findViewById(R.id.dinnerContainer)
+        snackContainer = findViewById(R.id.snackContainer)
+        lunchContainer = findViewById(R.id.lunchContainer)
+        dinnerContainer = findViewById(R.id.dinnerContainer)
 
-        val searchBtn: ImageButton = findViewById(R.id.btn_buy_food) // ← now it's non-null
+        val searchBtn: ImageButton = findViewById(R.id.btn_buy_food)
         searchBtn.isEnabled = false
 
         db = AppDatabase.getInstance(applicationContext)
@@ -152,13 +144,10 @@ class MacroActivity : AppCompatActivity() {
                 refreshTodayMeals()
                 refreshTodayTotals()
             } else {
-                // Navigate to sign-in if user is not found
                 Toast.makeText(this@MacroActivity, "User not found, navigating back to sign-in page.", Toast.LENGTH_SHORT).show()
                 startActivity(Intent(this@MacroActivity, LoginActivity::class.java))
                 finish()
             }
-
-
         }
 
         findViewById<ImageButton>(R.id.btn_diary)?.setOnClickListener {
@@ -167,11 +156,7 @@ class MacroActivity : AppCompatActivity() {
             overridePendingTransition(0, 0)
         }
 
-        findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
-            it.startAnimation(pressAnim)
-            showMacroSettingsDialog()
-        }
-
+        // (Removed duplicate listener) — single settings listener
         findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
             it.startAnimation(pressAnim)
             showMacroSettingsDialog()
@@ -189,14 +174,12 @@ class MacroActivity : AppCompatActivity() {
                     defaultMeal = "Lunch"
                 ) {
                     lifecycleScope.launch {
-                        refreshTodayMeals()      // redraw plates
-                        refreshTodayTotals()     // update numbers + progress
+                        refreshTodayMeals()
+                        refreshTodayTotals()
                     }
                 }
             }.show(supportFragmentManager, "food_search")
         }
-
-        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         // hides the system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -216,39 +199,34 @@ class MacroActivity : AppCompatActivity() {
         }
 
         // --- Tips inputs for MACRO category ---
-        val goalRaw = intent.getStringExtra("GOAL")               // may be null; helper maps null → "any"
-        val activityRaw = intent.getStringExtra("ACTIVITY_LEVEL") // may be null; helper maps null → "any"
+        val goalRaw = intent.getStringExtra("GOAL")
+        val activityRaw = intent.getStringExtra("ACTIVITY_LEVEL")
 
-// For log clarity, also show normalized forms:
         val goalNorm = TipsHelper.mapGoalToCsv(goalRaw)
-        val actNorm  = TipsHelper.mapActivityToCsv(activityRaw)
+        val actNorm = TipsHelper.mapActivityToCsv(activityRaw)
         Log.d("MacroDebug", "Goal raw='$goalRaw' norm='$goalNorm' | Activity raw='$activityRaw' norm='$actNorm'")
 
-// Load tips and filter
         val tips = TipsLoader.loadTips(this)
         Log.d("MacroDebug", "Loaded tips count=${tips.size}")
 
         val macroTips = TipsHelper.getMacroTips(tips, goalRaw, activityRaw)
         Log.d("MacroDebug", "Filtered macro tips count=${macroTips.size} goal='$goalNorm' activity='$actNorm'")
 
-// Show one macro tip (or a friendly fallback)
         findViewById<TextView>(R.id.macroTip).text =
             macroTips.randomOrNull()?.tip ?: "No macro tips available for your plan yet."
 
         setupNavigationBar()
     }
 
-
     private fun displayMacroTip() {
         val tips = TipsLoader.loadTips(this)
         val goalRaw = intent.getStringExtra("GOAL")
-        val actRaw  = intent.getStringExtra("ACTIVITY_LEVEL")
+        val actRaw = intent.getStringExtra("ACTIVITY_LEVEL")
 
         val macro = TipsHelper.getMacroTips(tips, goalRaw, actRaw)
         val fallback = "No macro tips available."
         findViewById<TextView>(R.id.macroTip).text = (macro.randomOrNull()?.tip ?: fallback)
     }
-
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
@@ -271,7 +249,6 @@ class MacroActivity : AppCompatActivity() {
         }
     }
 
-    // Adds a meal row into the container
     private fun addMealToContainer(meal: MealItem, container: LinearLayout) {
         val mealView = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -318,62 +295,42 @@ class MacroActivity : AppCompatActivity() {
         container.addView(mealView, params)
     }
 
-
     private fun refreshTodayTotals() {
         if (currentUserId <= 0) return
-
 
         lifecycleScope.launch(Dispatchers.IO) {
             val totals = foodRepo.getTodayTotals(currentUserId)
             val plan = macroPlan ?: db.macroPlanDao().getLatestForUser(currentUserId)
 
             withContext(Dispatchers.Main) {
-                // Numbers
-                findViewById<TextView>(R.id.protein_total).text = totals.protein.roundToInt().toString()
-                findViewById<TextView>(R.id.carbs_total).text   = totals.carbohydrate.roundToInt().toString()
-                findViewById<TextView>(R.id.fat_total).text     = totals.fat.roundToInt().toString()
-                findViewById<TextView>(R.id.calories_total).text= totals.calories.roundToInt().toString()
-
                 // Goals (limits)
                 val goalCalories = (plan?.calories ?: 3010).toInt()
-                val goalProtein  = (plan?.protein  ?: 151 ).toInt()
-                val goalCarbs    = (plan?.carbs    ?: 376 ).toInt()
-                val goalFat      = (plan?.fat      ?: 100 ).toInt()
+                val goalProtein = (plan?.protein ?: 151).toInt()
+                val goalCarbs = (plan?.carbs ?: 376).toInt()
+                val goalFat = (plan?.fat ?: 100).toInt()
 
                 // Done values (Int)
                 val doneCalories = totals.calories.roundToInt()
-                val doneProtein  = totals.protein.roundToInt()
-                val doneCarbs    = totals.carbohydrate.roundToInt()
-                val doneFat      = totals.fat.roundToInt()
+                val doneProtein = totals.protein.roundToInt()
+                val doneCarbs = totals.carbohydrate.roundToInt()
+                val doneFat = totals.fat.roundToInt()
 
-                // Set values for each label
-                val proteinValue = findViewById<TextView>(R.id.protein_total)
-                val carbsValue = findViewById<TextView>(R.id.carbs_total)
-                val fatsValue = findViewById<TextView>(R.id.fat_total)
-                val caloriesValue = findViewById<TextView>(R.id.calories_total)
+                // Labels show remaining/over
+                findViewById<TextView>(R.id.protein_total).text = calculateRemaining(goalProtein, doneProtein)
+                findViewById<TextView>(R.id.carbs_total).text = calculateRemaining(goalCarbs, doneCarbs)
+                findViewById<TextView>(R.id.fat_total).text = calculateRemaining(goalFat, doneFat)
+                findViewById<TextView>(R.id.calories_total).text = calculateRemaining(goalCalories, doneCalories)
 
-                proteinValue.text = calculateRemaining(goalProtein,doneProtein)
-                carbsValue.text = calculateRemaining(goalCarbs, doneCarbs)
-                fatsValue.text = calculateRemaining(goalFat, doneFat)
-                caloriesValue.text = calculateRemaining(goalCalories, doneCalories)
-
-
-                val ok   = ContextCompat.getColor(this@MacroActivity, R.color.progress_ok)
+                val ok = ContextCompat.getColor(this@MacroActivity, R.color.progress_ok)
                 val over = ContextCompat.getColor(this@MacroActivity, R.color.progress_over)
 
-                // --- Calories
-                val caloriesPI = findViewById<com.google.android.material.progressindicator.CircularProgressIndicator>(
-                    R.id.calories_progress
-                )
-
-                caloriesPI.max = goalCalories.coerceAtLeast(1) // avoid 0 max
-                caloriesPI.setProgressCompat(
-                    doneCalories.coerceIn(0, caloriesPI.max),
-                    /*animated=*/true
-                )
+                // Calories (Material progress)
+                val caloriesPI = findViewById<CircularProgressIndicator>(R.id.calories_progress)
+                caloriesPI.max = goalCalories.coerceAtLeast(1)
+                caloriesPI.setProgressCompat(doneCalories.coerceIn(0, caloriesPI.max), true)
                 caloriesPI.setIndicatorColor(if (doneCalories > goalCalories) over else ok)
 
-                // --- Protein/Carbs/Fat
+                // Protein/Carbs/Fat (classic ProgressBar)
                 fun setLimited(pbId: Int, done: Int, goal: Int) {
                     val pb = findViewById<ProgressBar>(pbId)
                     val limit = goal.coerceAtLeast(1)
@@ -384,8 +341,8 @@ class MacroActivity : AppCompatActivity() {
                 }
 
                 setLimited(R.id.protein_progress, doneProtein, goalProtein)
-                setLimited(R.id.carbs_progress,   doneCarbs,   goalCarbs)
-                setLimited(R.id.fat_progress,     doneFat,     goalFat)
+                setLimited(R.id.carbs_progress, doneCarbs, goalCarbs)
+                setLimited(R.id.fat_progress, doneFat, goalFat)
             }
         }
     }
@@ -394,7 +351,7 @@ class MacroActivity : AppCompatActivity() {
         if (currentUserId <= 0) return
         lifecycleScope.launch(Dispatchers.IO) {
             val zone = java.time.ZoneId.of("Asia/Manila")
-            val todayKey = java.time.LocalDate.now(zone).let { it.year*10000 + it.monthValue*100 + it.dayOfMonth }
+            val todayKey = java.time.LocalDate.now(zone).let { it.year * 10000 + it.monthValue * 100 + it.dayOfMonth }
 
             val totals = foodRepo.getTodayTotals(currentUserId)
             val plan = macroPlan ?: db.macroPlanDao().getLatestForUser(currentUserId)
@@ -404,18 +361,17 @@ class MacroActivity : AppCompatActivity() {
                     userId = currentUserId,
                     dayKey = todayKey,
                     calories = totals.calories.roundToInt(),
-                    protein  = totals.protein.roundToInt(),
-                    carbs    = totals.carbohydrate.roundToInt(),
-                    fat      = totals.fat.roundToInt(),
+                    protein = totals.protein.roundToInt(),
+                    carbs = totals.carbohydrate.roundToInt(),
+                    fat = totals.fat.roundToInt(),
                     planCalories = plan?.calories ?: 0,
-                    planProtein  = plan?.protein  ?: 0,
-                    planCarbs    = plan?.carbs    ?: 0,
-                    planFat      = plan?.fat      ?: 0
+                    planProtein = plan?.protein ?: 0,
+                    planCarbs = plan?.carbs ?: 0,
+                    planFat = plan?.fat ?: 0
                 )
             )
         }
     }
-
 
     private fun refreshTodayMeals() {
         if (currentUserId <= 0) return
@@ -429,16 +385,9 @@ class MacroActivity : AppCompatActivity() {
 
                 val byMeal = logs.groupBy { it.log.mealType } // "BREAKFAST", "SNACK", "LUNCH", "DINNER"
                 renderMealPlate(breakfastContainer, byMeal["BREAKFAST"].orEmpty())
-                renderMealPlate(snackContainer,     byMeal["SNACK"].orEmpty())
-                renderMealPlate(lunchContainer,     byMeal["LUNCH"].orEmpty())
-                renderMealPlate(dinnerContainer,    byMeal["DINNER"].orEmpty())
-
-
-                // Example: update header totals if you have TextViews
-                // findViewById<TextView>(R.id.tvTotalCalories).text = totals.calories.roundToInt().toString()
-                // findViewById<TextView>(R.id.tvTotalProtein).text  = totals.protein.roundToInt().toString()
-                // findViewById<TextView>(R.id.tvTotalCarbs).text    = totals.carbohydrate.roundToInt().toString()
-                // findViewById<TextView>(R.id.tvTotalFat).text      = totals.fat.roundToInt().toString()
+                renderMealPlate(snackContainer, byMeal["SNACK"].orEmpty())
+                renderMealPlate(lunchContainer, byMeal["LUNCH"].orEmpty())
+                renderMealPlate(dinnerContainer, byMeal["DINNER"].orEmpty())
             }
         }
         refreshTodayTotals()
@@ -449,7 +398,6 @@ class MacroActivity : AppCompatActivity() {
             val userDao = db.userDAO()
             val existing = userDao.getUserById(userId)
             if (existing == null) {
-                // Insert a minimal user record or redirect to a real sign-up flow
                 userDao.insert(
                     User(
                         userId = userId,
@@ -472,19 +420,28 @@ class MacroActivity : AppCompatActivity() {
             val v = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 setPadding(dp(12), dp(10), dp(12), dp(10))
-                setBackgroundResource(R.drawable.container_general)   // 👈 your image
+                setBackgroundResource(R.drawable.container_general)
                 isClickable = true
                 isFocusable = true
 
-                // ripple on press (keeps your image as background)
                 val attrs = intArrayOf(android.R.attr.selectableItemBackground)
                 val typed = obtainStyledAttributes(attrs)
                 foreground = typed.getDrawable(0)
                 typed.recycle()
             }
 
+            val qtyText = when {
+                row.log.inputQuantity != null && !row.log.inputLabel.isNullOrBlank() ->
+                    "${formatQty(row.log.inputQuantity!!)} ${row.log.inputLabel}"         // ← API label
+                row.log.inputQuantity != null && row.log.inputUnit != null ->
+                    "${formatQty(row.log.inputQuantity!!)} ${row.log.inputUnit.displayName}"
+                else ->
+                    "${row.log.grams.toInt()} g"
+            }
+
             val name = TextView(this).apply {
-                text = (row.foodName ?: "Food #${row.log.foodId}") + " • ${row.log.grams.toInt()}g"
+                text = (row.foodName ?: "Food #${row.log.foodId}") + " • " + qtyText
+//                text = (row.foodName ?: "Food #${row.log.foodId}") + " • ${row.log.grams.toInt()}g"
                 textSize = 15f
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
@@ -496,14 +453,12 @@ class MacroActivity : AppCompatActivity() {
             v.addView(name)
             v.addView(kcal)
 
-            // Long press actions
             v.setOnLongClickListener {
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
                 showFoodItemActionsDialog(row)
                 true
             }
 
-            // margin between items
             val lp = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -513,37 +468,66 @@ class MacroActivity : AppCompatActivity() {
         }
     }
 
-
     private fun showFoodItemActionsDialog(row: com.example.fitquest.database.FoodLogRow) {
         val view = layoutInflater.inflate(R.layout.dialog_food_item_actions, null)
 
         view.findViewById<TextView>(R.id.tv_title).text =
             row.foodName ?: "Food #${row.log.foodId}"
-        view.findViewById<TextView>(R.id.tv_message).text =
-            "${row.log.mealType} • ${row.log.grams.roundToInt()} g • ${row.log.calories.roundToInt()} kcal"
 
-        // Optional: swap to button_edit.png if you have it
+        val previewQty = when {
+            row.log.inputQuantity != null && !row.log.inputLabel.isNullOrBlank() ->
+                "${formatQty(row.log.inputQuantity!!)} ${row.log.inputLabel}"
+            row.log.inputQuantity != null && row.log.inputUnit != null ->
+                "${formatQty(row.log.inputQuantity!!)} ${row.log.inputUnit.displayName}"
+            else ->
+                "${row.log.grams.roundToInt()} g"
+        }
+        view.findViewById<TextView>(R.id.tv_message).text =
+            "${row.log.mealType} • $previewQty • ${row.log.calories.roundToInt()} kcal"
+
+
+        view.findViewById<TextView>(R.id.tv_message).text =
+            "${row.log.mealType} • $previewQty • ${row.log.calories.roundToInt()} kcal"
+//            "${row.log.mealType} • ${row.log.grams.roundToInt()} g • ${row.log.calories.roundToInt()} kcal"
+
+        // Optional skinning
         val editRes = resources.getIdentifier("button_edit", "drawable", packageName)
         if (editRes != 0) {
             view.findViewById<ImageButton>(R.id.btn_edit_img).setBackgroundResource(editRes)
         }
 
-        val dlg = androidx.appcompat.app.AlertDialog.Builder(this)
+        val dlg = AlertDialog.Builder(this)
             .setView(view)
             .create()
 
         dlg.setOnShowListener {
-            dlg.window?.setBackgroundDrawable(
-                android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
-            )
+            dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             (view.parent as? ViewGroup)?.setPadding(0, 0, 0, 0)
 
-            view.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener { dlg.dismiss() }
-            view.findViewById<ImageButton>(R.id.btn_edit_img).setOnClickListener {
+            view.findViewById<ImageButton>(R.id.btn_cancel_img)?.setOnClickListener {
                 dlg.dismiss()
-                showEditServingDialog(row)
             }
-            view.findViewById<ImageButton>(R.id.btn_delete_img).setOnClickListener {
+
+
+
+            view.findViewById<ImageButton>(R.id.btn_edit_img)?.setOnClickListener {
+                dlg.dismiss()
+                lifecycleScope.launch {
+                    val fdcId: Long? = foodRepo.fdcIdForFoodId(row.log.foodId)
+
+                    showEditServingDialog(
+                        repo = foodRepo,
+                        userId = currentUserId,
+                        logId = row.log.logId,                                // ← NEW
+                        foodId = fdcId,
+                        defaultAmount = (row.log.inputQuantity ?: row.log.grams).toDouble(),
+                        defaultUnit = (row.log.inputUnit ?: MeasurementType.GRAM),
+                        defaultMeal = row.log.mealType,
+                        defaultApiLabel = row.log.inputLabel
+                    )
+                }
+            }
+            view.findViewById<ImageButton>(R.id.btn_delete_img)?.setOnClickListener {
                 dlg.dismiss()
                 confirmDeleteRow(row)
             }
@@ -553,12 +537,9 @@ class MacroActivity : AppCompatActivity() {
     }
 
 
-
-
     private fun confirmDeleteRow(row: com.example.fitquest.database.FoodLogRow) {
         val view = layoutInflater.inflate(R.layout.dialog_confirm_delete, null)
 
-        // Set black title + message text
         view.findViewById<TextView>(R.id.tv_title).text = "Remove item?"
         view.findViewById<TextView>(R.id.tv_message).text =
             "This will remove it from ${row.log.mealType}."
@@ -568,21 +549,16 @@ class MacroActivity : AppCompatActivity() {
             .create()
 
         dlg.setOnShowListener {
-            // Make the dialog window itself transparent; we use our PNG as the content background
             dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
-            // Remove default insets/padding the Builder adds around your custom view
             (view.parent as? ViewGroup)?.setPadding(0, 0, 0, 0)
 
-            // Wire the image buttons
             view.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener {
                 dlg.dismiss()
             }
             view.findViewById<ImageButton>(R.id.btn_delete_img).setOnClickListener {
-                // Do the delete
-                lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                lifecycleScope.launch(Dispatchers.IO) {
                     foodRepo.deleteLog(row.log.logId)
-                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    withContext(Dispatchers.Main) {
                         refreshTodayMeals()
                         refreshTodayTotals()
                         dlg.dismiss()
@@ -594,53 +570,168 @@ class MacroActivity : AppCompatActivity() {
         dlg.show()
     }
 
-    private fun showEditServingDialog(row: com.example.fitquest.database.FoodLogRow) {
-        val view = layoutInflater.inflate(R.layout.dialog_edit_serving, null)
-        val titleTv = view.findViewById<TextView>(R.id.tv_title)
-        val et = view.findViewById<EditText>(R.id.et_grams)
+    private fun showEditServingDialog(
+        repo: FoodRepository,
+        userId: Int,
+        logId: Long,
+        foodId: Long?,
+        defaultAmount: Double = 100.0,
+        defaultUnit: MeasurementType = MeasurementType.GRAM,
+        defaultMeal: String = "Lunch",
+        defaultApiLabel: String? = null,
+        onLogged: (logId: Long) -> Unit = {}
+    ) {
+        // Use a Material base theme to avoid InflateException for M3 widgets
+        val materialCtx = ContextThemeWrapper(
+            this,
+            com.google.android.material.R.style.Theme_Material3_DayNight
+        )
 
-        titleTv.text = "Edit serving (grams)"
-        et.setText(row.log.grams.toString())
-        et.setSelection(et.text?.length ?: 0)
+        val inflater = LayoutInflater.from(materialCtx)
+        val binding = DialogEditServingBinding.inflate(inflater)
+        val view = binding.root
 
-        val dlg = androidx.appcompat.app.AlertDialog.Builder(this)
+        // Pre-fill amount/unit if you have fields for them in the layout
+        binding.etAmount?.setText(
+            if (defaultAmount % 1.0 == 0.0) defaultAmount.toInt().toString() else defaultAmount.toString()
+        )
+
+        var apiPortions: List<ApiPortion> = emptyList()
+
+        // Units: load only what the API actually provides for this food
+        binding.actvUnit.isEnabled = false
+        binding.actvUnit.setText("Loading units…", false)
+
+        // Load available units for the chosen FDC food (or fallback to grams)
+        lifecycleScope.launch {
+            try {
+                apiPortions = if (foodId != null) {
+                    repo.availableApiPortions(foodId)          // requires non-null FDC id
+                } else {
+                    listOf(ApiPortion("grams (g)", 1.0))       // no FDC mapping → grams only
+                }
+//                val labels = apiPortions.map { it.label }
+//                val adapter = ArrayAdapter(materialCtx, android.R.layout.simple_list_item_1, labels)
+//                binding.actvUnit.setAdapter(adapter)
+
+//                val defaultLabel = labels.firstOrNull().orEmpty()
+//                if (defaultLabel.isNotEmpty()) binding.actvUnit.setText(defaultLabel, false)
+
+                val labels = apiPortions.map { it.label }
+                binding.actvUnit.setAdapter(ArrayAdapter(materialCtx, android.R.layout.simple_list_item_1, labels))
+
+                val preferred = defaultApiLabel?.let { want ->
+                    labels.firstOrNull { it.equals(want, ignoreCase = true) }
+                } ?: labels.firstOrNull()
+
+                if (!preferred.isNullOrEmpty()) binding.actvUnit.setText(preferred, false)
+
+
+                // Make sure dropdown shows ALL items (not just those matching current text)
+                fun showAll() {
+                    (binding.actvUnit.adapter as? ArrayAdapter<*>)?.filter?.filter(null) // clear constraint
+                    binding.actvUnit.showDropDown()
+                }
+
+                binding.actvUnit.setOnClickListener { showAll() }
+                binding.actvUnit.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) showAll() }
+
+//                binding.actvUnit.inputType = android.text.InputType.TYPE_NULL
+//                binding.actvUnit.keyListener = null
+//                binding.actvUnit.isCursorVisible = false
+//                binding.actvUnit.setOnClickListener { binding.actvUnit.showDropDown() }
+//                binding.actvUnit.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) binding.actvUnit.showDropDown() }
+
+//                val defaultLabel = labels.firstOrNull().orEmpty()
+//                if (defaultLabel.isNotEmpty()) binding.actvUnit.setText(defaultLabel, false)
+
+                binding.tilUnit.error = if (labels.isEmpty()) "No available units for this food." else null
+                binding.actvUnit.isEnabled = labels.isNotEmpty()
+            } catch (t: Throwable) {
+                Log.e("DialogEditServing", "Failed to load units", t)
+                binding.tilUnit.error = "Failed to load units."
+                binding.actvUnit.isEnabled = false
+            }
+        }
+
+        val dlg = MaterialAlertDialogBuilder(materialCtx)
             .setView(view)
             .create()
 
         dlg.setOnShowListener {
-            dlg.window?.setBackgroundDrawable(
-                android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
-            )
+            dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             (view.parent as? ViewGroup)?.setPadding(0, 0, 0, 0)
 
-            view.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener { dlg.dismiss() }
-            view.findViewById<ImageButton>(R.id.btn_save_img).setOnClickListener {
-                val newGrams = et.text.toString().toDoubleOrNull()
-                if (newGrams == null || newGrams <= 0) {
-                    android.widget.Toast.makeText(this, "Enter a valid grams value", android.widget.Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-                lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                    val updated = foodRepo.updateLogServing(row.log.logId, newGrams)
-                    withContext(kotlinx.coroutines.Dispatchers.Main) {
-                        if (updated == 0) {
-                            android.widget.Toast.makeText(this@MacroActivity, "Update failed", android.widget.Toast.LENGTH_SHORT).show()
-                        } else {
-                            refreshTodayMeals()
-                            refreshTodayTotals()
-                        }
+            view.findViewById<ImageButton>(R.id.btn_cancel_img)?.setOnClickListener {
+                dlg.dismiss()
+            }
+
+            view.findViewById<ImageButton>(R.id.btn_save_img)?.setOnClickListener {
+                val amount = binding.etAmount?.text?.toString()?.toDoubleOrNull() ?: defaultAmount
+                val selectedLabel = binding.actvUnit.text?.toString()?.trim().orEmpty()
+                val portion = apiPortions.firstOrNull { it.label.equals(selectedLabel, true) }
+                val grams = (portion?.gramsPerUnit?.let { amount * it } ?: amount)
+
+                // Still try to map to enum if you like keeping it populated
+                val enumUnit = MeasurementType.tryParse(selectedLabel)
+                val inputLabel = portion?.label.takeUnless { it.isNullOrBlank() } ?: selectedLabel
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    repo.updateLogServing(
+                        logId         = logId,
+                        newGrams      = grams,
+                        inputUnit     = enumUnit,       // can be null for API-only labels
+                        inputQuantity = amount,
+                        inputLabel    = inputLabel      // ← persist API label
+                    )
+                    withContext(Dispatchers.Main) {
+                        refreshTodayMeals()
+                        refreshTodayTotals()
                         dlg.dismiss()
                     }
                 }
+
+//                val amountText   = binding.etAmount?.text?.toString()?.trim().orEmpty()
+//                val amount       = amountText.toDoubleOrNull() ?: defaultAmount
+//                val selectedText = binding.actvUnit.text?.toString()?.trim().orEmpty()
+//
+//                // 1) Resolve grams for macros using the API portion list you already loaded
+//                val pickedPortion = apiPortions.firstOrNull { it.label.equals(selectedText, true) }
+//                val grams = when {
+//                    pickedPortion != null -> amount * pickedPortion.gramsPerUnit
+//                    else -> amount // fallback; your list usually includes "grams (g)" → gramsPerUnit=1.0
+//                }
+//
+//                // 2) Try to map the selected text to your enum so we can store the *chosen* unit
+//                val enumUnit = MeasurementType.tryParse(selectedText)
+//
+//                lifecycleScope.launch(Dispatchers.IO) {
+//                    try {
+//                        repo.updateLogServing(
+//                            logId         = logId,
+//                            newGrams      = grams,          // keep macros consistent
+//                            inputUnit     = enumUnit,       // ← store what the user picked (if parseable)
+//                            inputQuantity = amount          // ← and the amount they typed
+//                        )
+//                        withContext(Dispatchers.Main) {
+//                            refreshTodayMeals()
+//                            refreshTodayTotals()
+//                            dlg.dismiss()
+//                        }
+//                    } catch (t: Throwable) {
+//                        Log.e("DialogEditServing", "Failed to update log", t)
+//                        withContext(Dispatchers.Main) {
+//                            binding.tilUnit.error = "Failed to save. Try again."
+//                        }
+//                    }
+//                }
             }
 
-            // Optional: focus & show keyboard
-            et.requestFocus()
-            dlg.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         }
 
         dlg.show()
     }
+
 
 
     private fun showMacroSettingsDialog() {
@@ -657,7 +748,6 @@ class MacroActivity : AppCompatActivity() {
                 macroPlan ?: db.macroPlanDao().getLatestForUser(currentUserId)
             }
 
-            // Inflate dialog view
             val view = layoutInflater.inflate(R.layout.dialog_macro_settings, null)
             val range = view.findViewById<RangeSlider>(R.id.rs_macro)
             val tvSummary = view.findViewById<TextView>(R.id.tv_summary)
@@ -667,14 +757,15 @@ class MacroActivity : AppCompatActivity() {
 
             val goalCalories = (plan?.calories ?: 2000.0).toInt().coerceAtLeast(1)
             val curP = (plan?.protein ?: 150.0).toInt()
-            val curF = (plan?.fat     ?: 60.0 ).toInt()
-            val curC = (plan?.carbs   ?: 250.0).toInt()
+            val curF = (plan?.fat ?: 60.0).toInt()
+            val curC = (plan?.carbs ?: 250.0).toInt()
 
-            // derive starting % from grams + kcal
             var pPct = ((curP * 4f / goalCalories) * 100f).roundToInt().coerceIn(0, 100)
             var fPct = ((curF * 9f / goalCalories) * 100f).roundToInt().coerceIn(0, 100)
             var cPct = 100 - pPct - fPct
-            if (cPct < 0) { fPct = (fPct + cPct).coerceAtLeast(0); cPct = 0 }
+            if (cPct < 0) {
+                fPct = (fPct + cPct).coerceAtLeast(0); cPct = 0
+            }
 
             var left = pPct.coerceIn(0, 100)
             var right = (pPct + fPct).coerceIn(left, 100)
@@ -689,12 +780,12 @@ class MacroActivity : AppCompatActivity() {
                 val proteinPct = left
                 val fatPct = (right - left).coerceAtLeast(0)
                 var carbsPct = (100 - right).coerceAtLeast(0)
-                val adjust = 100 - (proteinPct + fatPct + carbsPct) // rounding fix
+                val adjust = 100 - (proteinPct + fatPct + carbsPct)
                 carbsPct += adjust
 
                 val proteinG = ((goalCalories * proteinPct) / 100f / 4f).roundToInt()
-                val fatG     = ((goalCalories * fatPct)     / 100f / 9f).roundToInt()
-                val carbsG   = ((goalCalories * carbsPct)   / 100f / 4f).roundToInt()
+                val fatG = ((goalCalories * fatPct) / 100f / 9f).roundToInt()
+                val carbsG = ((goalCalories * carbsPct) / 100f / 4f).roundToInt()
 
                 tvSummary.text = "Protein $proteinPct% (${proteinG}g) • " +
                         "Fat $fatPct% (${fatG}g) • " +
@@ -715,15 +806,11 @@ class MacroActivity : AppCompatActivity() {
                 )
             ).setView(view).create()
 
-
             dialog.setOnShowListener {
-                // Make the dialog window fully transparent
                 dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
-                // The builder wraps your view in a FrameLayout with its own bg + paddings.
                 (view.parent as? ViewGroup)?.apply {
-                    setBackgroundColor(Color.TRANSPARENT)   // remove gray surface
-                    setPadding(0, 0, 0, 0)                  // remove default insets
+                    setBackgroundColor(Color.TRANSPARENT)
+                    setPadding(0, 0, 0, 0)
                 }
             }
 
@@ -748,10 +835,9 @@ class MacroActivity : AppCompatActivity() {
 
                 macroPlan = updated
 
-                // persist off the main thread
                 lifecycleScope.launch(Dispatchers.IO) {
                     try {
-                        db.macroPlanDao().upsert(updated) // replace with your DAO method if different
+                        db.macroPlanDao().upsert(updated)
                     } catch (t: Throwable) {
                         Log.e("Macro", "Failed saving macro plan", t)
                     }
@@ -769,13 +855,14 @@ class MacroActivity : AppCompatActivity() {
 
     private fun calculateRemaining(goal: Int, done: Int): String {
         val remaining = goal - done
-        if (remaining >= 0) {
-            return "${remaining} left"
-        }
-        else {
-            return "${-remaining} over"
+        return if (remaining >= 0) {
+            "${remaining} left"
+        } else {
+            "${-remaining} over"
         }
     }
 
-}
+    private fun formatQty(q: Double): String =
+        if (q == q.toLong().toDouble()) q.toLong().toString() else q.toString()
 
+}
