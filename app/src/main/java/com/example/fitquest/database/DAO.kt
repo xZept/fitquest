@@ -356,13 +356,15 @@ interface FoodLogDao {
     suspend fun getById(logId: Long): FoodLog?
 
     @Query("""
-        UPDATE foodLog
-        SET grams = :grams,
-            calories = :calories,
-            protein = :protein,
-            carbohydrate = :carbohydrate,
-            fat = :fat
-        WHERE logId = :logId
+    UPDATE foodLog
+    SET grams = :grams,
+        calories = :calories,
+        protein = :protein,
+        carbohydrate = :carbohydrate,
+        fat = :fat,
+        inputUnit = :inputUnit,
+        inputQuantity = :inputQuantity
+    WHERE logId = :logId
     """)
     suspend fun updateServing(
         logId: Long,
@@ -370,8 +372,11 @@ interface FoodLogDao {
         calories: Double,
         protein: Double,
         carbohydrate: Double,
-        fat: Double
+        fat: Double,
+        inputUnit: MeasurementType?,
+        inputQuantity: Double?
     ): Int
+
 
     @Query("DELETE FROM foodLog WHERE logId = :logId")
     suspend fun deleteById(logId: Long): Int

@@ -228,8 +228,12 @@ data class FoodLog(
     val fat: Double,
 
     // timestamps
-    val loggedAt: Long,          // epoch ms UTC
-    val dayKey: Int,             // e.g., 20251004 for Oct 4, 2025 in user's tz
+    val loggedAt: Long,
+    val dayKey: Int,
+
+    // NEW: remember how the user entered this serving
+    val inputUnit: MeasurementType? = null,
+    val inputQuantity: Double? = null,
 
     // optional: group the UI by meals
     val mealType: String

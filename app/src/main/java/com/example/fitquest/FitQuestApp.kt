@@ -53,7 +53,7 @@ class FitQuestApp : Application() {
     }
 
 
-    // Function for logging macros every 12 MN
+    // Function for logging macros every 11:59 PM
     private fun scheduleMidnightMacroSnapshot() {
         val zone = ZoneId.of("Asia/Manila")
         val now = ZonedDateTime.now(zone)

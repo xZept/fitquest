@@ -27,12 +27,13 @@
         app:endIconTint="@color/til_outline_yellow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Amount">
+        android:hint="Serving">
+
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_amount"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="numberDecimal"/>
+            android:inputType="numberDecimal" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout

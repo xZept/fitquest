@@ -28,7 +28,12 @@ class FoodRepository(
         db.foodLogDao().delete(log)
     }
 
-    suspend fun updateLogServing(logId: Long, newGrams: Double): Int = withContext(Dispatchers.IO) {
+    suspend fun updateLogServing(
+        logId: Long,
+        newGrams: Double,
+        inputUnit: MeasurementType? = null,
+        inputQuantity: Double? = null
+    ): Int = withContext(Dispatchers.IO) {
         val log  = db.foodLogDao().getById(logId) ?: return@withContext 0
         val food = db.foodDao().getById(log.foodId) ?: return@withContext 0
 
@@ -38,8 +43,11 @@ class FoodRepository(
         val carb = food.carbPer100g * factor
         val fat  = food.fatPer100g * factor
 
-        db.foodLogDao().updateServing(logId, newGrams, cals, pro, carb, fat)
+        db.foodLogDao().updateServing(
+            logId, newGrams, cals, pro, carb, fat, inputUnit, inputQuantity
+        )
     }
+
 
     suspend fun getTodayLogs(userId: Int, zone: ZoneId = ZoneId.of("Asia/Manila")): List<FoodLogRow> =
         withContext(Dispatchers.IO) {
@@ -89,26 +97,35 @@ class FoodRepository(
         return d.year * 10000 + d.monthValue * 100 + d.dayOfMonth  // YYYYMMDD
     }
 
-    // 3) LOG TO HISTORY (for quick reuse next time)
-    suspend fun logIntake(userId: Int, foodId: Long, grams: Double, mealType: String): Long =
-        withContext(Dispatchers.IO) {
-            val f = db.foodDao().getById(foodId) ?: error("Food not found")
-            val factor = grams / 100.0
-            val log = FoodLog(
-                logId = 0L,
-                userId = userId,
-                foodId = foodId,
-                grams = grams,
-                calories = f.kcalPer100g * factor,
-                protein = f.proteinPer100g * factor,
-                carbohydrate = f.carbPer100g * factor,
-                fat = f.fatPer100g * factor,
-                loggedAt = System.currentTimeMillis(),
-                dayKey  = dayKeyFor(System.currentTimeMillis()),
-                mealType = mealType.uppercase()
-            )
-            db.foodLogDao().insert(log)
-        }
+    suspend fun logIntake(
+        userId: Int,
+        foodId: Long,
+        grams: Double,
+        mealType: String,
+        inputUnit: MeasurementType? = null,
+        inputQuantity: Double? = null
+    ): Long = withContext(Dispatchers.IO) {
+        val f = db.foodDao().getById(foodId) ?: error("Food not found")
+        val factor = grams / 100.0
+        val log = FoodLog(
+            logId = 0L,
+            userId = userId,
+            foodId = foodId,
+            grams = grams,
+            calories = f.kcalPer100g * factor,
+            protein = f.proteinPer100g * factor,
+            carbohydrate = f.carbPer100g * factor,
+            fat = f.fatPer100g * factor,
+            loggedAt = System.currentTimeMillis(),
+            dayKey  = dayKeyFor(System.currentTimeMillis()),
+            mealType = mealType.uppercase(),
+            inputUnit = inputUnit,
+            inputQuantity = inputQuantity
+        )
+        db.foodLogDao().insert(log)
+    }
+
+
 
     // --- helpers ---
     private fun resolveGrams(input: MeasurementInput, detail: FdcModels.FdcFoodDetail, portions: List<Portion>): Double {
@@ -210,6 +227,10 @@ class FoodRepository(
         else portions
     }
 
+    // Get food id from API using the food id from database
+    suspend fun fdcIdForFoodId(foodId: Long): Long? = withContext(Dispatchers.IO) {
+        db.foodDao().getById(foodId)?.sourceRef?.toLongOrNull()
+    }
 
     suspend fun availableUnitsFor(fdcId: Long): List<MeasurementType> = withContext(Dispatchers.IO) {
         // Ensure cached locally (same flow you use for getMacrosForMeasurement)
@@ -225,7 +246,70 @@ class FoodRepository(
         portions.map { it.measurementType }.distinct()
     }
 
+    suspend fun gramsFor(foodId: Long, unit: MeasurementType, quantity: Double): Double =
+        withContext(Dispatchers.IO) {
+            val portions = db.portionDao().getForFood(foodId)
+
+            fun perOne(t: MeasurementType): Double? =
+                portions.firstOrNull { it.measurementType == t }?.let { it.gramWeight / it.quantity }
+
+            when (unit) {
+                MeasurementType.GRAM -> quantity
+                MeasurementType.MILLILITER -> {
+                    val gPerMl = perOne(MeasurementType.MILLILITER)
+                        ?: perOne(MeasurementType.CUP)?.let { it / 240.0 }
+                        ?: 1.0
+                    quantity * gPerMl
+                }
+                MeasurementType.CUP -> {
+                    val gPerCup = perOne(MeasurementType.CUP) ?: 240.0
+                    quantity * gPerCup
+                }
+                MeasurementType.TABLESPOON -> {
+                    val gPerTbsp = perOne(MeasurementType.TABLESPOON)
+                        ?: (perOne(MeasurementType.MILLILITER)?.times(15.0))
+                        ?: 15.0
+                    quantity * gPerTbsp
+                }
+                MeasurementType.TEASPOON -> {
+                    val gPerTsp = perOne(MeasurementType.TEASPOON)
+                        ?: (perOne(MeasurementType.MILLILITER)?.times(5.0))
+                        ?: 5.0
+                    quantity * gPerTsp
+                }
+                MeasurementType.FL_OUNCE -> {
+                    val gPerFloz = perOne(MeasurementType.FL_OUNCE)
+                        ?: (perOne(MeasurementType.MILLILITER)?.times(29.5735))
+                        ?: 29.5735
+                    quantity * gPerFloz
+                }
+                MeasurementType.OUNCE -> quantity * (MeasurementType.OUNCE.gramsPerUnit ?: 28.3495)
+                MeasurementType.POUND -> quantity * (MeasurementType.POUND.gramsPerUnit ?: 453.592)
+                MeasurementType.PIECE, MeasurementType.SANDOK -> {
+                    val perOne = perOne(unit)
+                        ?: error("No per-${unit.displayName} mapping for this food.")
+                    quantity * perOne
+                }
+            }
+        }
+
+
+    suspend fun availableUnitsForFood(foodId: Long): List<MeasurementType> = withContext(Dispatchers.IO) {
+        val portions = db.portionDao().getForFood(foodId)
+        val units = portions.map { it.measurementType }.distinct()
+        if (units.isEmpty()) listOf(MeasurementType.GRAM) else units
+    }
+
+    suspend fun availableApiPortionsForFoodId(foodId: Long): List<ApiPortion> {
+        val food = db.foodDao().getById(foodId) ?: return listOf(ApiPortion("grams (g)", 1.0))
+        val fdcId = food.sourceRef?.toLongOrNull() ?: return listOf(ApiPortion("grams (g)", 1.0))
+        return availableApiPortions(fdcId)
+    }
+
+
+
 }
+
 
 data class PreviewMacros(
     val protein: Double,

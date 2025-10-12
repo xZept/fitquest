@@ -49,6 +49,13 @@ fun Fragment.showLogFoodDialog(
                 ArrayAdapter<String>(requireContext(), android.R.layout.simple_list_item_1, labels)
             )
 
+            binding.actvUnit.inputType = android.text.InputType.TYPE_NULL
+            binding.actvUnit.keyListener = null
+            binding.actvUnit.isCursorVisible = false
+            binding.actvUnit.setOnClickListener { binding.actvUnit.showDropDown() }
+            binding.actvUnit.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) binding.actvUnit.showDropDown() }
+
+
             val defaultLabel = labels.firstOrNull().orEmpty()
             if (defaultLabel.isNotEmpty()) binding.actvUnit.setText(defaultLabel, false)
 
@@ -127,8 +134,12 @@ fun Fragment.showLogFoodDialog(
                         userId = userId,
                         foodId = foodId,
                         grams = macros.resolvedGramWeight,
-                        mealType = mealText.uppercase()
+                        mealType = mealText.uppercase(),
+                        inputUnit =     enumUnit,
+                        inputQuantity = amount
                     )
+
+
                     onLogged(logId); dialog.dismiss()
                 } catch (t: Throwable) {
                     addBtnImg.isEnabled = true
@@ -240,8 +251,12 @@ fun FragmentActivity.showLogFoodDialog(
                         userId = userId,
                         foodId = foodId,
                         grams = macros.resolvedGramWeight,
-                        mealType = mealText.uppercase()
+                        mealType = mealText.uppercase(),
+                        inputUnit =     enumUnit,
+                        inputQuantity = amount
                     )
+
+
                     onLogged(logId); dialog.dismiss()
                 } catch (t: Throwable) {
                     addBtnImg.isEnabled = true

@@ -52,8 +52,6 @@ import android.graphics.drawable.ColorDrawable
 import androidx.appcompat.content.res.AppCompatResources
 import android.widget.EditText
 import com.example.fitquest.R
-import com.example.fitquest.database.MacroDiary
-
 class MacroActivity : AppCompatActivity() {
 
     private var currentUserId: Int = -1
@@ -131,8 +129,6 @@ class MacroActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_macro)   // ← set the layout first
 
-        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
-
         breakfastContainer = findViewById(R.id.breakfastContainer)
         snackContainer     = findViewById(R.id.snackContainer)
         lunchContainer     = findViewById(R.id.lunchContainer)
@@ -182,7 +178,6 @@ class MacroActivity : AppCompatActivity() {
         }
 
         searchBtn.setOnClickListener {
-            it.startAnimation(pressAnim)
             val repo = (application as FitQuestApp).foodRepository
             FoodSearchBottomSheet(repo) { item ->
                 showLogFoodDialog(
@@ -201,7 +196,7 @@ class MacroActivity : AppCompatActivity() {
             }.show(supportFragmentManager, "food_search")
         }
 
-
+        pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         // hides the system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -391,17 +386,6 @@ class MacroActivity : AppCompatActivity() {
                 setLimited(R.id.protein_progress, doneProtein, goalProtein)
                 setLimited(R.id.carbs_progress,   doneCarbs,   goalCarbs)
                 setLimited(R.id.fat_progress,     doneFat,     goalFat)
-
-                saveMacroDiaryForToday(
-                    totalsKcal   = doneCalories,
-                    totalsProtein= doneProtein,
-                    totalsCarbs  = doneCarbs,
-                    totalsFat    = doneFat,
-                    planKcal     = goalCalories,
-                    planProtein  = goalProtein,
-                    planCarbs    = goalCarbs,
-                    planFat      = goalFat
-                )
             }
         }
     }
@@ -554,17 +538,12 @@ class MacroActivity : AppCompatActivity() {
             )
             (view.parent as? ViewGroup)?.setPadding(0, 0, 0, 0)
 
-            view.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener {
-                it.startAnimation(pressAnim)
-                dlg.dismiss()
-            }
+            view.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener { dlg.dismiss() }
             view.findViewById<ImageButton>(R.id.btn_edit_img).setOnClickListener {
-                it.startAnimation(pressAnim)
                 dlg.dismiss()
                 showEditServingDialog(row)
             }
             view.findViewById<ImageButton>(R.id.btn_delete_img).setOnClickListener {
-                it.startAnimation(pressAnim)
                 dlg.dismiss()
                 confirmDeleteRow(row)
             }
@@ -597,12 +576,10 @@ class MacroActivity : AppCompatActivity() {
 
             // Wire the image buttons
             view.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener {
-                it.startAnimation(pressAnim)
                 dlg.dismiss()
             }
             view.findViewById<ImageButton>(R.id.btn_delete_img).setOnClickListener {
                 // Do the delete
-                it.startAnimation(pressAnim)
                 lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
                     foodRepo.deleteLog(row.log.logId)
                     withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -636,12 +613,8 @@ class MacroActivity : AppCompatActivity() {
             )
             (view.parent as? ViewGroup)?.setPadding(0, 0, 0, 0)
 
-            view.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener {
-                it.startAnimation(pressAnim)
-                dlg.dismiss()
-            }
+            view.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener { dlg.dismiss() }
             view.findViewById<ImageButton>(R.id.btn_save_img).setOnClickListener {
-                it.startAnimation(pressAnim)
                 val newGrams = et.text.toString().toDoubleOrNull()
                 if (newGrams == null || newGrams <= 0) {
                     android.widget.Toast.makeText(this, "Enter a valid grams value", android.widget.Toast.LENGTH_SHORT).show()
@@ -685,7 +658,6 @@ class MacroActivity : AppCompatActivity() {
             }
 
             // Inflate dialog view
-
             val view = layoutInflater.inflate(R.layout.dialog_macro_settings, null)
             val range = view.findViewById<RangeSlider>(R.id.rs_macro)
             val tvSummary = view.findViewById<TextView>(R.id.tv_summary)
@@ -755,10 +727,7 @@ class MacroActivity : AppCompatActivity() {
                 }
             }
 
-            btnCancel.setOnClickListener {
-                it.startAnimation(pressAnim)
-                it.startAnimation(pressAnim); dialog.dismiss()
-            }
+            btnCancel.setOnClickListener { it.startAnimation(pressAnim); dialog.dismiss() }
             btnSave.setOnClickListener {
                 it.startAnimation(pressAnim)
                 val (proteinG, fatG, carbsG) =
@@ -807,33 +776,6 @@ class MacroActivity : AppCompatActivity() {
             return "${-remaining} over"
         }
     }
-
-    private fun todayDayKey(): Int {
-        val z = java.time.ZoneId.of("Asia/Manila")
-        val now = java.time.ZonedDateTime.now(z)
-        return now.year * 10_000 + now.monthValue * 100 + now.dayOfMonth
-    }
-
-    private fun saveMacroDiaryForToday(
-        totalsKcal: Int, totalsProtein: Int, totalsCarbs: Int, totalsFat: Int,
-        planKcal: Int, planProtein: Int, planCarbs: Int, planFat: Int
-    ) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val uid = DataStoreManager.getUserId(this@MacroActivity).first()
-            if (uid == -1) return@launch
-            val dk = todayDayKey()
-            AppDatabase.getInstance(applicationContext).macroDiaryDao().upsert(
-                MacroDiary(
-                    id = 0, userId = uid, dayKey = dk,
-                    calories = totalsKcal, planCalories = planKcal,
-                    protein = totalsProtein, planProtein = planProtein,
-                    carbs = totalsCarbs, planCarbs = planCarbs,
-                    fat = totalsFat, planFat = planFat
-                )
-            )
-        }
-    }
-
 
 }
 
