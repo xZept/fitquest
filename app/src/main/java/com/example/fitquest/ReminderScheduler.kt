@@ -1,4 +1,3 @@
-// WeightReminderScheduler.kt
 package com.example.fitquest
 
 import android.app.AlarmManager
@@ -9,7 +8,7 @@ import android.os.Build
 import java.time.ZoneId
 import java.time.ZonedDateTime
 
-object WeightReminderScheduler {
+object ReminderScheduler {
 
     fun scheduleNext6am(ctx: Context) {
         val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -85,6 +84,36 @@ object WeightReminderScheduler {
         if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
             // Inexact fallback for debug
             if (Build.VERSION.SDK_INT >= 19) am.setWindow(AlarmManager.RTC_WAKEUP, triggerAt, 5_000L, pi)
+            else am.set(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            return
+        }
+
+        when {
+            Build.VERSION.SDK_INT >= 23 -> am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            Build.VERSION.SDK_INT >= 19 -> am.setExact(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+            else                        -> am.set(AlarmManager.RTC_WAKEUP, triggerAt, pi)
+        }
+    }
+
+    fun scheduleNext2359PHT(ctx: Context) {
+        val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(ctx, MacroSnapshotReceiver::class.java)
+
+        // Distinct request code so it doesn't collide with weight alarm
+        val pi = PendingIntent.getBroadcast(
+            ctx, 1011, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or immutableFlag()
+        )
+
+        val zone = ZoneId.of("Asia/Manila")
+        val now = ZonedDateTime.now(zone)
+        var next = now.withHour(23).withMinute(59).withSecond(0).withNano(0)
+        if (!next.isAfter(now)) next = next.plusDays(1)
+        val triggerAt = next.toInstant().toEpochMilli()
+
+        if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
+            // Inexact fallback (may fire within ~15 min window)
+            if (Build.VERSION.SDK_INT >= 19) am.setWindow(AlarmManager.RTC_WAKEUP, triggerAt, 15 * 60 * 1000L, pi)
             else am.set(AlarmManager.RTC_WAKEUP, triggerAt, pi)
             return
         }

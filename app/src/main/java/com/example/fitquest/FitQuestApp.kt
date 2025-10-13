@@ -25,7 +25,8 @@ class FitQuestApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        WeightReminderScheduler.scheduleNext6am(this)
+        ReminderScheduler.scheduleNext6am(this)
+        ReminderScheduler.scheduleNext2359PHT(this) // NEW
 
         // For debugging
         val key = BuildConfig.FDC_API_KEY

@@ -54,6 +54,10 @@
             android:name=".WeightReminderReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".MacroSnapshotReceiver"
+            android:exported="false" />
+
         <!-- The prompt activity you want to show -->
         <activity
             android:name=".WeightPromptActivity"

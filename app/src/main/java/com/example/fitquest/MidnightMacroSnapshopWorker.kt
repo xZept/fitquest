@@ -20,10 +20,16 @@ class MidnightMacroSnapshotWorker(
             ?: return Result.success() // no user yet
 
         val zone = ZoneId.of("Asia/Manila")
-        // Log daily macros every 11:59 PM
-        val targetDate = LocalDate.now(zone)
-        val dayKey = targetDate.year * 10000 + targetDate.monthValue * 100 + targetDate.dayOfMonth
 
+        // Determine the diary day. If we fired shortly after midnight due to inexact alarms,
+        // log for "yesterday" to preserve the 23:59 intention.
+        val now = ZonedDateTime.now(zone)
+        val targetDate = if (now.toLocalTime().isBefore(java.time.LocalTime.of(1, 0)))
+            now.minusDays(1).toLocalDate()
+        else
+            now.toLocalDate()
+
+        val dayKey = targetDate.year * 10000 + targetDate.monthValue * 100 + targetDate.dayOfMonth
 
         // Avoid duplicates
         db.macroDiaryDao().get(userId, dayKey)?.let { return Result.success() }

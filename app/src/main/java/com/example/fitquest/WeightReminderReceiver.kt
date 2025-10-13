@@ -21,7 +21,7 @@ class WeightReminderReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         Log.d("WeightReminder", "onReceive called; rescheduling next 6am")
-        WeightReminderScheduler.scheduleNext6am(context)
+        ReminderScheduler.scheduleNext6am(context)
 
         val isAppInForeground = try {
             ProcessLifecycleOwner.get()

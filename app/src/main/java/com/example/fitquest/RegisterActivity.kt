@@ -476,7 +476,7 @@ class RegisterActivity : AppCompatActivity() {
                         repository.computeAndSaveMacroPlan(newUserId.toInt())
 
                         // Log macros for the day every 11:59 PM
-                        scheduleMidnightMacroSnapshot()
+                        ReminderScheduler.scheduleNext2359PHT(applicationContext)
 
                         Toast.makeText(
                             this@RegisterActivity,

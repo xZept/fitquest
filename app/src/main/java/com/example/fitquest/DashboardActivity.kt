@@ -87,7 +87,7 @@ class DashboardActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             // Only schedule after user grants notifications on Android 13+
             if (granted) {
-                WeightReminderScheduler.scheduleNext6am(this)
+                ReminderScheduler.scheduleNext6am(this)
                 // (Optional) debug:
                 // WeightReminderScheduler.scheduleInSeconds(this, 15)
             }
@@ -105,12 +105,12 @@ class DashboardActivity : AppCompatActivity() {
 
         if (BuildConfig.DEBUG) {
             findViewById<View>(R.id.card_daily_summary)?.setOnLongClickListener {
-                WeightReminderScheduler.scheduleInSeconds(this, 15)
+                ReminderScheduler.scheduleInSeconds(this, 15)
                 Toast.makeText(this, "Test: reminder in 15s", Toast.LENGTH_SHORT).show()
                 true
             }
             findViewById<View>(R.id.btn_quick_action)?.setOnLongClickListener {
-                WeightReminderScheduler.scheduleInSeconds(this, 15)
+                ReminderScheduler.scheduleInSeconds(this, 15)
                 Toast.makeText(this, "Test weight reminder in 15s", Toast.LENGTH_SHORT).show()
                 true
             }
@@ -491,7 +491,7 @@ class DashboardActivity : AppCompatActivity() {
             }
         }
         // Permission not needed or already granted
-        WeightReminderScheduler.scheduleNext6am(this)
+        ReminderScheduler.scheduleNext6am(this)
         // (Optional) debug:
         // WeightReminderScheduler.scheduleInSeconds(this, 15)
     }
