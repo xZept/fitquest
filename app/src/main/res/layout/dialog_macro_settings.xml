@@ -82,7 +82,8 @@
         android:valueFrom="0"
         android:valueTo="100"
         android:stepSize="1"
-        app:values="@array/macro_initial_values"/>
+        app:values="@array/macro_initial_values"
+        />
 
     <!-- Helper -->
     <TextView
@@ -92,7 +93,40 @@
         android:textColor="#6B7280"
         android:textSize="12sp"
         android:layout_marginTop="4dp"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="8dp" />
+
+        <!-- Deficit controls -->
+        <LinearLayout
+            android:id="@+id/row_deficit_controls"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_add_deficit"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Add deficit (-50)"
+                android:contentDescription="Add deficit by 50 kcal"
+                android:tooltipText="Subtract 50 kcal from goal"
+                android:textColor="#111827"/>
+
+            <Space
+                android:layout_width="8dp"
+                android:layout_height="0dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_reduce_deficit"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Reduce deficit (+50)"
+                android:contentDescription="Reduce deficit by 50 kcal"
+                android:tooltipText="Add 50 kcal to goal"
+                android:textColor="#111827"/>
+        </LinearLayout>
 
     <!-- Footer: same pattern as dialog_settings -->
     <LinearLayout

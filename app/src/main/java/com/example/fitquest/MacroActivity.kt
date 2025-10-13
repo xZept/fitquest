@@ -756,7 +756,7 @@ class MacroActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            // Log yesterday's food entries
+            // Snapshot today's totals into diary
             upsertTodayDiarySnapshot()
 
             val plan = withContext(Dispatchers.IO) {
@@ -764,13 +764,24 @@ class MacroActivity : AppCompatActivity() {
             }
 
             val view = layoutInflater.inflate(R.layout.dialog_macro_settings, null)
-            val range = view.findViewById<RangeSlider>(R.id.rs_macro)
+            val range = view.findViewById<com.google.android.material.slider.RangeSlider>(R.id.rs_macro)
             val tvSummary = view.findViewById<TextView>(R.id.tv_summary)
             val tvCaloriesHint = view.findViewById<TextView>(R.id.tv_calories_hint)
             val btnCancel = view.findViewById<ImageButton>(R.id.btn_cancel)
             val btnSave = view.findViewById<ImageButton>(R.id.btn_save)
 
-            val goalCalories = (plan?.calories ?: 2000.0).toInt().coerceAtLeast(1)
+            val btnAddDeficit = view.findViewById<View>(R.id.btn_add_deficit)
+            val btnReduceDeficit = view.findViewById<View>(R.id.btn_reduce_deficit)
+
+            range.valueFrom = 0f
+            range.valueTo = 100f
+            range.stepSize = 1f
+
+
+            // Make calories mutable so buttons can adjust it
+            var goalCalories = (plan?.calories ?: 2000.0).toInt().coerceAtLeast(1)
+
+            // Current grams → initial percentages
             val curP = (plan?.protein ?: 150.0).toInt()
             val curF = (plan?.fat ?: 60.0).toInt()
             val curC = (plan?.carbs ?: 250.0).toInt()
@@ -778,15 +789,14 @@ class MacroActivity : AppCompatActivity() {
             var pPct = ((curP * 4f / goalCalories) * 100f).roundToInt().coerceIn(0, 100)
             var fPct = ((curF * 9f / goalCalories) * 100f).roundToInt().coerceIn(0, 100)
             var cPct = 100 - pPct - fPct
-            if (cPct < 0) {
-                fPct = (fPct + cPct).coerceAtLeast(0); cPct = 0
-            }
+            if (cPct < 0) { fPct = (fPct + cPct).coerceAtLeast(0); cPct = 0 }
 
             var left = pPct.coerceIn(0, 100)
             var right = (pPct + fPct).coerceIn(left, 100)
-            range.values = mutableListOf(left.toFloat(), right.toFloat())
 
+            // Initialize UI
             tvCaloriesHint.text = "Calories: $goalCalories kcal"
+            range.values = mutableListOf(left.toFloat(), right.toFloat())
 
             fun updateSummary() {
                 left = range.values[0].toInt()
@@ -799,8 +809,8 @@ class MacroActivity : AppCompatActivity() {
                 carbsPct += adjust
 
                 val proteinG = ((goalCalories * proteinPct) / 100f / 4f).roundToInt()
-                val fatG = ((goalCalories * fatPct) / 100f / 9f).roundToInt()
-                val carbsG = ((goalCalories * carbsPct) / 100f / 4f).roundToInt()
+                val fatG     = ((goalCalories * fatPct) / 100f / 9f).roundToInt()
+                val carbsG   = ((goalCalories * carbsPct) / 100f / 4f).roundToInt()
 
                 tvSummary.text = "Protein $proteinPct% (${proteinG}g) • " +
                         "Fat $fatPct% (${fatG}g) • " +
@@ -811,20 +821,45 @@ class MacroActivity : AppCompatActivity() {
                 btnSave.setTag(R.id.btn_save, Triple(proteinG, fatG, carbsG))
             }
 
+            // Recalculate when slider moves
             range.addOnChangeListener { _, _, _ -> updateSummary() }
             updateSummary()
 
-            val dialog = MaterialAlertDialogBuilder(
-                ContextThemeWrapper(
+            // NEW: helper to change calories by ±50 and refresh UI
+            fun adjustCalories(delta: Int) {
+                val minCal = 1000 // tweak if needed
+                val maxCal = 5000 // tweak if needed
+                val newVal = (goalCalories + delta).coerceIn(minCal, maxCal)
+                if (newVal != goalCalories) {
+                    goalCalories = newVal
+                    tvCaloriesHint.text = "Calories: $goalCalories kcal"
+                    updateSummary()
+                }
+            }
+
+            // NEW: wire buttons
+            btnAddDeficit.setOnClickListener {
+                it.startAnimation(pressAnim)
+                it.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                adjustCalories(-50) // subtract 50 = higher deficit
+            }
+            btnReduceDeficit.setOnClickListener {
+                it.startAnimation(pressAnim)
+                it.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                adjustCalories(+50) // add 50 = lower deficit
+            }
+
+            val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(
+                android.view.ContextThemeWrapper(
                     this@MacroActivity,
                     com.google.android.material.R.style.ThemeOverlay_Material3_MaterialAlertDialog
                 )
             ).setView(view).create()
 
             dialog.setOnShowListener {
-                dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+                dialog.window?.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
                 (view.parent as? ViewGroup)?.apply {
-                    setBackgroundColor(Color.TRANSPARENT)
+                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
                     setPadding(0, 0, 0, 0)
                 }
             }
@@ -839,10 +874,10 @@ class MacroActivity : AppCompatActivity() {
                     protein = proteinG,
                     fat = fatG,
                     carbs = carbsG,
-                    calories = goalCalories
-                ) ?: MacroPlan(
+                    calories = goalCalories              // <- save adjusted calories
+                ) ?: com.example.fitquest.database.MacroPlan(
                     userId = currentUserId,
-                    calories = goalCalories,
+                    calories = goalCalories,             // <- save adjusted calories
                     protein = proteinG,
                     carbs = carbsG,
                     fat = fatG
@@ -867,6 +902,8 @@ class MacroActivity : AppCompatActivity() {
             dialog.show()
         }
     }
+
+
 
     private fun calculateRemaining(goal: Int, done: Int): String {
         val remaining = goal - done
