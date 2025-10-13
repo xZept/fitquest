@@ -23,7 +23,9 @@ import androidx.room.TypeConverters
         FoodLog::class,
         MacroPlan::class,
         MacroDiary::class,
-        WeightLog::class
+        WeightLog::class,
+        Item::class,
+        UserItem::class
     ],
     version = 1,
     exportSchema = false
@@ -45,6 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun macroPlanDao(): MacroPlanDao
     abstract fun macroDiaryDao(): MacroDiaryDao
     abstract fun weightLogDao(): WeightLogDao
+    abstract fun itemDao(): ItemDao
 
 
     companion object {

@@ -37,18 +37,28 @@ import android.graphics.BitmapFactory
 import com.example.fitquest.repository.FitquestRepository
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import android.view.MotionEvent
-
+import android.text.method.DigitsKeyListener
+import com.example.fitquest.shop.ShopRepository
 
 /**
- * Merged ProfileActivity
- * - Keeps the repo UI/UX (sprites, animations, input validation, ImageButton save)
- * - Replaces SharedPreferences SettingsStore with Room-backed UserSettings
- * - Loads equipment choices from CSV in /assets (canonicalized), not hardcoded
- * - Adds fallbackToDestructiveMigration() for development safety
- *
- * NOTE: AppDatabase must expose userSettingsDao() and include UserSettings entity.
+ * ProfileActivity with Edit Ticket gating:
+ * - Locked fields by default.
+ * - Unlock requires owning an Edit Profile Ticket (consumed on Save).
+ * - If no ticket, redirect to Shop Items tab.
  */
 class ProfileActivity : AppCompatActivity() {
+
+    // ----- New gating state -----
+    private var editingUnlocked = false
+    private var btnUnlock: ImageButton? = null
+    private lateinit var repoShop: ShopRepository
+
+    companion object {
+        private const val EDIT_TICKET_CODE = "edit_profile_ticket"
+        // mirror ShopActivity extras to avoid hard coupling
+        private const val EXTRA_SHOP_TAB = "shop_tab"
+        private const val TAB_ITEMS = "items"
+    }
 
     // Declare repo field
     private lateinit var repository: FitquestRepository
@@ -61,14 +71,13 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var spFitnessGoal: Spinner
     private lateinit var etHeight: EditText
     private lateinit var etWeight: EditText
+    private lateinit var etGoalWeight: EditText
     private lateinit var btnSave: ImageButton
     private lateinit var db: AppDatabase
-
 
     private var loggedInUser: User? = null
 
     private lateinit var tvBmiValue: TextView
-    private lateinit var etGoalWeight: EditText
     private var goalWeightEditedManually = false
 
     // sprites/animations from repo version
@@ -88,9 +97,9 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var tvSettingsHint: TextView
     private var hintHideJob: kotlinx.coroutines.Job? = null
 
-    private val HINT_DEFAULT = "Manage rest timer and equipment in Settings"
-    private val HINT_HEIGHT  = "Height: enter 120–230 cm. Digits only."
-    private val HINT_WEIGHT  = "Weight: enter 30–300 kg. Decimals OK (e.g., 72.5)."
+    private val HINT_DEFAULT  = "Manage rest timer and equipment in Settings"
+    private val HINT_HEIGHT   = "Height: enter 120–230 cm. Digits only."
+    private val HINT_WEIGHT   = "Weight: enter 30–300 kg. Decimals OK (e.g., 72.5)."
     private val HINT_ACTIVITY = "Activity level: pick how active you are on non-workout days. It affects calorie estimates."
     private val HINT_GOAL     = "Fitness goal: choose fat loss, maintenance, or muscle gain to shape your plan."
 
@@ -99,23 +108,22 @@ class ProfileActivity : AppCompatActivity() {
     private var goalSpinnerTouched = false
     private var suppressHint = false
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile)
 
         bgView = findViewById(R.id.bg_anim)
-
         tvSettingsHint = findViewById(R.id.tv_settings_hint)
-        showHint(HINT_DEFAULT) // shows, then hides after 8s
+        showHint(HINT_DEFAULT)
 
-
-        // Load your sheet without density scaling so frame math stays exact.
+        // Load BG sheet
         val opts = BitmapFactory.Options().apply { inScaled = false }
         val sheet = BitmapFactory.decodeResource(resources, R.drawable.bg_page_profile_spritesheet0, opts)
 
-        // Initialiuze repo
+        // Initialize repos/db
         repository = FitquestRepository(this)
+        db = AppDatabase.getInstance(applicationContext)
+        repoShop = ShopRepository(db)
 
         bgSprite = SpriteSheetDrawable(
             sheet = sheet,
@@ -129,13 +137,10 @@ class ProfileActivity : AppCompatActivity() {
             drawable.start()
         }
 
-
         enterImmersive()
-
         pressAnim = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.press)
 
-        db = AppDatabase.getInstance(applicationContext)
-
+        // Views
         spriteView = findViewById(R.id.iv_profile_photo)
         tvName = findViewById(R.id.tv_name)
         tvAge = findViewById(R.id.tv_age)
@@ -144,26 +149,13 @@ class ProfileActivity : AppCompatActivity() {
         spFitnessGoal = findViewById(R.id.sp_fitness_goal)
         etHeight = findViewById(R.id.et_height)
         etWeight = findViewById(R.id.et_weight)
-        btnSave = findViewById(R.id.btn_save_profile)
-        tvBmiValue = findViewById(R.id.tv_bmi_value)
         etGoalWeight = findViewById(R.id.et_goal_weight)
+        btnSave = findViewById(R.id.btn_save_profile)
+        btnUnlock = findViewById(R.id.btn_unlock_edit) // optional; safe if null
+        tvBmiValue = findViewById(R.id.tv_bmi_value)
 
-        // Lock spinners
-        spActivityLevel.isEnabled = false
-        spActivityLevel.isClickable = false
-        spFitnessGoal.isEnabled = false
-        spFitnessGoal.isClickable = false
-
-        // Lock EditTexts but keep their styling
-        listOf(etHeight, etWeight, etGoalWeight).forEach { et ->
-            et.keyListener = null        // disables typing without graying out
-            et.isFocusable = false
-            et.isFocusableInTouchMode = false
-            et.isClickable = false
-            et.isLongClickable = false
-            et.setTextIsSelectable(false)
-        }
-
+        // Lock UI initially
+        unlockEditing(false)
 
         etGoalWeight.addTextChangedListener {
             if (etGoalWeight.hasFocus()) goalWeightEditedManually = true
@@ -181,11 +173,9 @@ class ProfileActivity : AppCompatActivity() {
             showSettingsDialog()
         }
 
-        // input constraints & live validation (repo)
+        // input constraints & live validation (NO keyListener here; unlocked later)
         etHeight.filters = arrayOf(android.text.InputFilter.LengthFilter(3))
         etWeight.filters = arrayOf(android.text.InputFilter.LengthFilter(6))
-        etHeight.keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789")
-        etWeight.keyListener = android.text.method.DigitsKeyListener.getInstance("0123456789.")
         etHeight.addTextChangedListener {
             if (!suppressHint && etHeight.hasFocus()) showHint(HINT_HEIGHT)
             validateHeight()
@@ -208,11 +198,9 @@ class ProfileActivity : AppCompatActivity() {
 
         // ---- Activity Level spinner ----
         spActivityLevel.setOnTouchListener { _, ev ->
-            if (ev.action == MotionEvent.ACTION_DOWN && !suppressHint) {
-                showHint(HINT_ACTIVITY)   // show as soon as user taps to open
-            }
+            if (ev.action == MotionEvent.ACTION_DOWN && !suppressHint) showHint(HINT_ACTIVITY)
             activitySpinnerTouched = true
-            false // allow dropdown to open
+            false
         }
         spActivityLevel.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, pos: Int, id: Long) {
@@ -225,11 +213,9 @@ class ProfileActivity : AppCompatActivity() {
             if (hasFocus && !suppressHint) showHint(HINT_ACTIVITY)
         }
 
-// ---- Fitness Goal spinner ----
+        // ---- Fitness Goal spinner ----
         spFitnessGoal.setOnTouchListener { _, ev ->
-            if (ev.action == MotionEvent.ACTION_DOWN && !suppressHint) {
-                showHint(HINT_GOAL)       // show on tap too
-            }
+            if (ev.action == MotionEvent.ACTION_DOWN && !suppressHint) showHint(HINT_GOAL)
             goalSpinnerTouched = true
             false
         }
@@ -243,8 +229,6 @@ class ProfileActivity : AppCompatActivity() {
         spFitnessGoal.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus && !suppressHint) showHint(HINT_GOAL)
         }
-
-
 
         val activityOptions = resources.getStringArray(R.array.activity_levels)
         val goalOptions = resources.getStringArray(R.array.fitness_goals)
@@ -292,17 +276,78 @@ class ProfileActivity : AppCompatActivity() {
             }
         }
 
+        // Optional Unlock button (if present in layout)
+        btnUnlock?.setOnClickListener {
+            it.startAnimation(pressAnim)
+            lifecycleScope.launch {
+                val have = withContext(Dispatchers.IO) { repoShop.getItemQuantity(userId, EDIT_TICKET_CODE) }
+                if (have <= 0) {
+                    AlertDialog.Builder(this@ProfileActivity)
+                        .setTitle("Edit Ticket required")
+                        .setMessage("Buy an Edit Profile Ticket in the Shop to unlock editing. Open Shop now?")
+                        .setPositiveButton("Open Shop") { _, _ ->
+                            startActivity(Intent(this@ProfileActivity, ShopActivity::class.java).apply {
+                                putExtra(EXTRA_SHOP_TAB, TAB_ITEMS)
+                            })
+                            overridePendingTransition(0, 0)
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                } else {
+                    unlockEditing(true)
+                    Toast.makeText(this@ProfileActivity, "Editing unlocked. Ticket will be used when you save.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
 
         btnSave.setOnClickListener {
             it.startAnimation(pressAnim)
 
-            // validate height/weight before saving
-            if (!validateHeightWeight()) {
-                Toast.makeText(this, "Please fix height/weight.", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
             lifecycleScope.launch {
+                // If not unlocked yet, handle gating here
+                if (!editingUnlocked) {
+                    val have = withContext(Dispatchers.IO) { repoShop.getItemQuantity(userId, EDIT_TICKET_CODE) }
+                    if (have <= 0) {
+                        AlertDialog.Builder(this@ProfileActivity)
+                            .setTitle("Editing locked")
+                            .setMessage("Editing your profile requires an Edit Profile Ticket.")
+                            .setPositiveButton("Open Shop") { _, _ ->
+                                startActivity(Intent(this@ProfileActivity, ShopActivity::class.java).apply {
+                                    putExtra(EXTRA_SHOP_TAB, TAB_ITEMS)
+                                })
+                                overridePendingTransition(0, 0)
+                            }
+                            .setNegativeButton("Cancel", null)
+                            .show()
+                        return@launch
+                    } else {
+                        AlertDialog.Builder(this@ProfileActivity)
+                            .setTitle("Use Edit Profile Ticket?")
+                            .setMessage("Use 1 ticket to unlock editing now. It will be consumed when you save.")
+                            .setPositiveButton("Use Ticket") { _, _ ->
+                                unlockEditing(true)
+                                Toast.makeText(this@ProfileActivity, "Editing unlocked. Make your changes and press Save.", Toast.LENGTH_LONG).show()
+                            }
+                            .setNegativeButton("Not now", null)
+                            .show()
+                        return@launch
+                    }
+                }
+
+                // validate height/weight before saving (once unlocked)
+                if (!validateHeightWeight()) {
+                    Toast.makeText(this@ProfileActivity, "Please fix height/weight.", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                // Consume a ticket now (must have been unlocked)
+                val consumed = withContext(Dispatchers.IO) { repoShop.consumeItem(userId, EDIT_TICKET_CODE, 1) }
+                if (!consumed) {
+                    Toast.makeText(this@ProfileActivity, "No Edit Ticket found.", Toast.LENGTH_SHORT).show()
+                    unlockEditing(false)
+                    return@launch
+                }
+
                 val plan = withContext(Dispatchers.IO) {
                     val existing = db.userProfileDAO().getProfileByUserId(userId)
                     val updated = (existing?.copy(
@@ -322,8 +367,10 @@ class ProfileActivity : AppCompatActivity() {
                     ))
 
                     if (existing == null) db.userProfileDAO().insert(updated) else db.userProfileDAO().update(updated)
-                    repository.computeAndSaveMacroPlan(userId) // IO-safe here
+                    repository.computeAndSaveMacroPlan(userId)
                 }
+
+                unlockEditing(false) // lock again after success
 
                 Toast.makeText(this@ProfileActivity,
                     "Macros updated: ${plan.calories} kcal | P ${plan.protein}g • F ${plan.fat}g • C ${plan.carbs}g",
@@ -336,18 +383,96 @@ class ProfileActivity : AppCompatActivity() {
         setupNavigationBar()
     }
 
+    // ---- Gating toggle ----
+    private fun unlockEditing(unlock: Boolean) {
+        editingUnlocked = unlock
+
+        // Spinners
+        spActivityLevel.isEnabled = unlock
+        spActivityLevel.isClickable = unlock
+        spFitnessGoal.isEnabled = unlock
+        spFitnessGoal.isClickable = unlock
+
+        // EditTexts
+        val edits = listOf(etHeight, etWeight, etGoalWeight)
+        edits.forEach { et ->
+            if (unlock) {
+                // Fully re-enable interaction
+                et.isEnabled = true                   // keep style but allow input
+                et.isFocusable = true
+                et.isFocusableInTouchMode = true
+                et.isClickable = true
+                et.isLongClickable = true
+                et.setTextIsSelectable(true)
+
+                // Give them a real inputType (ensures proper keyboard)
+                et.inputType = if (et === etWeight || et === etGoalWeight) {
+                    android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                } else {
+                    android.text.InputType.TYPE_CLASS_NUMBER
+                }
+
+                // Digits guard
+                val allowDecimals = et === etWeight || et === etGoalWeight
+                et.keyListener = if (allowDecimals)
+                    DigitsKeyListener.getInstance("0123456789.")
+                else
+                    DigitsKeyListener.getInstance("0123456789")
+
+                // Make sure parents don't intercept taps (e.g., nested containers)
+                et.setOnTouchListener { v, ev ->
+                    v.parent?.requestDisallowInterceptTouchEvent(true)
+                    v.onTouchEvent(ev) // let EditText handle selection/cursor
+                    true
+                }
+            } else {
+                // Keep styling but block edits
+                et.keyListener = null
+                et.isFocusable = false
+                et.isFocusableInTouchMode = false
+                et.isClickable = false
+                et.isLongClickable = false
+                et.setTextIsSelectable(false)
+                et.setOnTouchListener(null)
+            }
+        }
+
+        // Quality-of-life: when unlocking, jump cursor to Weight and show the keyboard
+        if (unlock) {
+            etWeight.post {
+                etWeight.requestFocus()
+                etWeight.setSelection(etWeight.text?.length ?: 0)
+                showKeyboard(etWeight)
+            }
+        } else {
+            // hide keyboard on lock (optional)
+            hideKeyboard(currentFocus)
+        }
+    }
+
+    private fun showKeyboard(view: View) {
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.showSoftInput(view, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun hideKeyboard(view: View?) {
+        view ?: return
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
+    }
+
+
     private fun updateBmi() {
         val hCm = etHeight.text?.toString()?.trim()?.toIntOrNull()
         val wKg = etWeight.text?.toString()?.trim()?.toDoubleOrNull()
 
         val bmi = computeBmi(hCm, wKg)
         tvBmiValue.text = bmi?.let { b ->
-            val bmiInt = kotlin.math.ceil(b).toInt()  // nearest whole number
-            val cat = bmiCategory(b)        // keep category based on precise BMI
+            val bmiInt = kotlin.math.ceil(b).toInt()
+            val cat = bmiCategory(b)
             "$bmiInt ($cat)"
         } ?: "—"
     }
-
 
     private fun computeBmi(heightCm: Int?, weightKg: Double?): Double? {
         if (heightCm == null || heightCm <= 0) return null
@@ -356,16 +481,12 @@ class ProfileActivity : AppCompatActivity() {
         return weightKg / (m * m)
     }
 
-
-    // when calling, pass existing Int as Double: computeBmi(h, w?.toDouble())
-
     private fun bmiCategory(bmi: Double): String = when {
         bmi < 18.5 -> "Underweight"
         bmi < 25.0 -> "Normal"
         bmi < 30.0 -> "Overweight"
         else       -> "Obese"
     }
-
 
     private fun showHint(text: String, durationMs: Long = 6000L, fadeMs: Long = 250L) {
         tvSettingsHint.text = text
@@ -388,14 +509,12 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
 
-
     // ---------- Repo sprite helpers ----------
-
     private fun setSpriteForSex(sexRaw: String?) {
         val resId = when (sexRaw?.trim()?.lowercase()) {
             "female", "f", "woman", "girl" -> R.drawable.user_icon_female_sprite
             "male", "m", "man", "boy"      -> R.drawable.user_icon_male_sprite
-            else                                 -> R.drawable.user_icon_male_sprite
+            else                           -> R.drawable.user_icon_male_sprite
         }
         iconAnim?.stop()
         spriteView.setImageResource(resId)
@@ -416,15 +535,12 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        // Optional: release ref to help GC
         bgView.setImageDrawable(null)
         bgSprite = null
         super.onDestroy()
     }
 
-
     // ---------- Validation (repo) ----------
-
     private fun validateHeight(): Boolean {
         val h = etHeight.text.toString().trim().toIntOrNull()
         return when {
@@ -475,7 +591,6 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     // ---------- Settings dialog (Room-backed) ----------
-
     private fun showSettingsDialog() {
         if (userId == -1) {
             Toast.makeText(this, "No user loaded", Toast.LENGTH_SHORT).show()
@@ -490,7 +605,6 @@ class ProfileActivity : AppCompatActivity() {
         val etTimer = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.et_timer)
         val eqContainer = view.findViewById<GridLayout>(R.id.equipment_container)
         val cbMandatory = view.findViewById<CheckBox>(R.id.cb_mandatory_rest)
-
 
         CompoundButtonCompat.setButtonTintList(cbMandatory, checkboxTint())
 
@@ -523,9 +637,9 @@ class ProfileActivity : AppCompatActivity() {
                     val label = displayLabel(canon)
 
                     val lp = GridLayout.LayoutParams().apply {
-                        width = 0                                   // stretch evenly per column (weight)
+                        width = 0
                         height = ViewGroup.LayoutParams.WRAP_CONTENT
-                        columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)  // weight = 1
+                        columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f)
                         setMargins(dp(6), dp(6), dp(6), dp(6))
                     }
 
@@ -547,23 +661,17 @@ class ProfileActivity : AppCompatActivity() {
 
         view.setPadding(20, 80, 20, 10)
 
-        val dialog = MaterialAlertDialogBuilder(this /* , R.style.FitQuestSettingsImageDialog (optional overlay) */)
-            .setView(view)         // no setPositive/Negative/NeutralButton here
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(view)
             .create()
 
-
-
         dialog.setOnShowListener {
-            // If you’re using a custom background image for the whole dialog:
             dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
             (view.parent as? View)?.setBackgroundColor(Color.TRANSPARENT)
 
-            // wire up image buttons
             val btnSave   = view.findViewById<ImageButton>(R.id.btn_save)
             val btnCancel = view.findViewById<ImageButton>(R.id.btn_cancel)
             val btnLogout = view.findViewById<ImageButton>(R.id.btn_logout)
-            val chosenCanon = checks.filter { it.isChecked }.map { it.tag as String }
-
 
             btnSave.setOnClickListener {
                 val seconds = parseDurationToSeconds(etTimer.text?.toString()?.trim() ?: "")
@@ -606,7 +714,6 @@ class ProfileActivity : AppCompatActivity() {
 
         dialog.setOnDismissListener { enterImmersive() }
         dialog.show()
-
     }
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).roundToInt()
@@ -631,7 +738,6 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     // ---------- helpers ----------
-
     private fun formatDuration(totalSec: Int): String {
         val m = totalSec / 60
         val s = totalSec % 60

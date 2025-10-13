@@ -472,3 +472,68 @@ interface WeightLogDao {
     @Query("DELETE FROM weightLog WHERE userId = :uid AND id = :id")
     suspend fun delete(uid: Int, id: Long)
 }
+
+// ----- Item -----
+data class ItemListItem(
+    val code: String,
+    val name: String,
+    val spriteRes: String,
+    val price: Int,
+    val quantity: Int   // owned qty (0 if none)
+)
+
+@Dao
+interface ItemDao {
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertIgnore(item: Item): Long
+
+    @Query("SELECT * FROM item WHERE code = :code LIMIT 1")
+    suspend fun getByCode(code: String): Item?
+
+    @Query("UPDATE item SET price = :price WHERE code = :code")
+    suspend fun updatePrice(code: String, price: Int)
+
+    @Query("""
+        UPDATE item 
+        SET name = :name, spriteRes = :spriteRes, consumable = :consumable, category = :category, description = :description 
+        WHERE code = :code
+    """)
+    suspend fun updateMeta(
+        code: String,
+        name: String,
+        spriteRes: String,
+        consumable: Boolean,
+        category: String,
+        description: String?
+    )
+
+    @Query("DELETE FROM item WHERE code NOT IN (:keep)")
+    suspend fun deleteAllExcept(keep: List<String>)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertUserItem(row: UserItem): Long
+
+    @Query("UPDATE userItem SET quantity = quantity + :delta WHERE userId = :userId AND itemCode = :code")
+    suspend fun addQuantity(userId: Int, code: String, delta: Int)
+
+    @Query("SELECT COALESCE(quantity, 0) FROM userItem WHERE userId = :userId AND itemCode = :code LIMIT 1")
+    suspend fun getQuantity(userId: Int, code: String): Int?
+
+    @Query("""
+        SELECT 
+            i.code       AS code,
+            i.name       AS name,
+            i.spriteRes  AS spriteRes,
+            i.price      AS price,
+            COALESCE(ui.quantity, 0) AS quantity
+        FROM item i
+        LEFT JOIN userItem ui
+               ON ui.itemCode = i.code AND ui.userId = :userId
+        ORDER BY i.price ASC, i.name ASC
+    """)
+    suspend fun listForUser(userId: Int): List<ItemListItem>
+
+    @Query("DELETE FROM userItem WHERE userId = :userId AND itemCode = :code")
+    suspend fun deleteUserItem(userId: Int, code: String)
+}

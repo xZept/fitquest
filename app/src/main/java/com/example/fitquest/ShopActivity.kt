@@ -1,7 +1,6 @@
 package com.example.fitquest
 
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Build
@@ -15,9 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.fitquest.database.AppDatabase
-import com.example.fitquest.database.Monster
-import com.example.fitquest.database.MonsterListItem
+import com.example.fitquest.database.*
 import com.example.fitquest.datastore.DataStoreManager
 import com.example.fitquest.shop.PurchaseResult
 import com.example.fitquest.shop.ShopRepository
@@ -29,6 +26,13 @@ import kotlinx.coroutines.withContext
 
 class ShopActivity : AppCompatActivity() {
 
+    companion object {
+        const val EXTRA_SHOP_TAB = "shop_tab"           // "monsters" | "items"
+        const val TAB_MONSTERS = "monsters"
+        const val TAB_ITEMS = "items"
+        private const val EDIT_TICKET_CODE = "edit_profile_ticket"
+    }
+
     private lateinit var pressAnim: android.view.animation.Animation
     private lateinit var db: AppDatabase
     private lateinit var repo: ShopRepository
@@ -36,18 +40,23 @@ class ShopActivity : AppCompatActivity() {
 
     private var tvCoins: TextView? = null
     private lateinit var recycler: RecyclerView
-    private lateinit var adapter: MonsterAdapter
 
-    // In-memory state
+    // Tabs
+    private lateinit var tabMonsters: TextView
+    private lateinit var tabItems: TextView
+    private var activeTab: String = TAB_MONSTERS
+
+    // Adapters
+    private lateinit var monstersAdapter: MonsterAdapter
+    private lateinit var itemsAdapter: ItemAdapter
+
+    // State
     private var balance: Int = 0
-    private val items = mutableListOf<MonsterListItem>()
+    private val monsters = mutableListOf<MonsterListItem>()
+    private val items = mutableListOf<ItemListItem>()   // from ItemDao
 
-    // Animated background bits
-    private var bgBitmap: Bitmap? = null
+    // Animations using your SpriteSheetDrawable API
     private var bgDrawable: SpriteSheetDrawable? = null
-
-    // Coin sprite bits
-    private var coinBitmap: Bitmap? = null
     private var coinDrawable: SpriteSheetDrawable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,10 +70,19 @@ class ShopActivity : AppCompatActivity() {
         tvCoins = findViewById(R.id.tv_coins_badge)
         recycler = findViewById(R.id.shop_items_recycler)
         recycler.layoutManager = LinearLayoutManager(this)
-        adapter = MonsterAdapter()
-        recycler.adapter = adapter
 
-        // hides the system navigation
+        // Tabs
+        tabMonsters = findViewById(R.id.tab_monsters)
+        tabItems = findViewById(R.id.tab_items)
+
+        monstersAdapter = MonsterAdapter()
+        itemsAdapter = ItemAdapter()
+        recycler.adapter = monstersAdapter
+
+        tabMonsters.setOnClickListener { if (activeTab != TAB_MONSTERS) switchTab(TAB_MONSTERS) }
+        tabItems.setOnClickListener { if (activeTab != TAB_ITEMS) switchTab(TAB_ITEMS) }
+
+        // Immersive (same pattern as your other screens)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
             window.insetsController?.apply {
@@ -74,23 +92,24 @@ class ShopActivity : AppCompatActivity() {
         } else {
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility =
-                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
             @Suppress("DEPRECATION")
             window.navigationBarColor = Color.TRANSPARENT
         }
 
-        // Load user + ensure wallet + seed and refresh shop
+        // Load user, seed catalogs, open tab, refresh balance
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@ShopActivity).first()
             if (userId != -1) {
                 withContext(Dispatchers.IO) { db.userWalletDao().ensure(userId) }
                 seedMonstersOnce()
-                refreshAll()
+                seedItemsOnce()
+                val initialTab = intent?.getStringExtra(EXTRA_SHOP_TAB) ?: TAB_MONSTERS
+                switchTab(initialTab)
+                refreshCoins()
             }
         }
 
-        // Apply animated background + coin anim
         applyAnimatedBackground()
         applyCoinBadgeAnimation()
         setupNavigationBar()
@@ -103,49 +122,53 @@ class ShopActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
-        super.onStop()
         bgDrawable?.stop()
         coinDrawable?.stop()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        bgBitmap?.recycle()
-        bgBitmap = null
-        coinBitmap?.recycle()
-        coinBitmap = null
+        super.onStop()
     }
 
     override fun onResume() {
         super.onResume()
+        // keep balances/buttons fresh when returning from Profile or elsewhere
         refreshCoins(alsoRefreshButtons = true)
+        if (activeTab == TAB_ITEMS) refreshItems() else refreshMonsters()
     }
 
-    /* ---------------- Data ops ---------------- */
+    /* ---------------- Seeding ---------------- */
 
-    private suspend fun seedMonstersOnce() {
-        withContext(Dispatchers.IO) {
-            val dao = db.monsterDao()
-
-            val catalog = listOf(
-                Monster(code = "mushroom", name = "Mushroom",  spriteRes = "monster_mushroom", price = 75),
-                Monster(code = "goblin",   name = "Goblin",    spriteRes = "monster_goblin",   price = 150),
-                Monster(code = "ogre",     name = "Ogre",      spriteRes = "monster_ogre",     price = 300),
-                Monster(code = "eye",      name = "Giant Eye", spriteRes = "monster_eye",      price = 500)
-            )
-
-            catalog.forEach { m ->
-                val inserted = dao.insertIgnore(m)
-                if (inserted == -1L) {
-                    dao.updatePrice(m.code, m.price)
-                    dao.updateMeta(m.code, m.name, m.spriteRes)
-                }
+    private suspend fun seedMonstersOnce() = withContext(Dispatchers.IO) {
+        val dao = db.monsterDao()
+        val catalog = listOf(
+            Monster(code = "mushroom", name = "Mushroom",  spriteRes = "monster_mushroom", price = 75),
+            Monster(code = "goblin",   name = "Goblin",    spriteRes = "monster_goblin",   price = 150),
+            Monster(code = "ogre",     name = "Ogre",      spriteRes = "monster_ogre",     price = 300),
+            Monster(code = "eye",      name = "Giant Eye", spriteRes = "monster_eye",      price = 500)
+        )
+        catalog.forEach { m ->
+            val inserted = dao.insertIgnore(m)
+            if (inserted == -1L) {
+                dao.updatePrice(m.code, m.price)
+                dao.updateMeta(m.code, m.name, m.spriteRes)
             }
-
-            // Keep ONLY these in the catalog (optional for dev)
-            dao.deleteAllExcept(catalog.map { it.code })
         }
+        dao.deleteAllExcept(catalog.map { it.code })
     }
+
+    private suspend fun seedItemsOnce() = withContext(Dispatchers.IO) {
+        repo.seedItems(
+            Item(
+                code = EDIT_TICKET_CODE,
+                name = "Edit Profile Ticket",
+                spriteRes = "ticket_change",
+                price = 1000,
+                consumable = true,
+                category = "ticket",
+                description = "Unlock editing your profile once. Consumed when you save."
+            )
+        )
+    }
+
+    /* ---------------- Refreshers ---------------- */
 
     private fun refreshCoins(alsoRefreshButtons: Boolean = false) {
         val badge = tvCoins ?: return
@@ -155,75 +178,83 @@ class ShopActivity : AppCompatActivity() {
             withContext(Dispatchers.Main) {
                 balance = coins
                 badge.text = coins.toString()
-                if (alsoRefreshButtons) adapter.notifyDataSetChanged()
+                if (alsoRefreshButtons) {
+                    when (activeTab) {
+                        TAB_MONSTERS -> monstersAdapter.notifyDataSetChanged()
+                        TAB_ITEMS -> itemsAdapter.notifyDataSetChanged()
+                    }
+                }
             }
         }
     }
 
-    private fun refreshAll() {
+    private fun refreshMonsters() {
         lifecycleScope.launch(Dispatchers.IO) {
-            val coins = repo.getBalance(userId)
-            val list = repo.list(userId)
+            val list = db.monsterDao().listForUser(userId)
             withContext(Dispatchers.Main) {
-                balance = coins
-                tvCoins?.text = coins.toString()
+                monsters.clear()
+                monsters.addAll(list)
+                monstersAdapter.notifyDataSetChanged()
+            }
+        }
+    }
+
+    private fun refreshItems() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val list = repo.listItemsForUser(userId)
+            withContext(Dispatchers.Main) {
                 items.clear()
                 items.addAll(list)
-                adapter.notifyDataSetChanged()
+                itemsAdapter.notifyDataSetChanged()
             }
         }
     }
 
-    /* ---------------- Background ---------------- */
+    private fun switchTab(tab: String) {
+        activeTab = if (tab == TAB_ITEMS) TAB_ITEMS else TAB_MONSTERS
+        styleTabs()
+        recycler.adapter = if (activeTab == TAB_ITEMS) itemsAdapter else monstersAdapter
+        if (activeTab == TAB_ITEMS) refreshItems() else refreshMonsters()
+    }
+
+    private fun styleTabs() {
+        fun TextView.select(sel: Boolean) {
+            alpha = if (sel) 1f else 0.6f
+            paint.isUnderlineText = sel
+            setTextColor(if (sel) Color.WHITE else Color.LTGRAY)
+        }
+        tabMonsters.select(activeTab == TAB_MONSTERS)
+        tabItems.select(activeTab == TAB_ITEMS)
+    }
+
+    /* ---------------- Animated BG/coins (matches your API/resources) ---------------- */
 
     private fun applyCoinBadgeAnimation() {
-        val opts = BitmapFactory.Options().apply {
-            inScaled = false
-            inPreferredConfig = Bitmap.Config.ARGB_8888
-            inDither = true
-        }
-
-        coinBitmap = BitmapFactory.decodeResource(
-            resources,
-            R.drawable.coin_spritesheet,
-            opts
-        )
-
+        val opts = BitmapFactory.Options().apply { inScaled = false }
+        val sheet = BitmapFactory.decodeResource(resources, R.drawable.coin_spritesheet, opts)
         val coin = SpriteSheetDrawable(
-            sheet = requireNotNull(coinBitmap) { "coin_spritesheet failed to decode" },
+            sheet = sheet,
             rows = 1,
             cols = 6,
             fps  = 12,
             loop = true,
             scaleMode = SpriteSheetDrawable.ScaleMode.FIT_CENTER
         )
-
         findViewById<ImageView>(R.id.iv_coin_anim).setImageDrawable(coin)
         coinDrawable = coin
     }
 
     private fun applyAnimatedBackground() {
-        val opts = BitmapFactory.Options().apply {
-            inScaled = false
-            inPreferredConfig = Bitmap.Config.RGB_565
-            inDither = true
-        }
-
-        bgBitmap = BitmapFactory.decodeResource(
-            resources,
-            R.drawable.bg_page_shop_spritesheet0,
-            opts
-        )
-
+        val opts = BitmapFactory.Options().apply { inScaled = false }
+        val sheet = BitmapFactory.decodeResource(resources, R.drawable.bg_page_shop_spritesheet0, opts)
         val drawable = SpriteSheetDrawable(
-            sheet = requireNotNull(bgBitmap) { "bg_shop_spritesheet failed to decode" },
+            sheet = sheet,
             rows = 1,
             cols = 12,
             fps  = 12,
             loop = true,
             scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
         )
-
         findViewById<RelativeLayout>(R.id.shop_layout).background = drawable
         bgDrawable = drawable
     }
@@ -249,16 +280,16 @@ class ShopActivity : AppCompatActivity() {
         }
     }
 
-    /* ---------------- Adapter ---------------- */
+    /* ---------------- Monster adapter (uses your item_shop_monster.xml ids) ---------------- */
 
     private inner class MonsterAdapter : RecyclerView.Adapter<MonsterAdapter.VH>() {
 
         inner class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val iv: ImageView = v.findViewById(R.id.iv_sprite)
-            val name: TextView = v.findViewById(R.id.tv_name)
+            val iv: ImageView   = v.findViewById(R.id.iv_sprite)
+            val name: TextView  = v.findViewById(R.id.tv_name)
             val price: TextView = v.findViewById(R.id.tv_price)
             val btn: ImageButton = v.findViewById(R.id.btn_buy)
-            val overlay: View = v.findViewById(R.id.overlay_dim)
+            val overlay: View   = v.findViewById(R.id.overlay_dim)
         }
 
         override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): VH {
@@ -266,10 +297,10 @@ class ShopActivity : AppCompatActivity() {
             return VH(v)
         }
 
-        override fun getItemCount() = items.size
+        override fun getItemCount() = monsters.size
 
         override fun onBindViewHolder(holder: VH, position: Int) {
-            val row = items[position]
+            val row = monsters[position]
 
             val resId = resources.getIdentifier(row.spriteRes, "drawable", packageName)
             holder.iv.setImageResource(if (resId != 0) resId else android.R.color.transparent)
@@ -292,7 +323,6 @@ class ShopActivity : AppCompatActivity() {
             holder.btn.setImageResource(imgRes)
             holder.btn.isEnabled = canBuy
             holder.btn.isClickable = canBuy
-
             holder.overlay.visibility = if (locked || notEnough) View.VISIBLE else View.GONE
 
             holder.btn.contentDescription = when {
@@ -311,7 +341,8 @@ class ShopActivity : AppCompatActivity() {
                     val result = withContext(Dispatchers.IO) { repo.purchase(userId, row.code) }
                     when (result) {
                         is PurchaseResult.Success -> {
-                            refreshAll()
+                            refreshCoins()
+                            refreshMonsters()
                             Toast.makeText(this@ShopActivity, "Purchased ${row.name}!", Toast.LENGTH_SHORT).show()
                         }
                         is PurchaseResult.Insufficient -> {
@@ -319,7 +350,7 @@ class ShopActivity : AppCompatActivity() {
                             notifyItemChanged(position)
                         }
                         is PurchaseResult.AlreadyOwned -> {
-                            refreshAll()
+                            refreshMonsters()
                             Toast.makeText(this@ShopActivity, "Already owned.", Toast.LENGTH_SHORT).show()
                         }
                         is PurchaseResult.LockedByProgress -> {
@@ -329,6 +360,78 @@ class ShopActivity : AppCompatActivity() {
                         is PurchaseResult.NotFound -> {
                             Toast.makeText(this@ShopActivity, "Item not found.", Toast.LENGTH_SHORT).show()
                             notifyItemChanged(position)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /* ---------------- Items adapter (new) ---------------- */
+
+    private inner class ItemAdapter : RecyclerView.Adapter<ItemAdapter.VH>() {
+
+        inner class VH(v: View) : RecyclerView.ViewHolder(v) {
+            val iv: ImageView    = v.findViewById(R.id.iv_sprite)
+            val name: TextView   = v.findViewById(R.id.tv_name)
+            val price: TextView  = v.findViewById(R.id.tv_price)
+            val qty: TextView    = v.findViewById(R.id.tv_owned) // "xN"
+            val btn: ImageButton = v.findViewById(R.id.btn_buy)
+            val overlay: View    = v.findViewById(R.id.overlay_dim)
+        }
+
+        override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): VH {
+            val v = layoutInflater.inflate(R.layout.item_shop_item, parent, false)
+            return VH(v)
+        }
+
+        override fun getItemCount() = items.size
+
+        override fun onBindViewHolder(holder: VH, position: Int) {
+            val row = items[position]
+
+            val resId = resources.getIdentifier(row.spriteRes, "drawable", packageName)
+            holder.iv.setImageResource(if (resId != 0) resId else android.R.color.transparent)
+
+            holder.name.text = row.name
+            holder.price.text = "${row.price} coins"
+
+            // qty badge
+            if (row.quantity > 0) {
+                holder.qty.visibility = View.VISIBLE
+                holder.qty.text = "x${row.quantity}"
+            } else {
+                holder.qty.visibility = View.GONE
+            }
+
+            val notEnough = row.price > balance
+            holder.overlay.visibility = if (notEnough) View.VISIBLE else View.GONE
+
+            holder.btn.setImageResource(if (notEnough) R.drawable.indicator_not_enough else R.drawable.button_buy)
+            holder.btn.isEnabled = !notEnough
+            holder.btn.isClickable = !notEnough
+            holder.btn.contentDescription = if (notEnough) "Not enough coins" else "Buy ${row.name}"
+
+            holder.btn.setOnClickListener {
+                if (notEnough) return@setOnClickListener
+                it.startAnimation(pressAnim)
+                holder.btn.isEnabled = false
+
+                lifecycleScope.launch {
+                    val result = withContext(Dispatchers.IO) { repo.purchaseItem(userId, row.code) }
+                    when (result) {
+                        is PurchaseResult.Success -> {
+                            refreshCoins()
+                            refreshItems()
+                            Toast.makeText(this@ShopActivity, "Purchased ${row.name}!", Toast.LENGTH_SHORT).show()
+                        }
+                        is PurchaseResult.Insufficient -> {
+                            Toast.makeText(this@ShopActivity, "Not enough coins.", Toast.LENGTH_SHORT).show()
+                            notifyItemChanged(position)
+                        }
+                        else -> {
+                            refreshItems()
+                            Toast.makeText(this@ShopActivity, "Error purchasing item.", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }

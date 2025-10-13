@@ -279,8 +279,45 @@ data class MacroDiary(
     indices = [Index(value = ["userId", "loggedAt"])]
 )
 data class WeightLog(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0L,  // <-- add this
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val userId: Int,
-    val loggedAt: Long,
+    val loggedAt: Long,  // epoch millis
     val weightKg: Float
+)
+
+// ----- Item -----
+
+@Entity(
+    tableName = "item",
+    indices = [Index(value = ["code"], unique = true)]
+)
+data class Item(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val code: String,           // e.g. "edit_profile_ticket"
+    val name: String,           // shown in UI
+    val spriteRes: String,      // drawable name, e.g. "ic_settings"
+    val price: Int,             // cost in coins
+    val consumable: Boolean = true,
+    val category: String = "ticket",
+    val description: String? = null
+)
+
+@Entity(
+    tableName = "userItem",
+    indices = [Index(value = ["userId", "itemCode"], unique = true)],
+    foreignKeys = [
+        ForeignKey(
+            entity = User::class,
+            parentColumns = ["userId"],
+            childColumns = ["userId"],
+            onDelete = ForeignKey.CASCADE
+        )
+    ]
+)
+data class UserItem(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val userId: Int,
+    val itemCode: String,
+    val quantity: Int = 0,
+    val acquiredAt: Long = System.currentTimeMillis()
 )
