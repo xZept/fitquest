@@ -27,7 +27,7 @@ class FitQuestApp : Application() {
 
         WeightReminderScheduler.scheduleNext6am(this)
 
-        // Log macros for the day every 12 MN
+        // Log macros for the day every 11:59 PM
         scheduleMidnightMacroSnapshot()
 
         // For debugging
@@ -57,19 +57,21 @@ class FitQuestApp : Application() {
     private fun scheduleMidnightMacroSnapshot() {
         val zone = ZoneId.of("Asia/Manila")
         val now = ZonedDateTime.now(zone)
-        val nextRun = now.toLocalDate().plusDays(1).atTime(23, 59).atZone(zone)
-        val initialDelay = java.time.Duration.between(now, nextRun).toMinutes()
+        val today2359 = now.toLocalDate().atTime(23, 59).atZone(zone)
+        val firstRun = if (now.isBefore(today2359)) today2359 else today2359.plusDays(1)
+        val delay = java.time.Duration.between(now, firstRun)
 
-        val request = PeriodicWorkRequestBuilder<MidnightMacroSnapshotWorker>(
-            1, TimeUnit.DAYS
+        val request = androidx.work.PeriodicWorkRequestBuilder<MidnightMacroSnapshotWorker>(
+            1, java.util.concurrent.TimeUnit.DAYS
         )
-            .setInitialDelay(initialDelay, TimeUnit.MINUTES)
+            .setInitialDelay(delay.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
             .addTag("macroSnapshotDaily")
             .build()
 
-        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+        // Don’t reschedule every app start; keep the existing timing.
+        androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "macroSnapshotDaily",
-            ExistingPeriodicWorkPolicy.UPDATE,
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
             request
         )
     }
