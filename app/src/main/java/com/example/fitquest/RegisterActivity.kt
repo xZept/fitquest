@@ -1,5 +1,6 @@
 package com.example.fitquest
 
+import MidnightMacroSnapshotWorker
 import android.app.DatePickerDialog
 import android.content.Intent
 import android.graphics.Color
@@ -37,8 +38,8 @@ import androidx.core.view.isVisible
 import com.example.fitquest.database.AppDatabase
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
 
 class RegisterActivity : AppCompatActivity() {
@@ -474,7 +475,8 @@ class RegisterActivity : AppCompatActivity() {
                         // Calculate macros
                         repository.computeAndSaveMacroPlan(newUserId.toInt())
 
-
+                        // Log macros for the day every 11:59 PM
+                        scheduleMidnightMacroSnapshot()
 
                         Toast.makeText(
                             this@RegisterActivity,
@@ -517,6 +519,28 @@ class RegisterActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    // Function for logging macros every 11:59 PM
+    private fun scheduleMidnightMacroSnapshot() {
+        val zone = ZoneId.of("Asia/Manila")
+        val now = ZonedDateTime.now(zone)
+        val today2359 = now.toLocalDate().atTime(23, 59).atZone(zone)
+        val firstRun = if (now.isBefore(today2359)) today2359 else today2359.plusDays(1)
+        val delay = java.time.Duration.between(now, firstRun)
+
+        val request = androidx.work.PeriodicWorkRequestBuilder<MidnightMacroSnapshotWorker>(
+            1, java.util.concurrent.TimeUnit.DAYS
+        )
+            .setInitialDelay(delay.toMillis(), java.util.concurrent.TimeUnit.MILLISECONDS)
+            .addTag("macroSnapshotDaily")
+            .build()
+
+        // Don’t reschedule every app start; keep the existing timing.
+        androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "macroSnapshotDaily",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            request
+        )
+    }
     private fun showBanner(text: String, holdMs: Long = 4000L) {
         welcomeBanner.text = text
 

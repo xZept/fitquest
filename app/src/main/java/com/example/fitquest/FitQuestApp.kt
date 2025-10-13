@@ -27,9 +27,6 @@ class FitQuestApp : Application() {
 
         WeightReminderScheduler.scheduleNext6am(this)
 
-        // Log macros for the day every 11:59 PM
-        scheduleMidnightMacroSnapshot()
-
         // For debugging
         val key = BuildConfig.FDC_API_KEY
         android.util.Log.d("FDC", "API key length = ${key.length}")
@@ -54,7 +51,7 @@ class FitQuestApp : Application() {
 
 
     // Function for logging macros every 11:59 PM
-    private fun scheduleMidnightMacroSnapshot() {
+    fun scheduleMidnightMacroSnapshot() {
         val zone = ZoneId.of("Asia/Manila")
         val now = ZonedDateTime.now(zone)
         val today2359 = now.toLocalDate().atTime(23, 59).atZone(zone)
