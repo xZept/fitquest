@@ -447,7 +447,7 @@ class MacroActivity : AppCompatActivity() {
 
             val qtyText = when {
                 row.log.inputQuantity != null && !row.log.inputLabel.isNullOrBlank() ->
-                    "${formatQty(row.log.inputQuantity!!)} ${row.log.inputLabel}"         // ← API label
+                    "${formatQty(row.log.inputQuantity!!)}" + " servings of " + "${row.log.inputLabel}"
                 row.log.inputQuantity != null && row.log.inputUnit != null ->
                     "${formatQty(row.log.inputQuantity!!)} ${row.log.inputUnit.displayName}"
                 else ->
