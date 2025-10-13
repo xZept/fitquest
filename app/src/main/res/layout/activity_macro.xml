@@ -421,6 +421,19 @@
 
     <!-- Add Meal Button -->
     <!-- Fixed floating action just above the navbar -->
+
+    <ImageView
+        android:id="@+id/iv_capybara"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:src="@drawable/capybara_hungry"
+        android:contentDescription="Capybara mood"
+        android:elevation="20dp"
+        app:layout_constraintStart_toStartOf="@id/btn_buy_food"
+        app:layout_constraintEnd_toEndOf="@id/btn_buy_food"
+        app:layout_constraintBottom_toTopOf="@id/btn_buy_food"
+        android:layout_marginBottom="2dp" />
+
     <ImageButton
         android:id="@+id/btn_buy_food"
         android:layout_width="wrap_content"

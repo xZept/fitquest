@@ -52,6 +52,7 @@ class MacroActivity : AppCompatActivity() {
     private lateinit var dinnerContainer: LinearLayout
     private lateinit var repository: FitquestRepository
     private var macroPlan: MacroPlan? = null
+    private lateinit var capybaraView: ImageView
 
     private val foodRepo by lazy { (application as FitQuestApp).foodRepository }
     private val TAG = "MacroActivity"
@@ -111,6 +112,8 @@ class MacroActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Capybara
+        capybaraView = findViewById(R.id.iv_capybara)
 
         // Initialize repo
         repository = FitquestRepository(this)
@@ -343,6 +346,18 @@ class MacroActivity : AppCompatActivity() {
                 setLimited(R.id.protein_progress, doneProtein, goalProtein)
                 setLimited(R.id.carbs_progress, doneCarbs, goalCarbs)
                 setLimited(R.id.fat_progress, doneFat, goalFat)
+
+                updateCapybaraMood(
+                    doneCalories = doneCalories,
+                    doneProtein  = doneProtein,
+                    doneCarbs    = doneCarbs,
+                    doneFat      = doneFat,
+                    goalCalories = goalCalories,
+                    goalProtein  = goalProtein,
+                    goalCarbs    = goalCarbs,
+                    goalFat      = goalFat
+                )
+
             }
         }
     }
@@ -864,5 +879,37 @@ class MacroActivity : AppCompatActivity() {
 
     private fun formatQty(q: Double): String =
         if (q == q.toLong().toDouble()) q.toLong().toString() else q.toString()
+
+    private fun updateCapybaraMood(
+        doneCalories: Int, doneProtein: Int, doneCarbs: Int, doneFat: Int,
+        goalCalories: Int, goalProtein: Int, goalCarbs: Int, goalFat: Int
+    ) {
+
+        // Capybara
+        capybaraView = findViewById(R.id.iv_capybara)
+
+        // Nothing logged = all zeros
+        val nothingLogged = (doneCalories == 0 && doneProtein == 0 && doneCarbs == 0 && doneFat == 0)
+
+        // Bloated if ANY macro OR calories is over the plan
+        val anyOver = (doneCalories > goalCalories) ||
+                (doneProtein > goalProtein) ||
+                (doneCarbs > goalCarbs) ||
+                (doneFat > goalFat)
+
+        val (drawableRes, desc) = when {
+            nothingLogged -> R.drawable.capybara_hungry to "Hungry capybara"
+            anyOver      -> R.drawable.capybara_bloated to "Bloated capybara"
+            else         -> R.drawable.capybara_fulfilled to "Fulfilled capybara"
+        }
+
+        // Simple fade to make the change feel alive
+        capybaraView.animate().alpha(0f).setDuration(120).withEndAction {
+            capybaraView.setImageResource(drawableRes)
+            capybaraView.contentDescription = desc
+            capybaraView.animate().alpha(1f).setDuration(120).start()
+        }.start()
+    }
+
 
 }
