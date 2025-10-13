@@ -75,14 +75,13 @@ class DashboardActivity : AppCompatActivity() {
     private var hasActiveQuest: Boolean = false
 
     private lateinit var tvKcal: TextView
-    private lateinit var tvProtein: TextView
     private lateinit var tvWorkouts: TextView
     private lateinit var cardDaily: View
-    private lateinit var pbKcal: com.google.android.material.progressindicator.LinearProgressIndicator
-    private lateinit var pbProtein: com.google.android.material.progressindicator.LinearProgressIndicator
     private lateinit var weightChart: com.github.mikephil.charting.charts.LineChart
     private val dateFmt = java.time.format.DateTimeFormatter.ofPattern("MMM d")
 
+    private lateinit var pbKcalCircle: com.google.android.material.progressindicator.CircularProgressIndicator
+    private lateinit var tvKcalCenter: android.widget.TextView
 
     private val requestNotifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -117,12 +116,10 @@ class DashboardActivity : AppCompatActivity() {
             }
         }
 
-
-
-
+        pbKcalCircle = findViewById(R.id.pb_kcal_circle)
+        tvKcalCenter = findViewById(R.id.tv_kcal_center)
         db = AppDatabase.getInstance(applicationContext)
         chart = findViewById(R.id.chart_splits)
-
         weightChart = findViewById(R.id.weightChart)
         setupChart(weightChart)
         setupChartAppearance()
@@ -151,12 +148,8 @@ class DashboardActivity : AppCompatActivity() {
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         tvKcal = findViewById(R.id.tv_kcal)
-        tvProtein = findViewById(R.id.tv_protein)
         tvWorkouts = findViewById(R.id.tv_workouts)
         cardDaily = findViewById(R.id.card_daily_summary)
-        pbKcal = findViewById(R.id.pb_kcal)
-        pbProtein = findViewById(R.id.pb_protein)
-
 
 
 
@@ -510,45 +503,44 @@ class DashboardActivity : AppCompatActivity() {
                 val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
                 if (uid == -1) return@launch
 
-                // NOTE: use the package where you actually put ProgressRepository
-                // You imported: com.example.fitquest.repository.ProgressRepository (keep that)
                 val repo = ProgressRepository(db)
-
                 val daily = repo.dailySummary(uid, todayDayKey())
+
                 tvKcal.text = "${daily.calories} / ${daily.planCalories} kcal (${fmtDev(daily.kcalDeviation)})"
-                tvProtein.text = "Protein: ${daily.protein} / ${daily.planProtein} g (${daily.proteinHitPct}%)"
-                tvWorkouts.text = "Workouts: ${daily.workoutsCompletedToday} today"
+                tvWorkouts.text = "${daily.workoutsCompletedToday}"
+
                 val ok   = androidx.core.content.ContextCompat.getColor(this@DashboardActivity, R.color.progress_ok)
                 val over = androidx.core.content.ContextCompat.getColor(this@DashboardActivity, R.color.progress_over)
 
-// Calories bar
+                // Calories bar only
                 if (daily.planCalories > 0) {
-                    pbKcal.max = daily.planCalories.coerceAtLeast(1)
-                    pbKcal.setProgressCompat(daily.calories.coerceIn(0, pbKcal.max), true)
-                    pbKcal.setIndicatorColor(if (daily.calories > daily.planCalories) over else ok)
-                    pbKcal.visibility = View.VISIBLE
+                    // ring color (turn red when over)
+                    pbKcalCircle.setIndicatorColor(if (daily.calories > daily.planCalories) over else ok)
+
+                    // use real kcal numbers for max/progress
+                    pbKcalCircle.max = daily.planCalories.coerceAtLeast(1)
+                    val clamped = daily.calories.coerceIn(0, pbKcalCircle.max)
+                    pbKcalCircle.setProgressCompat(clamped, /*animate=*/true)
+
+                    // center text shows percent
+                    val pct = ((daily.calories * 100.0) / daily.planCalories).toInt()
+                    tvKcalCenter.text = "${pct.coerceAtLeast(0)}%"
+
+                    pbKcalCircle.visibility = View.VISIBLE
                 } else {
-                    pbKcal.visibility = View.GONE
+                    pbKcalCircle.visibility = View.GONE
+                    tvKcalCenter.text = ""
                 }
 
-// Protein bar
-                if (daily.planProtein > 0) {
-                    pbProtein.max = daily.planProtein.coerceAtLeast(1)
-                    pbProtein.setProgressCompat(daily.protein.coerceIn(0, pbProtein.max), true)
-                    pbProtein.setIndicatorColor(if (daily.protein > daily.planProtein) over else ok)
-                    pbProtein.visibility = View.VISIBLE
-                } else {
-                    pbProtein.visibility = View.GONE
-                }
-
-            } catch (t: Throwable) {
+            } catch (_: Throwable) {
                 // Fail quietly so dashboard never crashes
                 tvKcal.text = "—"
-                tvProtein.text = "—"
                 tvWorkouts.text = "—"
+                pbKcalCircle.visibility = View.GONE
             }
         }
     }
+
 
 
     /** Extracts the split ("Push","Pull","Legs","Upper") from a title like "Push • General". */
