@@ -32,12 +32,12 @@ class DiaryActivity : AppCompatActivity() {
         pager.adapter = object : FragmentStateAdapter(this) {
             override fun getItemCount() = 2
             override fun createFragment(position: Int): Fragment =
-                if (position == 0) WorkoutHistoryFragment() else QuestHistoryFragment()
+                if (position == 0) WorkoutHistoryFragment() else WeightHistoryFragment()
         }
 
         TabLayoutMediator(tabs, pager) { tab, pos ->
             val tv = TextView(this).apply {
-                text = if (pos == 0) "Workout History" else "Quest History"
+                text = if (pos == 0) "Workout History" else "Weight History"
                 setTextColor(android.graphics.Color.BLACK)
                 textSize = 16f                     // unselected size
                 typeface = Typeface.DEFAULT_BOLD

@@ -274,3 +274,14 @@ data class MacroDiary(
     val capturedAt: Long = System.currentTimeMillis()
 )
 
+@Entity(
+    tableName = "weightLog",
+    indices = [Index(value = ["userId", "loggedAt"])]
+)
+data class WeightLog(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    val userId: Int,
+    val loggedAt: Long,  // epoch millis
+    val weightKg: Float
+)
+

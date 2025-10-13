@@ -34,6 +34,7 @@ import android.view.MotionEvent
 import android.widget.*
 import android.widget.TextView
 import androidx.core.view.isVisible
+import com.example.fitquest.database.AppDatabase
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -455,12 +456,25 @@ class RegisterActivity : AppCompatActivity() {
                             goal = goal
                         )
                         repository.insertUserProfile(newUserProfile)
+
+                        val db = AppDatabase.getInstance(applicationContext)
+
+                        db.weightLogDao().insert(
+                            com.example.fitquest.database.WeightLog(
+                                userId   = newUserId.toInt(),
+                                loggedAt = System.currentTimeMillis(),
+                                weightKg = weightVal!!.toFloat()   // you already validated non-null and range
+                            )
+                        )
+
                         Log.d("FitquestDB", "User and UserProfile inserted.")
                         Log.d("FitquestDB", "Registering new user: $newUser")
                         Log.d("FitquestDB", "Adding new user profile: $newUserProfile")
 
                         // Calculate macros
                         repository.computeAndSaveMacroPlan(newUserId.toInt())
+
+
 
                         Toast.makeText(
                             this@RegisterActivity,

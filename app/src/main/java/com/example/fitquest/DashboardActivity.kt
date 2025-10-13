@@ -212,6 +212,7 @@ class DashboardActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        backfillInitialWeightIfMissing()
         lifecycleScope.launch {
             val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
             hasActiveQuest = db.activeQuestDao().getActiveForUser(uid) != null
@@ -483,6 +484,30 @@ class DashboardActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun backfillInitialWeightIfMissing() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
+            if (uid == -1) return@launch
+
+            val db = AppDatabase.getInstance(applicationContext)
+            val hasAny = db.weightLogDao().getAll(uid).isNotEmpty()
+            if (!hasAny) {
+                val profile = db.userProfileDAO().getProfileByUserId(uid)
+                val w = profile?.weight ?: 0
+                if (w > 0) {
+                    db.weightLogDao().insert(
+                        com.example.fitquest.database.WeightLog(
+                            userId = uid,
+                            loggedAt = System.currentTimeMillis(),
+                            weightKg = w.toFloat()
+                        )
+                    )
+                }
+            }
+        }
+    }
+
 
 
 

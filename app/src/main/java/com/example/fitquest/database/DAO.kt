@@ -453,3 +453,22 @@ interface MacroPlanDao {
     @Query("""SELECT * FROM macroPlan WHERE userId = :userId ORDER BY updatedAt DESC LIMIT 1""")
     suspend fun getLatestForUser(userId: Int): MacroPlan?
 }
+
+@Dao
+interface WeightLogDao {
+    @Insert
+    suspend fun insert(row: WeightLog): Long
+
+    @Query("""
+        SELECT * FROM weightLog
+        WHERE userId = :uid
+        ORDER BY loggedAt DESC
+    """)
+    suspend fun getAll(uid: Int): List<WeightLog>
+
+    @Query("SELECT weightKg FROM weightLog WHERE userId = :uid ORDER BY loggedAt DESC LIMIT 1")
+    suspend fun getLastWeight(uid: Int): Float?
+
+    @Query("DELETE FROM weightLog WHERE userId = :uid AND id = :id")
+    suspend fun delete(uid: Int, id: Long)
+}
