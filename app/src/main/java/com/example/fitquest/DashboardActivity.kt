@@ -45,6 +45,7 @@ import android.app.AlarmManager
 import android.provider.Settings
 import android.net.Uri
 import android.Manifest
+import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowInsetsCompat
 import com.github.mikephil.charting.charts.LineChart
@@ -52,6 +53,7 @@ import com.github.mikephil.charting.components.LimitLine
 import com.github.mikephil.charting.formatter.ValueFormatter
 import java.time.LocalDate
 import androidx.core.view.isVisible
+
 
 // MPAndroidChart for the line chart
 import com.github.mikephil.charting.data.Entry
@@ -82,6 +84,10 @@ class DashboardActivity : AppCompatActivity() {
 
     private lateinit var pbKcalCircle: com.google.android.material.progressindicator.CircularProgressIndicator
     private lateinit var tvKcalCenter: android.widget.TextView
+
+    private lateinit var tvWeeklyKcal: TextView
+    private lateinit var tvWeeklyWorkouts: TextView
+
 
     private val requestNotifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -116,6 +122,21 @@ class DashboardActivity : AppCompatActivity() {
             }
         }
 
+        findViewById<ImageButton>(R.id.btn_diary).apply {
+            isEnabled = true
+            setOnClickListener {
+                startActivity(Intent(this@DashboardActivity, DiaryHistoryActivity::class.java))
+            }
+            // optional debug: shows a toast when long-pressed
+            setOnLongClickListener {
+                Toast.makeText(this@DashboardActivity, "Diary tapped", Toast.LENGTH_SHORT).show()
+                true
+            }
+        }
+
+
+        tvWeeklyKcal = findViewById(R.id.tv_weekly_kcal)
+        tvWeeklyWorkouts = findViewById(R.id.tv_weekly_workouts)
         pbKcalCircle = findViewById(R.id.pb_kcal_circle)
         tvKcalCenter = findViewById(R.id.tv_kcal_center)
         db = AppDatabase.getInstance(applicationContext)
@@ -125,6 +146,15 @@ class DashboardActivity : AppCompatActivity() {
         setupChartAppearance()
         loadDataAndRender()
         refreshDailySummary()
+
+
+        val header = findViewById<LinearLayout>(R.id.header_bar)
+        header.bringToFront()  // make sure it’s above everything
+        ViewCompat.setOnApplyWindowInsetsListener(header) { v, insets ->
+            val top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            v.setPadding(v.paddingLeft, top + v.paddingTop, v.paddingRight, v.paddingBottom)
+            insets
+        }
 
 
 
@@ -222,6 +252,8 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     override fun onResume() {
+        refreshWeeklySummary()
+        refreshDailySummary()
         super.onResume()
         loadWeightSeries()
         backfillInitialWeightIfMissing()
@@ -237,7 +269,6 @@ class DashboardActivity : AppCompatActivity() {
         bgAnim?.stop()
         super.onStop()
     }
-
 
     private fun setupChartAppearance() {
         chart.description.isEnabled = false
@@ -425,6 +456,11 @@ class DashboardActivity : AppCompatActivity() {
         return now.year * 10_000 + now.monthValue * 100 + now.dayOfMonth
     }
 
+    private fun dayKeyNDaysAgo(n: Int): Int {
+        val z = java.time.ZoneId.of("Asia/Manila")
+        val d = java.time.LocalDate.now(z).minusDays(n.toLong())
+        return d.year * 10_000 + d.monthValue * 100 + d.dayOfMonth
+    }
 
     private fun attachMiniSeeder() {
         if (!BuildConfig.DEBUG) return
@@ -472,6 +508,46 @@ class DashboardActivity : AppCompatActivity() {
             true
         }
     }
+
+    private fun refreshWeeklySummary() {
+        lifecycleScope.launch {
+            try {
+                val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
+                if (uid == -1) return@launch
+
+                val repo = ProgressRepository(db)
+
+                // build last 7 day keys (Mon-Today isn’t required; this is “last 7 days including today”)
+                val dayKeys = (0..6).map { dayKeyNDaysAgo(it) }
+
+                val daily = withContext(Dispatchers.IO) {
+                    dayKeys.map { dk -> repo.dailySummary(uid, dk) }
+                }
+
+                val daysCount = daily.size.coerceAtLeast(1)
+                val totalCals = daily.sumOf { it.calories }
+                val totalPlan = daily.sumOf { it.planCalories }
+                val workouts = daily.sumOf { it.workoutsCompletedToday }
+
+                val avgCals = (totalCals / daysCount)
+                val avgPlan = (totalPlan / daysCount).coerceAtLeast(0)
+                val dev = if (avgPlan > 0) (avgCals - avgPlan) else 0
+
+                tvWeeklyKcal.text =
+                    if (avgPlan > 0)
+                        "Avg: $avgCals / $avgPlan kcal (${fmtDev(dev)})"
+                    else
+                        "Avg: $avgCals kcal"
+
+                tvWeeklyWorkouts.text = "Workouts: $workouts in last 7 days"
+
+            } catch (_: Throwable) {
+                tvWeeklyKcal.text = "Avg: —"
+                tvWeeklyWorkouts.text = "Workouts: —"
+            }
+        }
+    }
+
 
 
 

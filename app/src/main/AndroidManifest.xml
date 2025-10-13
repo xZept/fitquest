@@ -48,6 +48,7 @@
         <activity android:name=".DiaryActivity" />
         <activity android:name=".SessionDetailActivity" />
         <activity android:name="com.example.fitquest.WeeklyReviewActivity" />
+        <activity android:name=".DiaryHistoryActivity"/>
 
         <!-- Weight reminder broadcast receiver (explicit internal receiver) -->
         <receiver

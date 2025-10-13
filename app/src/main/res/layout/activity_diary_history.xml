@@ -6,35 +6,33 @@
     android:background="@drawable/bg_diary">
 
     <!-- Main vertical content -->
-
-    <!-- Floating Back button (bottom-right) -->
     <LinearLayout
+        android:orientation="vertical"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:layout_height="match_parent">
 
         <!-- Title image (flush left) -->
         <ImageView
             android:id="@+id/titleImage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="start"
-            android:layout_marginTop="10dp"
-            android:layout_marginBottom="8dp"
+            android:src="@drawable/title_page_diary"
             android:adjustViewBounds="true"
+            android:layout_marginTop="10dp"
+            android:layout_gravity="start"
             android:scaleType="centerInside"
-            android:src="@drawable/title_page_diary" />
+            android:layout_marginBottom="8dp" />
 
         <!-- Padded content -->
         <LinearLayout
+            android:orientation="vertical"
+            android:padding="16dp"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:layout_weight="1">
 
             <com.google.android.material.tabs.TabLayout
-                android:id="@+id/tabLayout"
+                android:id="@+id/tab_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="20dp"
@@ -42,7 +40,6 @@
                 app:tabIndicatorColor="@android:color/black"
                 app:tabRippleColor="@android:color/transparent"
                 app:tabSelectedTextColor="@android:color/black"
-                app:tabTextAppearance="@style/Widget.FitQuest.Tab.Text"
                 app:tabTextColor="@android:color/darker_gray" />
 
             <androidx.viewpager2.widget.ViewPager2
@@ -56,6 +53,7 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- Floating Back button (bottom-left like sample; change to end if you prefer) -->
     <ImageButton
         android:id="@+id/btnBack"
         android:layout_width="wrap_content"

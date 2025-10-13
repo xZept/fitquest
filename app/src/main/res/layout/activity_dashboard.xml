@@ -16,6 +16,7 @@
         android:contentDescription="Dashboard Background"
         android:alpha="1.0" />
 
+    <!-- STICKY HEADER (outside the scroll view) -->
     <LinearLayout
         android:id="@+id/header_bar"
         android:layout_width="match_parent"
@@ -26,7 +27,8 @@
         android:paddingStart="0dp"
         android:paddingEnd="16dp"
         android:paddingTop="8dp"
-        android:paddingBottom="8dp">
+        android:paddingBottom="8dp"
+        android:elevation="8dp">
 
         <ImageView
             android:id="@+id/img_profile_title"
@@ -34,7 +36,26 @@
             android:layout_height="wrap_content"
             android:src="@drawable/title_page_dashboard"
             android:contentDescription="dashboard" />
+
+        <!-- push-right spacer -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Diary button on the right -->
+        <ImageButton
+            android:id="@+id/btn_diary"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:padding="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/icon_diary"
+            android:clickable="true"
+            android:focusable="true" />
+
     </LinearLayout>
+
 
     <!-- Scrollable content area (stays above bottom nav) -->
     <androidx.core.widget.NestedScrollView
@@ -178,6 +199,45 @@
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>
+
+            <!-- Weekly Summary -->
+            <LinearLayout
+                android:id="@+id/card_weekly_summary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginHorizontal="16dp"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:background="@drawable/container_general">
+
+                <TextView
+                    android:id="@+id/tv_weekly_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="This Week"
+                    android:textSize="18sp"
+                    android:textColor="@color/white"
+                    android:paddingBottom="6dp"/>
+
+                <!-- Avg calories -->
+                <TextView
+                    android:id="@+id/tv_weekly_kcal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Avg: —"
+                    android:textColor="@color/white" />
+
+                <!-- Workouts count -->
+                <TextView
+                    android:id="@+id/tv_weekly_workouts"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Workouts: —"
+                    android:textColor="@color/white"
+                    android:layout_marginTop="6dp" />
+            </LinearLayout>
+
 
             <!-- Weight line chart -->
             <FrameLayout
