@@ -25,7 +25,8 @@
         android:gravity="center_vertical"
         android:paddingStart="0dp"
         android:paddingEnd="16dp"
-        android:paddingTop="8dp">
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
 
         <ImageView
             android:id="@+id/img_profile_title"
@@ -35,102 +36,134 @@
             android:contentDescription="dashboard" />
     </LinearLayout>
 
-    <!-- Dashboard Content  -->
-    <TextView
-        android:id="@+id/dashboardTip"
+    <!-- Scrollable content area (stays above bottom nav) -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scroll_content"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:textSize="14sp"
-        android:textStyle="italic"
-        android:text="Tip of the Day will appear here"
+        android:layout_height="match_parent"
         android:layout_below="@id/header_bar"
-        android:gravity="center"
-        android:textColor="@android:color/white"
-        android:background="@drawable/tip_general"/>
+        android:layout_above="@id/bottom_nav"
+        android:fillViewport="true"
+        android:clipToPadding="false"
+        android:paddingBottom="120dp">
 
-
-
-    <!-- Daily Summary (tap to open Weekly Review) -->
-
-    <LinearLayout
-        android:id="@+id/card_daily_summary"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:layout_marginHorizontal="16dp"
-        android:orientation="vertical"
-        android:padding="12dp"
-        android:background="@drawable/container_general"
-        android:layout_below="@+id/dashboardTip">
-
-        <TextView
-            android:id="@+id/tv_daily_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Today’s Summary"
-            android:textSize="18sp"
-            android:textColor="@color/white"
-            android:paddingBottom="4dp"/>
-
-        <!-- Calories row -->
-        <TextView
-            android:id="@+id/tv_kcal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0 / 0 kcal (±0)"
-            android:textColor="@color/white" />
-
-        <com.google.android.material.progressindicator.LinearProgressIndicator
-            android:id="@+id/pb_kcal"
+        <LinearLayout
+            android:id="@+id/content_container"
             android:layout_width="match_parent"
-            android:layout_height="8dp"
-            android:layout_marginTop="6dp"
-            app:trackThickness="8dp"
-            android:visibility="gone" />
-
-        <!-- Protein row -->
-        <TextView
-            android:id="@+id/tv_protein"
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Protein: 0 / 0 g (0%)"
-            android:textColor="@color/white"
-            android:layout_marginTop="10dp" />
+            android:orientation="vertical">
 
-        <com.google.android.material.progressindicator.LinearProgressIndicator
-            android:id="@+id/pb_protein"
-            android:layout_width="match_parent"
-            android:layout_height="8dp"
-            android:layout_marginTop="6dp"
-            app:trackThickness="8dp"
-            android:visibility="gone" />
+            <!-- Tip -->
+            <TextView
+                android:id="@+id/dashboardTip"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:textSize="14sp"
+                android:textStyle="italic"
+                android:text="Tip of the Day will appear here"
+                android:gravity="center"
+                android:textColor="@android:color/white"
+                android:background="@drawable/tip_general" />
 
-        <TextView
-            android:id="@+id/tv_workouts"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Workouts: 0 today"
-            android:textColor="@color/white"
-            android:layout_marginTop="10dp" />
-    </LinearLayout>
+            <!-- Daily Summary -->
+            <LinearLayout
+                android:id="@+id/card_daily_summary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:layout_marginHorizontal="16dp"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:background="@drawable/container_general">
 
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@drawable/container_graph"
-        android:layout_marginHorizontal="16dp"
-        android:paddingHorizontal="15dp"
-        android:layout_below="@+id/card_daily_summary">
+                <TextView
+                    android:id="@+id/tv_daily_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Today’s Summary"
+                    android:textSize="18sp"
+                    android:textColor="@color/white"
+                    android:paddingBottom="4dp"/>
 
-        <com.github.mikephil.charting.charts.BarChart
-            android:id="@+id/chart_splits"
-            android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:layout_gravity="center_vertical" />
-    </FrameLayout>
+                <TextView
+                    android:id="@+id/tv_kcal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0 / 0 kcal (±0)"
+                    android:textColor="@color/white" />
 
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/pb_kcal"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:layout_marginTop="6dp"
+                    app:trackThickness="8dp"
+                    android:visibility="gone" />
 
+                <TextView
+                    android:id="@+id/tv_protein"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Protein: 0 / 0 g (0%)"
+                    android:textColor="@color/white"
+                    android:layout_marginTop="10dp" />
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/pb_protein"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:layout_marginTop="6dp"
+                    app:trackThickness="8dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tv_workouts"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Workouts: 0 today"
+                    android:textColor="@color/white"
+                    android:layout_marginTop="10dp" />
+            </LinearLayout>
+
+            <!-- Weight line chart -->
+            <FrameLayout
+                android:id="@+id/weight_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginHorizontal="16dp"
+                android:background="@drawable/container_graph"
+                android:padding="12dp">
+
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/weightChart"
+                    android:layout_width="match_parent"
+                    android:layout_height="220dp" />
+            </FrameLayout>
+
+            <!-- Splits bar chart -->
+            <FrameLayout
+                android:id="@+id/splits_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginHorizontal="16dp"
+                android:background="@drawable/container_graph"
+                android:paddingHorizontal="15dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp">
+
+                <com.github.mikephil.charting.charts.BarChart
+                    android:id="@+id/chart_splits"
+                    android:layout_width="match_parent"
+                    android:layout_height="220dp"
+                    android:layout_gravity="center_vertical" />
+            </FrameLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Quick Action (floats above bottom nav) -->
     <ImageButton
         android:id="@+id/btn_quick_action"
         android:layout_width="wrap_content"
@@ -140,7 +173,7 @@
         android:background="@drawable/button_take_quest"
         android:layout_marginBottom="8dp" />
 
-    <!-- Bottom nav -->
+    <!-- Bottom nav (pinned) -->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
@@ -222,4 +255,5 @@
                 android:contentDescription="Macros" />
         </FrameLayout>
     </LinearLayout>
+
 </RelativeLayout>

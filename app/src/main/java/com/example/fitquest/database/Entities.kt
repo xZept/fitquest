@@ -279,9 +279,8 @@ data class MacroDiary(
     indices = [Index(value = ["userId", "loggedAt"])]
 )
 data class WeightLog(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0L,
+    @PrimaryKey(autoGenerate = true) val id: Long = 0L,  // <-- add this
     val userId: Int,
-    val loggedAt: Long,  // epoch millis
+    val loggedAt: Long,
     val weightKg: Float
 )
-

@@ -46,6 +46,19 @@ import android.provider.Settings
 import android.net.Uri
 import android.Manifest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.WindowInsetsCompat
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.LimitLine
+import com.github.mikephil.charting.formatter.ValueFormatter
+import java.time.LocalDate
+import androidx.core.view.isVisible
+
+// MPAndroidChart for the line chart
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
+import java.time.format.DateTimeFormatter
+import com.example.fitquest.utils.localDateFromDayKey
 
 
 
@@ -67,6 +80,9 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var cardDaily: View
     private lateinit var pbKcal: com.google.android.material.progressindicator.LinearProgressIndicator
     private lateinit var pbProtein: com.google.android.material.progressindicator.LinearProgressIndicator
+    private lateinit var weightChart: com.github.mikephil.charting.charts.LineChart
+    private val dateFmt = java.time.format.DateTimeFormatter.ofPattern("MMM d")
+
 
     private val requestNotifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -107,6 +123,8 @@ class DashboardActivity : AppCompatActivity() {
         db = AppDatabase.getInstance(applicationContext)
         chart = findViewById(R.id.chart_splits)
 
+        weightChart = findViewById(R.id.weightChart)
+        setupChart(weightChart)
         setupChartAppearance()
         loadDataAndRender()
         refreshDailySummary()
@@ -166,8 +184,8 @@ class DashboardActivity : AppCompatActivity() {
         }
 
         val root = findViewById<View>(R.id.dashboard_root)
-        ViewCompat.setOnApplyWindowInsetsListener(root) { v, insets ->
-            val sys = insets.getInsets(Type.systemBars())
+        ViewCompat.setOnApplyWindowInsetsListener(root) { v: View, insets: WindowInsetsCompat ->
+            val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(0, 0, 0, sys.bottom)
             insets
         }
@@ -212,6 +230,7 @@ class DashboardActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        loadWeightSeries()
         backfillInitialWeightIfMissing()
         lifecycleScope.launch {
             val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
@@ -225,8 +244,6 @@ class DashboardActivity : AppCompatActivity() {
         bgAnim?.stop()
         super.onStop()
     }
-
-
 
 
     private fun setupChartAppearance() {
@@ -280,9 +297,86 @@ class DashboardActivity : AppCompatActivity() {
 //// Or, if you want to fully override auto-calculated offsets:
 //        chart.setViewPortOffsets(32f, 24f, 32f, 32f)
 
-
-
     }
+
+    private fun setupChart(chart: LineChart) {
+        chart.description.isEnabled = false
+        chart.axisRight.isEnabled = false
+        chart.axisLeft.setDrawGridLines(true)
+        chart.xAxis.position = XAxis.XAxisPosition.BOTTOM
+        chart.xAxis.setDrawGridLines(false)
+        chart.legend.isEnabled = false
+    }
+
+    private fun loadWeightSeries() {
+        lifecycleScope.launch {
+            val userId = DataStoreManager.getUserId(this@DashboardActivity).first()  // was: uid
+            val rows = withContext(Dispatchers.IO) {
+                AppDatabase.getInstance(this@DashboardActivity)
+                    .weightLogDao()
+                    .getAll(userId)                       // uses userId
+                    .sortedBy { it.loggedAt }
+            }
+
+            if (rows.size < 2) {
+                weightChart.isVisible = false
+                return@launch
+            } else {
+                weightChart.isVisible = true
+            }
+
+            val entries = rows.map { r ->
+                val x = java.time.Instant.ofEpochMilli(r.loggedAt)
+                    .atZone(java.time.ZoneId.of("Asia/Manila"))
+                    .toLocalDate()
+                    .toEpochDay()
+                    .toFloat()
+                Entry(x, r.weightKg.toFloat())
+            }
+
+            val ds = LineDataSet(entries, "Weight (kg)").apply {
+                setDrawCircles(true)
+                circleRadius = 3f
+                lineWidth = 2f
+                mode = LineDataSet.Mode.CUBIC_BEZIER
+                setDrawValues(false)
+                setDrawFilled(true)
+            }
+
+            weightChart.data = LineData(ds)
+
+            weightChart.xAxis.valueFormatter = object : ValueFormatter() {
+                override fun getFormattedValue(value: Float): String {
+                    return LocalDate.ofEpochDay(value.toLong()).format(dateFmt)
+                }
+            }
+
+            val minY = rows.minOf { it.weightKg }.toFloat()
+            val maxY = rows.maxOf { it.weightKg }.toFloat()
+            val pad  = ((maxY - minY).coerceAtLeast(1f)) * 0.1f
+            weightChart.axisLeft.axisMinimum = (minY - pad)
+            weightChart.axisLeft.axisMaximum = (maxY + pad)
+
+            val goalKg = withContext(Dispatchers.IO) {
+                AppDatabase.getInstance(this@DashboardActivity)
+                    .userProfileDAO()
+                    .getProfileByUserId(userId)          // was: userId unresolved when var was uid
+                    ?.goalWeight
+                    ?.toDouble()
+            } ?: 0.0
+
+            if (goalKg > 0.0) {
+                val ll = LimitLine(goalKg.toFloat(), "Goal")
+                ll.lineWidth = 1.5f
+                ll.enableDashedLine(10f, 10f, 0f)
+                weightChart.axisLeft.removeAllLimitLines()
+                weightChart.axisLeft.addLimitLine(ll)
+            }
+
+            weightChart.invalidate()
+        }
+    }
+
 
     private fun loadDataAndRender() {
         lifecycleScope.launch {
