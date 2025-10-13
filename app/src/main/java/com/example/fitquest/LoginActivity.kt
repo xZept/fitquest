@@ -29,6 +29,7 @@ import androidx.core.widget.addTextChangedListener
 import com.example.fitquest.database.AppDatabase
 import kotlinx.coroutines.withContext
 
+
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var repository: FitquestRepository

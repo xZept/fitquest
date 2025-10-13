@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import android.widget.ImageButton
 
 class WeightPromptActivity : AppCompatActivity() {
 
@@ -27,13 +28,12 @@ class WeightPromptActivity : AppCompatActivity() {
         setContentView(R.layout.dialog_weight_prompt)
 
         val et = findViewById<EditText>(R.id.et_weight_today)
-        val btnSave = findViewById<Button>(R.id.btn_save_weight)
-        val btnSkip = findViewById<Button>(R.id.btn_skip_weight)
+        val btnSave = findViewById<ImageButton>(R.id.btn_save_weight)
 
-        btnSkip.setOnClickListener { finish() }
 
         btnSave.setOnClickListener {
             val w = et.text.toString().trim().toDoubleOrNull()
+
             if (w == null || w < MIN_WEIGHT || w > MAX_WEIGHT) {
                 Toast.makeText(this, "Enter a realistic weight (30–300 kg).", Toast.LENGTH_LONG).show()
                 return@setOnClickListener

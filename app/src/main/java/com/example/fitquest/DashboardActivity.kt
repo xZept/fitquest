@@ -41,6 +41,12 @@ import com.example.fitquest.repository.ProgressRepository
 import kotlinx.coroutines.flow.first
 import java.time.ZoneId
 import android.content.pm.PackageManager
+import android.app.AlarmManager
+import android.provider.Settings
+import android.net.Uri
+import android.Manifest
+import androidx.activity.result.contract.ActivityResultContracts
+
 
 
 class DashboardActivity : AppCompatActivity() {
@@ -62,35 +68,39 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var pbKcal: com.google.android.material.progressindicator.LinearProgressIndicator
     private lateinit var pbProtein: com.google.android.material.progressindicator.LinearProgressIndicator
 
+    private val requestNotifPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            // Only schedule after user grants notifications on Android 13+
+            if (granted) {
+                WeightReminderScheduler.scheduleNext6am(this)
+                // (Optional) debug:
+                // WeightReminderScheduler.scheduleInSeconds(this, 15)
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dashboard)
 
+        // Ask for exact alarm special access (Android 12L+/13)
+        requestExactAlarmIfNeeded()
+
+        // Ask for POST_NOTIFICATIONS (Android 13+) and schedule once granted
+        ensureNotificationPermissionThenSchedule()
 
         if (BuildConfig.DEBUG) {
-            // Long-press the daily summary card to fire a test reminder in 1 minute
             findViewById<View>(R.id.card_daily_summary)?.setOnLongClickListener {
-                WeightReminderScheduler.scheduleInMinutes(this, 1)
-                Toast.makeText(this, "Test: reminder in 1 minute", Toast.LENGTH_SHORT).show()
+                WeightReminderScheduler.scheduleInSeconds(this, 15)
+                Toast.makeText(this, "Test: reminder in 15s", Toast.LENGTH_SHORT).show()
                 true
             }
-
-            // (Optional) another trigger: long-press the quick action button
             findViewById<View>(R.id.btn_quick_action)?.setOnLongClickListener {
-                WeightReminderScheduler.scheduleInMinutes(this, 1)
-                Toast.makeText(this, "Test weight reminder in 1 minute", Toast.LENGTH_SHORT).show()
+                WeightReminderScheduler.scheduleInSeconds(this, 15)
+                Toast.makeText(this, "Test weight reminder in 15s", Toast.LENGTH_SHORT).show()
                 true
             }
         }
 
-        if (Build.VERSION.SDK_INT >= 33) {
-            if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) {
-                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 42)
-            }
-        }
 
 
 
@@ -100,11 +110,6 @@ class DashboardActivity : AppCompatActivity() {
         setupChartAppearance()
         loadDataAndRender()
         refreshDailySummary()
-
-        // e.g., a hidden debug button or a quick line after login:
-        WeightReminderScheduler.scheduleInMinutes(this, 1) // fires in ~60s
-        Toast.makeText(this, "Test weight reminder set for ~1 minute", Toast.LENGTH_SHORT).show()
-
 
 
 
@@ -219,7 +224,6 @@ class DashboardActivity : AppCompatActivity() {
         bgAnim?.stop()
         super.onStop()
     }
-
 
 
 
@@ -389,6 +393,20 @@ class DashboardActivity : AppCompatActivity() {
         else     -> dev.toString()
     }
 
+    private fun ensureNotificationPermissionThenSchedule() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED
+            ) {
+                requestNotifPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                return
+            }
+        }
+        // Permission not needed or already granted
+        WeightReminderScheduler.scheduleNext6am(this)
+        // (Optional) debug:
+        // WeightReminderScheduler.scheduleInSeconds(this, 15)
+    }
 
 
     private fun refreshDailySummary() {
@@ -452,6 +470,20 @@ class DashboardActivity : AppCompatActivity() {
             else -> null
         }
     }
+
+    private fun requestExactAlarmIfNeeded() {
+        if (android.os.Build.VERSION.SDK_INT >= 31) {
+            val am = getSystemService(AlarmManager::class.java)
+            if (!am.canScheduleExactAlarms()) {
+                startActivity(
+                    Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                        data = Uri.parse("package:$packageName")
+                    }
+                )
+            }
+        }
+    }
+
 
 
 
