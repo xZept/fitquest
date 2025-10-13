@@ -57,6 +57,8 @@ class FitquestRepository(context: Context) {
         return profile
     }
 
+
+
     // Macro calculation
     suspend fun computeAndSaveMacroPlan(userId: Int): MacroPlan {
         val user = userDAO.getUserById(userId)
@@ -77,8 +79,34 @@ class FitquestRepository(context: Context) {
         val plan = MacroCalculator.calculatePlan(input)
         macroPlanDao.upsert(plan)
         Log.d("FitquestMacros", "Saved MacroPlan for $userId -> $plan")
+
+        macroPlanDao.upsert(plan)
+
+        // Mirror plan into today's MacroDiary (preserve actual intake so far)
+        val zone = java.time.ZoneId.of("Asia/Manila")
+        val now  = java.time.ZonedDateTime.now(zone)
+        val dk   = now.year * 10_000 + now.monthValue * 100 + now.dayOfMonth
+
+        val totals = db.foodLogDao().totalsForDay(userId, dk)
+
+        db.macroDiaryDao().upsert(
+            com.example.fitquest.database.MacroDiary(
+                userId = userId,
+                dayKey = dk,
+                calories = totals.calories.toInt(),
+                protein  = totals.protein.toInt(),
+                carbs    = totals.carbohydrate.toInt(),
+                fat      = totals.fat.toInt(),
+                planCalories = plan.calories,
+                planProtein  = plan.protein,
+                planCarbs    = plan.carbs,
+                planFat      = plan.fat,
+                capturedAt   = System.currentTimeMillis()
+            )
+        )
         return plan
     }
+
 
     suspend fun getMacroPlan(userId: Int): MacroPlan? =
         macroPlanDao.getLatestForUser(userId)

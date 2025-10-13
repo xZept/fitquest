@@ -14,18 +14,22 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 import java.time.Instant
 import java.time.ZoneId
+import kotlin.math.roundToInt
 
 class FoodRepository(
     private val api: FdcService,
     private val db: AppDatabase
 ) {
-    suspend fun deleteLog(logId: Long) {
+//
+    suspend fun deleteLog(logId: Long) = withContext(Dispatchers.IO) {
+        val log = db.foodLogDao().getById(logId) ?: return@withContext
         db.foodLogDao().deleteById(logId)
+        upsertMacroDiaryFor(log.userId, log.dayKey)
     }
 
-    // Overload if you prefer deleting by entity
-    suspend fun deleteLog(log: FoodLog) {
+    suspend fun deleteLog(log: FoodLog) = withContext(Dispatchers.IO) {
         db.foodLogDao().delete(log)
+        upsertMacroDiaryFor(log.userId, log.dayKey)
     }
 
     suspend fun updateLogServing(
@@ -44,9 +48,13 @@ class FoodRepository(
         val carb = food.carbPer100g * factor
         val fat  = food.fatPer100g * factor
 
+        // Make the update's return value the block result
         db.foodLogDao().updateServing(
             logId, newGrams, cals, pro, carb, fat, inputUnit, inputQuantity, inputLabel
-        )
+        ).also {
+            // keep MacroDiary in sync
+            upsertMacroDiaryFor(log.userId, log.dayKey)
+        }
     }
 
 
@@ -98,6 +106,7 @@ class FoodRepository(
         return d.year * 10000 + d.monthValue * 100 + d.dayOfMonth  // YYYYMMDD
     }
 
+
     suspend fun logIntake(
         userId: Int,
         foodId: Long,
@@ -125,8 +134,14 @@ class FoodRepository(
             inputQuantity = inputQuantity,
             inputLabel = inputLabel
         )
-        db.foodLogDao().insert(log)
+
+        db.foodLogDao().insert(log).also {  // <-- this Long becomes the return value
+            upsertMacroDiaryFor(userId, log.dayKey)
+        }
     }
+
+
+
 
 
 
@@ -156,6 +171,26 @@ class FoodRepository(
             MeasurementType.SANDOK -> portions.firstOrNull { it.measurementType == MeasurementType.SANDOK }?.let { input.quantity * it.gramWeight }
                 ?: error("No 'sandok' mapping for this food; add a default for rice/soups.")
         }
+    }
+
+    private suspend fun upsertMacroDiaryFor(userId: Int, dayKey: Int) = withContext(Dispatchers.IO) {
+        val totals = db.foodLogDao().totalsForDay(userId, dayKey)
+        val plan   = db.macroPlanDao().getLatestForUser(userId)
+
+        val row = MacroDiary(
+            userId = userId,
+            dayKey = dayKey,
+            calories = totals.calories.roundToInt(),
+            protein  = totals.protein.roundToInt(),
+            carbs    = totals.carbohydrate.roundToInt(),
+            fat      = totals.fat.roundToInt(),
+            planCalories = plan?.calories ?: 0,
+            planProtein  = plan?.protein  ?: 0,
+            planCarbs    = plan?.carbs    ?: 0,
+            planFat      = plan?.fat      ?: 0,
+            capturedAt   = System.currentTimeMillis()
+        )
+        db.macroDiaryDao().upsert(row) // (userId, dayKey) has a unique index, so this replaces in-place
     }
 
     suspend fun ensureLocalIdForFdc(fdcId: Long): Long = withContext(Dispatchers.IO) {

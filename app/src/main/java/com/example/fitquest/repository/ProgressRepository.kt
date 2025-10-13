@@ -28,18 +28,41 @@ class ProgressRepository(private val db: AppDatabase) {
     private fun endOfDayMs(dayKey: Int): Long = startOfDayMs(dayKey) + 86_399_000L
 
     suspend fun dailySummary(userId: Int, dayKey: Int): DailySummary = withContext(Dispatchers.IO) {
-        val md = db.macroDiaryDao().get(userId, dayKey)
-        val calories = md?.calories ?: 0
-        val planCalories = md?.planCalories ?: 0
-        val protein = md?.protein ?: 0
-        val planProtein = md?.planProtein ?: 0
-        val carbs = md?.carbs ?: 0
-        val planCarbs = md?.planCarbs ?: 0
-        val fat = md?.fat ?: 0
-        val planFat = md?.planFat ?: 0
+        // Try to read the snapshot
+        var md = db.macroDiaryDao().get(userId, dayKey)
 
-        val kcalDev = if (planCalories > 0) calories - planCalories else 0
-        val proteinPct = if (planProtein > 0) ((protein * 100.0) / planProtein).toInt() else 0
+        // If missing, compute on the fly and persist for consistency
+        if (md == null) {
+            val totals = db.foodLogDao().totalsForDay(userId, dayKey)
+            val plan   = db.macroPlanDao().getLatestForUser(userId)
+
+            md = MacroDiary(
+                userId = userId,
+                dayKey = dayKey,
+                calories = totals.calories.toInt(),
+                protein  = totals.protein.toInt(),
+                carbs    = totals.carbohydrate.toInt(),
+                fat      = totals.fat.toInt(),
+                planCalories = plan?.calories ?: 0,
+                planProtein  = plan?.protein  ?: 0,
+                planCarbs    = plan?.carbs    ?: 0,
+                planFat      = plan?.fat      ?: 0,
+                capturedAt   = System.currentTimeMillis()
+            )
+            db.macroDiaryDao().upsert(md)
+        }
+
+        val calories     = md.calories
+        val planCalories = md.planCalories
+        val protein      = md.protein
+        val planProtein  = md.planProtein
+        val carbs        = md.carbs
+        val planCarbs    = md.planCarbs
+        val fat          = md.fat
+        val planFat      = md.planFat
+
+        val kcalDev    = if (planCalories > 0) calories - planCalories else 0
+        val proteinPct = if (planProtein  > 0) ((protein * 100.0) / planProtein).toInt() else 0
 
         val workoutsToday = db.workoutSessionDao().countCompletedBetween(
             userId,
@@ -54,6 +77,7 @@ class ProgressRepository(private val db: AppDatabase) {
             workoutsCompletedToday = workoutsToday
         )
     }
+
 
     suspend fun weeklySummary(userId: Int, endDayKey: Int): WeeklySummary =
         withContext(Dispatchers.IO) {
