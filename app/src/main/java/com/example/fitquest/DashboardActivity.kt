@@ -85,8 +85,14 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var pbKcalCircle: com.google.android.material.progressindicator.CircularProgressIndicator
     private lateinit var tvKcalCenter: android.widget.TextView
 
-    private lateinit var tvWeeklyKcal: TextView
     private lateinit var tvWeeklyWorkouts: TextView
+    private lateinit var tvWeeklyRange: TextView
+
+    private lateinit var tvWeeklyKcalLabel: TextView
+    private lateinit var pbWeeklyKcalCircle: com.google.android.material.progressindicator.CircularProgressIndicator
+    private lateinit var tvWeeklyKcalCenter: TextView
+    private lateinit var tvWeeklyNextRange: TextView
+
 
 
     private val requestNotifPermission =
@@ -134,8 +140,13 @@ class DashboardActivity : AppCompatActivity() {
             }
         }
 
-
-        tvWeeklyKcal = findViewById(R.id.tv_weekly_kcal)
+        tvWeeklyRange       = findViewById(R.id.tv_weekly_range)
+        tvWeeklyNextRange   = findViewById(R.id.tv_weekly_next_range)
+        tvWeeklyKcalLabel   = findViewById(R.id.tv_weekly_kcal_label)
+        pbWeeklyKcalCircle  = findViewById(R.id.pb_weekly_kcal_circle)
+        tvWeeklyKcalCenter  = findViewById(R.id.tv_weekly_kcal_center)
+        tvWeeklyWorkouts    = findViewById(R.id.tv_weekly_workouts)
+        tvWeeklyRange = findViewById(R.id.tv_weekly_range)
         tvWeeklyWorkouts = findViewById(R.id.tv_weekly_workouts)
         pbKcalCircle = findViewById(R.id.pb_kcal_circle)
         tvKcalCenter = findViewById(R.id.tv_kcal_center)
@@ -515,11 +526,26 @@ class DashboardActivity : AppCompatActivity() {
                 val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
                 if (uid == -1) return@launch
 
+                val zone = java.time.ZoneId.of("Asia/Manila")
+                val today = java.time.LocalDate.now(zone)
+
+                val (startDate, endDate) = currentMonthBucket(today)
+                val (nextStart, nextEnd) = nextMonthBucket(today)
+
+                val ok   = androidx.core.content.ContextCompat.getColor(this@DashboardActivity, R.color.progress_ok)
+                val over = androidx.core.content.ContextCompat.getColor(this@DashboardActivity, R.color.progress_over)
+
+                // Set timeframe labels
+                tvWeeklyRange.text = formatDateRange(startDate, endDate)
+                tvWeeklyNextRange.text = "Next: ${formatDateRange(nextStart, nextEnd)}"
+
+                // Build dayKeys for all days in the current bucket
+                val dayKeys = generateSequence(startDate) { it.plusDays(1) }
+                    .takeWhile { !it.isAfter(endDate) }
+                    .map { d -> d.year * 10_000 + d.monthValue * 100 + d.dayOfMonth }
+                    .toList()
+
                 val repo = ProgressRepository(db)
-
-                // build last 7 day keys (Mon-Today isn’t required; this is “last 7 days including today”)
-                val dayKeys = (0..6).map { dayKeyNDaysAgo(it) }
-
                 val daily = withContext(Dispatchers.IO) {
                     dayKeys.map { dk -> repo.dailySummary(uid, dk) }
                 }
@@ -527,28 +553,69 @@ class DashboardActivity : AppCompatActivity() {
                 val daysCount = daily.size.coerceAtLeast(1)
                 val totalCals = daily.sumOf { it.calories }
                 val totalPlan = daily.sumOf { it.planCalories }
-                val workouts = daily.sumOf { it.workoutsCompletedToday }
+                val workouts  = daily.sumOf { it.workoutsCompletedToday }
 
                 val avgCals = (totalCals / daysCount)
                 val avgPlan = (totalPlan / daysCount).coerceAtLeast(0)
                 val dev = if (avgPlan > 0) (avgCals - avgPlan) else 0
 
-                tvWeeklyKcal.text =
-                    if (avgPlan > 0)
-                        "Avg: $avgCals / $avgPlan kcal (${fmtDev(dev)})"
-                    else
-                        "Avg: $avgCals kcal"
+                // Label line (matches daily style text)
+                // timeframe labels
+                tvWeeklyRange.text = formatDateRange(startDate, endDate)
+                tvWeeklyNextRange.text = "Next: ${formatDateRange(nextStart, nextEnd)}"
 
-                tvWeeklyWorkouts.text = "Workouts: $workouts in last 7 days"
+// fetch & aggregate...
+
+// label like "Avg: 1800 / 2000 kcal (+100)" OR "Avg: 1800 kcal"
+                tvWeeklyKcalLabel.text =
+                    if (avgPlan > 0) "Avg: $avgCals / $avgPlan kcal (${fmtDev(dev)})"
+                    else "Avg: $avgCals kcal"
+
+// ring (percent of avg vs plan)
+                if (avgPlan > 0) {
+                    pbWeeklyKcalCircle.setIndicatorColor(if (avgCals > avgPlan) over else ok)
+                    pbWeeklyKcalCircle.max = avgPlan.coerceAtLeast(1)
+                    pbWeeklyKcalCircle.setProgressCompat(avgCals.coerceIn(0, pbWeeklyKcalCircle.max), true)
+
+                    val pct = ((avgCals * 100.0) / avgPlan).toInt().coerceAtLeast(0)
+                    tvWeeklyKcalCenter.text = "$pct%"
+                    pbWeeklyKcalCircle.visibility = View.VISIBLE
+                } else {
+                    pbWeeklyKcalCircle.visibility = View.GONE
+                    tvWeeklyKcalCenter.text = ""
+                }
+
+// Ring like daily, but using weekly averages
+                if (avgPlan > 0) {
+                    pbWeeklyKcalCircle.setIndicatorColor(if (avgCals > avgPlan) over else ok)
+                    pbWeeklyKcalCircle.max = avgPlan.coerceAtLeast(1)
+                    pbWeeklyKcalCircle.setProgressCompat(avgCals.coerceIn(0, pbWeeklyKcalCircle.max), true)
+
+                    val pct = ((avgCals * 100.0) / avgPlan).toInt().coerceAtLeast(0)
+                    tvWeeklyKcalCenter.text = "$pct%"
+                    pbWeeklyKcalCircle.visibility = View.VISIBLE
+                } else {
+                    pbWeeklyKcalCircle.visibility = View.GONE
+                    tvWeeklyKcalCenter.text = ""
+                }
+
+// Big number on the right
+                tvWeeklyWorkouts.text = workouts.toString()
+
+// Set timeframe labels (you already compute startDate/endDate & nextStart/nextEnd)
+                tvWeeklyRange.text = formatDateRange(startDate, endDate)
+                tvWeeklyNextRange.text = "Next: ${formatDateRange(nextStart, nextEnd)}"
 
             } catch (_: Throwable) {
-                tvWeeklyKcal.text = "Avg: —"
-                tvWeeklyWorkouts.text = "Workouts: —"
+                tvWeeklyRange.text       = "—"
+                tvWeeklyNextRange.text   = "Next: —"
+                tvWeeklyKcalLabel.text   = "Avg: —"
+                tvWeeklyKcalCenter.text  = ""
+                pbWeeklyKcalCircle.visibility = View.GONE
+                tvWeeklyWorkouts.text    = "—"
             }
         }
     }
-
-
 
 
     private fun fmtDev(dev: Int): String = when {
@@ -670,8 +737,40 @@ class DashboardActivity : AppCompatActivity() {
         }
     }
 
+    private fun currentMonthBucket(today: java.time.LocalDate): Pair<java.time.LocalDate, java.time.LocalDate> {
+        val dom = today.dayOfMonth
+        val monthLen = today.lengthOfMonth()
+        val startDay = ((dom - 1) / 7) * 7 + 1        // 1, 8, 15, 22, 29
+        val endDay   = kotlin.math.min(startDay + 6, monthLen)
+        return today.withDayOfMonth(startDay) to today.withDayOfMonth(endDay)
+    }
 
+    private fun nextMonthBucket(today: java.time.LocalDate): Pair<java.time.LocalDate, java.time.LocalDate> {
+        val (curStart, curEnd) = currentMonthBucket(today)
+        val monthLen = today.lengthOfMonth()
+        val nextStartDom = curEnd.dayOfMonth + 1
 
+        return if (nextStartDom <= monthLen) {
+            val ns = today.withDayOfMonth(nextStartDom)
+            val ne = today.withDayOfMonth(kotlin.math.min(nextStartDom + 6, monthLen))
+            ns to ne
+        } else {
+            // move to next month: 1..min(7, len)
+            val firstNext = today.plusMonths(1).withDayOfMonth(1)
+            firstNext to firstNext.withDayOfMonth(kotlin.math.min(7, firstNext.lengthOfMonth()))
+        }
+    }
+
+    private fun formatDateRange(start: java.time.LocalDate, end: java.time.LocalDate): String {
+        val fmtMdy = java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy")
+        val fmtMd  = java.time.format.DateTimeFormatter.ofPattern("MMM d")
+
+        return when {
+            start.year != end.year -> "${start.format(fmtMdy)} – ${end.format(fmtMdy)}"
+            start.month != end.month -> "${start.format(fmtMd)} – ${end.format(fmtMd)}, ${end.year}"
+            else -> "${start.format(fmtMd)}–${end.dayOfMonth}, ${end.year}"
+        }
+    }
 
 
     private fun setupNavigationBar() {
