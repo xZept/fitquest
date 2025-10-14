@@ -27,15 +27,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-
-class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
+class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
 
     private lateinit var rv: RecyclerView
     private lateinit var btnAdd: ImageButton
-    private lateinit var btnBack: ImageButton    // uses R.id.btn_cancel in the XML
+    private lateinit var btnBack: ImageButton
     private lateinit var btnSave: ImageButton
 
-    private lateinit var mode: String       // "basic" or "advanced"
+    private lateinit var mode: String
     private lateinit var split: String
     private lateinit var focus: String
 
@@ -44,16 +43,20 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
     private var schemeSets = 3
 
     private val items = mutableListOf<String>()
-    private val addable = mutableListOf<String>()
+
+    // Addable lists
+    private val addableSuggestions = mutableListOf<String>() // dynamic (after deletions)
+    private val addableBaseline = mutableListOf<String>()    // from intent
+
+    // Track recent deletions (MRU, most recent first)
+    private val recentlyRemoved = ArrayDeque<String>() // keep small
 
     private var bgDrawable: SpriteSheetDrawable? = null
     private lateinit var itemTouchHelper: ItemTouchHelper
     private lateinit var pressAnim: android.view.animation.Animation
 
     private lateinit var tvBanner: TextView
-
-
-    private lateinit var db: AppDatabase  // ← declare only
+    private lateinit var db: AppDatabase
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,19 +68,12 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
         tvBanner.setOnClickListener { hideBannerRunnable.run() }
 
         db = AppDatabase.getInstance(applicationContext)
-
-        initAnimatedBg(
-            rows = 1,           // adjust if your sheet differs
-            cols = 12,          // your earlier note said 39 frames in a row
-            fps = 12            // tweak to taste
-        )
-
+        initAnimatedBg(rows = 1, cols = 12, fps = 12)
 
         rv = findViewById(R.id.rv_exercises)
         btnAdd   = findViewById(R.id.btn_add)
-        btnBack  = findViewById(R.id.btn_cancel) // treat as Back
+        btnBack  = findViewById(R.id.btn_cancel)
         btnSave  = findViewById(R.id.btn_save)
-
         rv.layoutManager = LinearLayoutManager(this)
 
         mode  = intent.getStringExtra("MODE") ?: "basic"
@@ -90,9 +86,7 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
                 db.monsterDao().getLatestOwnedForUser(uid)?.code ?: "slime"
             }
             setRvContainerBackgroundForCode(latestCode)
-
         }
-
 
         gitWorkoutEngine.defaultScheme(focus).let { (mn, mx, st) ->
             schemeMin = mn; schemeMax = mx; schemeSets = st
@@ -101,8 +95,11 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
         items.clear()
         items.addAll(intent.getStringArrayListExtra("START_NAMES")?.toList() ?: emptyList())
 
-        addable.clear()
-        addable.addAll(intent.getStringArrayListExtra("ADDABLE_NAMES")?.toList() ?: emptyList())
+        addableBaseline.clear()
+        addableBaseline.addAll(intent.getStringArrayListExtra("ADDABLE_NAMES")?.toList() ?: emptyList())
+
+        addableSuggestions.clear()
+        addableSuggestions.addAll(addableBaseline)
 
         val adapter = ExerciseAdapter(
             allowDelete = (mode == "advanced"),
@@ -111,9 +108,7 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
             sets = schemeSets,
             minReps = schemeMin,
             maxReps = schemeMax
-        ) {
-            // onDataChanged: optional place to persist temp order
-        }
+        ) { /* onDataChanged */ }
         rv.adapter = adapter
 
         val callback = SimpleItemTouchHelperCallback(adapter)
@@ -122,42 +117,20 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
-        // Add button only for advanced
         if (mode == "advanced") {
             btnAdd.visibility = View.VISIBLE
             btnAdd.setOnClickListener {
                 it.startAnimation(pressAnim)
-                val choices = addable
-                    .filter { candidate -> items.none { it.equals(candidate, ignoreCase = true) } }
-                    .sorted()
-                    .toTypedArray()
-
-                if (choices.isEmpty()) {
-                    Toast.makeText(this, "No more exercises to add.", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-
-                AlertDialog.Builder(this)
-                    .setTitle("Add Exercise")
-                    .setItems(choices) { _, which ->
-                        items.add(choices[which])
-                        adapter.notifyDataSetChanged()
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .show()
+                showAddDialog(useSuggestions = recentlyRemoved.isNotEmpty(), adapter = adapter)
             }
-        } else {
-            btnAdd.visibility = View.GONE
-        }
+        } else btnAdd.visibility = View.GONE
 
-        // Back → tell generator to reopen the chooser
         btnBack.setOnClickListener {
             it.startAnimation(pressAnim)
             setResult(RESULT_CANCELED, Intent().putExtra("BACK_TO_CHOICE", true))
             finish()
         }
 
-        // Save → return final ordered names
         btnSave.setOnClickListener {
             it.startAnimation(pressAnim)
             val out = adapter.currentItems().distinctBy { it.trim().lowercase() }
@@ -174,9 +147,6 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
     override fun onResume() {
         super.onResume()
         bgDrawable?.start()
-
-
-        // Re-check latest monster and update the RV container
         lifecycleScope.launch {
             val uid = DataStoreManager.getUserId(this@QuestPreviewActivity).first()
             val latestCode = withContext(Dispatchers.IO) {
@@ -205,10 +175,8 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
         tvBanner.text = message
         tvBanner.alpha = 1f
         tvBanner.visibility = View.VISIBLE
-
-        tvBanner.animate().cancel() // reset any prior animations
+        tvBanner.animate().cancel()
         tvBanner.removeCallbacks(hideBannerRunnable)
-
         tvBanner.postDelayed(hideBannerRunnable, durationMs)
     }
 
@@ -217,28 +185,19 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
             .alpha(0f)
             .setDuration(400)
             .withEndAction {
-                tvBanner.visibility = View.INVISIBLE   // ← was GONE
+                tvBanner.visibility = View.INVISIBLE
                 tvBanner.alpha = 1f
             }
             .start()
     }
 
-
-
     private fun initAnimatedBg(rows: Int, cols: Int, fps: Int) {
         val bmp = BitmapFactory.decodeResource(resources, R.drawable.bg_page_dashboard_spritesheet0)
         bgDrawable = SpriteSheetDrawable(
-            sheet = bmp,
-            rows = rows,
-            cols = cols,
-            fps = fps,
-            loop = true,
+            sheet = bmp, rows = rows, cols = cols, fps = fps, loop = true,
             scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
         )
-
-        val root = findViewById<View>(R.id.quest_root)
-        root.background = bgDrawable
-        // start happens in onResume, but we can kick it once here too
+        findViewById<View>(R.id.quest_root).background = bgDrawable
         bgDrawable?.start()
     }
 
@@ -253,21 +212,15 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
     private fun setRvContainerBackgroundForCode(codeRaw: String?) {
         val code = (codeRaw ?: "slime").lowercase()
         val bgId = resolveFirstDrawable(
-            "container_split_plan_${code}",    // e.g., container_split_plan_mushroom
-            "container_split_plan",            // generic (if present)
-            "container_split_plan_slime"       // safe fallback
+            "container_split_plan_${code}",
+            "container_split_plan",
+            "container_split_plan_slime"
         )
         rv.setBackgroundResource(if (bgId != 0) bgId else R.drawable.container_split_plan_slime)
     }
 
-
-
-
     private fun hideNavBar() {
-        // Let your content draw edge-to-edge
         WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        // Hide only the navigation bar. (Use Type.systemBars() if you also want to hide the status bar.)
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         controller.hide(WindowInsetsCompat.Type.navigationBars())
         controller.systemBarsBehavior =
@@ -277,6 +230,59 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
     override fun onStartDrag(viewHolder: RecyclerView.ViewHolder) {
         itemTouchHelper.startDrag(viewHolder)
         viewHolder.itemView.performHapticFeedback(android.view.HapticFeedbackConstants.DRAG_START)
+    }
+
+    // --- Add dialog helpers ---
+
+    private fun showAddDialog(useSuggestions: Boolean, adapter: ExerciseAdapter) {
+        val currentPool = if (useSuggestions) addableSuggestions else addableBaseline
+
+        val choices = currentPool
+            .filter { candidate -> items.none { it.equals(candidate, ignoreCase = true) } }
+            .distinctBy { it.trim().lowercase() }
+            .sorted()
+            .toTypedArray()
+
+        if (choices.isEmpty()) {
+            Toast.makeText(this, "No more exercises to add.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val title = when {
+            useSuggestions && recentlyRemoved.size > 1 ->
+                "Add Exercise — alternatives for ${recentlyRemoved.size} removed items"
+            useSuggestions && recentlyRemoved.isNotEmpty() ->
+                "Add Exercise — alternatives for: ${recentlyRemoved.first()}"
+            else -> "Add Exercise"
+        }
+
+        val builder = AlertDialog.Builder(this)
+            .setTitle(title)
+            .setItems(choices) { _, which ->
+                items.add(choices[which])
+                adapter.notifyDataSetChanged()
+            }
+            .setNegativeButton("Cancel", null)
+
+        if (useSuggestions) {
+            builder.setNeutralButton("Show all that fit my filter") { dlg, _ ->
+                dlg.dismiss()
+                showAddDialog(useSuggestions = false, adapter = adapter)
+            }
+        }
+
+        builder.show()
+    }
+
+    // --- utils ---
+
+    private suspend fun userOwnedEquip(): Set<String> {
+        val uid = DataStoreManager.getUserId(this@QuestPreviewActivity).first()
+        val settings = db.userSettingsDao().getByUserId(uid)
+        return settings?.equipmentCsv
+            ?.split('|')
+            ?.mapNotNull { it.trim().lowercase().ifEmpty { null } }
+            ?.toSet() ?: emptySet()
     }
 
     private inner class ExerciseAdapter(
@@ -306,14 +312,48 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
             holder.tvName.text = data[position]
             holder.tvDetail.text = "$sets sets • $minReps–$maxReps reps"
 
-
             if (allowDelete) {
                 holder.btnDel.visibility = View.VISIBLE
                 holder.btnDel.setOnClickListener {
                     val pos = holder.bindingAdapterPosition
+                    if (pos == RecyclerView.NO_POSITION) return@setOnClickListener
+
+                    val removedName = data[pos]
                     data.removeAt(pos)
                     notifyItemRemoved(pos)
                     onDataChanged()
+
+                    lifecycleScope.launch {
+                        // MRU list of deletions
+                        recentlyRemoved.remove(removedName)
+                        recentlyRemoved.addFirst(removedName)
+                        while (recentlyRemoved.size > 5) recentlyRemoved.removeLast()
+
+                        val owned = userOwnedEquip()
+                        val suggestions = gitWorkoutEngine.buildAddablePoolForReplacementsBatch(
+                            context = this@QuestPreviewActivity,
+                            removedExerciseNames = recentlyRemoved.toList(), // include ALL removed, most-recent first
+                            split = split,
+                            focus = focus,
+                            ownedEquipCanonical = owned,
+                            currentPlanNames = data, // exclude what remains
+                            limit = 60
+                        )
+
+                        addableSuggestions.clear()
+                        addableSuggestions.addAll(
+                            suggestions.filter { s -> data.none { it.equals(s, ignoreCase = true) } }
+                        )
+
+                        Toast.makeText(
+                            this@QuestPreviewActivity,
+                            if (recentlyRemoved.size > 1)
+                                "Showing alternatives for ${recentlyRemoved.size} removed items"
+                            else
+                                "Showing alternatives for: $removedName",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             } else {
                 holder.btnDel.visibility = View.GONE
@@ -342,10 +382,10 @@ class QuestPreviewActivity : AppCompatActivity(),  StartDragListener{
     }
 }
 
-// ItemTouchHelper glue
+// ItemTouchHelper glue (top-level)
 interface ItemTouchHelperAdapter {
     fun onItemMove(fromPosition: Int, toPosition: Int): Boolean
-    fun onItemDismiss(position: Int) {} // not used, but handy if you add swipe later
+    fun onItemDismiss(position: Int) {} // not used
 }
 
 class SimpleItemTouchHelperCallback(
@@ -357,7 +397,7 @@ class SimpleItemTouchHelperCallback(
         viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder
     ): Int {
         val dragFlags = androidx.recyclerview.widget.ItemTouchHelper.UP or androidx.recyclerview.widget.ItemTouchHelper.DOWN
-        val swipeFlags = 0 // disable swipe
+        val swipeFlags = 0
         return makeMovementFlags(dragFlags, swipeFlags)
     }
 
@@ -369,10 +409,9 @@ class SimpleItemTouchHelperCallback(
 
     override fun onSwiped(viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder, direction: Int) { /* no-op */ }
 
-    override fun isLongPressDragEnabled(): Boolean = false // we'll start drag via handle
+    override fun isLongPressDragEnabled(): Boolean = false
     override fun isItemViewSwipeEnabled(): Boolean = false
 
-    // Optional: little visual feedback while dragging
     override fun onSelectedChanged(viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder?, actionState: Int) {
         super.onSelectedChanged(viewHolder, actionState)
         if (actionState == androidx.recyclerview.widget.ItemTouchHelper.ACTION_STATE_DRAG) {

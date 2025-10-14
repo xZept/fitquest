@@ -5,7 +5,6 @@ import com.example.fitquest.models.QuestExercise
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlin.math.abs
-import kotlin.math.roundToInt
 import kotlin.random.Random
 
 object gitWorkoutEngine {
@@ -25,7 +24,7 @@ object gitWorkoutEngine {
      * Structured, slot-driven plan builder:
      * - Uses split-specific templates (required + optional slots)
      * - Scores candidates by pattern/mover match, focus, complexity, equipment
-     * - Enforces diversity and guaranteed minimum items
+     * - Enforces diversity (STRICT 1-per-movement-pattern)
      * Returns (initial list to preview/edit, addable pool).
      */
     fun buildStructuredPlan(
@@ -35,8 +34,6 @@ object gitWorkoutEngine {
         ownedEquipCanonical: Set<String>,
         targetItems: Int = 8
     ): Pair<List<QuestExercise>, List<String>> {
-
-        val (repMin, repMax, sets) = defaultScheme(focus)
 
         val all = loadCsv(context)
         val canonSplit = normSplit(split)
@@ -53,23 +50,21 @@ object gitWorkoutEngine {
         // Template for this split
         val template = templateForSplit(canonSplit)
 
-        // Diversity accounting
+        // Diversity accounting (STRICT: pattern cap = 1)
         val seenBase = mutableMapOf<String, Int>()
         val seenPattern = mutableMapOf<String, Int>()
         val seenMover = mutableMapOf<String, Int>()
         val chosen = mutableListOf<CsvExercise>()
 
-        // Selection flow: required slots first, then optionals until targetItems
         fun tryFillSlot(slot: Slot, soft: Boolean = false) {
             if (chosen.size >= targetItems) return
 
-            // Score & pick the best matching candidates for this slot
             val scored = filtered
                 .asSequence()
                 .filter { it !in chosen }
                 .map { ex -> ex to scoreForSlot(ex, slot, canonFocus, ownedEquipCanonical) }
-                .filter { it.second > 0.0 } // keep only helpful matches
-                .sortedByDescending { it.second + Random.nextDouble(0.0, 0.05) } // tiny jitter
+                .filter { it.second > 0.0 }
+                .sortedByDescending { it.second + Random.nextDouble(0.0, 0.05) }
                 .toList()
 
             for ((ex, _) in scored) {
@@ -81,32 +76,25 @@ object gitWorkoutEngine {
             }
         }
 
-        // Required first
+        // Required first, then optional until target
         template.filter { it.required }.forEach { tryFillSlot(it, soft = false) }
-        // Optional, balanced until target
         template.filter { !it.required }.forEach { tryFillSlot(it, soft = true) }
 
-        // If we’re short, do a permissive top-up while keeping diversity reasonable.
-        val MIN_ITEMS = maxOf(6, template.count { it.required }) // at least required slots or 6
-        if (chosen.size < MIN_ITEMS) {
+        // Respect the number of slots / requested size (no padding to 6+)
+        val minNeeded = minOf(targetItems, template.sumOf { it.count })
+        if (chosen.size < minNeeded) {
             val remaining = filtered.filter { it !in chosen }
-                .sortedBy { ex ->
-                    // prefer non-bodyweight if equipment exists
-                    val isBw = ex.equipment.size == 1 && ex.equipment.first() == "bodyweight"
-                    if (isBw) 1 else 0
-                }
-
-            // progressively relax the caps
+            // Relax caps progressively, but KEEP pattern cap at 1
             val relaxLevels = listOf(
-                Caps(1, 2, 2),
-                Caps(2, 2, 2),
-                Caps(2, 3, 3),
-                Caps(3, 4, 4)
+                Caps(base = 1, pattern = 1, mover = 2),
+                Caps(base = 2, pattern = 1, mover = 2),
+                Caps(base = 2, pattern = 1, mover = 3),
+                Caps(base = 3, pattern = 1, mover = 4)
             )
             for (caps in relaxLevels) {
-                if (chosen.size >= MIN_ITEMS) break
+                if (chosen.size >= minNeeded) break
                 for (ex in remaining) {
-                    if (chosen.size >= MIN_ITEMS) break
+                    if (chosen.size >= minNeeded) break
                     if (!passesDiversity(ex, seenBase, seenPattern, seenMover, soft = true, caps = caps)) continue
                     chosen += ex
                     bumpDiversity(ex, seenBase, seenPattern, seenMover)
@@ -114,8 +102,7 @@ object gitWorkoutEngine {
             }
         }
 
-        // Build QuestExercise list
-        val (finalRepMin, finalRepMax, finalSets) = defaultScheme(focus) // keep scheme consistent
+        val (finalRepMin, finalRepMax, finalSets) = defaultScheme(focus)
         val start = chosen.take(targetItems).mapIndexed { idx, eX ->
             QuestExercise(
                 name = eX.name,
@@ -129,7 +116,7 @@ object gitWorkoutEngine {
             )
         }
 
-        // Addable pool = all remaining (split+equipment filtered), deduped by base movement
+        // Addable pool = remaining unique base movements (still filtered)
         val usedBase = start.map { baseKey(it.name) }.toSet()
         val addPool = filtered
             .filter { baseKey(it.name) !in usedBase }
@@ -140,7 +127,6 @@ object gitWorkoutEngine {
         return start to addPool
     }
 
-    // (kept, in case you still use it elsewhere)
     fun buildBasicPlan(
         context: Context,
         split: String,
@@ -190,53 +176,80 @@ object gitWorkoutEngine {
 
     private data class Caps(val base: Int, val pattern: Int, val mover: Int)
 
-    /** Per-split templates. Tune to taste. */
+    /** Per-split templates using your new movement_pattern values (+ legacy synonyms). */
     private fun templateForSplit(split: String): List<Slot> = when (split) {
         "push" -> listOf(
-            Slot("Horizontal Press", required = true,  count = 1, patterns = setOf("horizontal press"), movers = setOf("chest")),
-            Slot("Vertical Press",   required = true,  count = 1, patterns = setOf("vertical press"),   movers = setOf("shoulders")),
-            Slot("Secondary Press",  required = false, count = 1, patterns = setOf("horizontal press","vertical press"), movers = setOf("chest","shoulders")),
-            Slot("Triceps",          required = false, count = 1, patterns = setOf("extension","pressdown"), movers = setOf("triceps")),
-            Slot("Chest/Shoulder Iso", required=false, count = 1, movers = setOf("chest","shoulders"))
+            Slot("Horizontal Push", required = true,  count = 1,
+                patterns = setOf("horizontal push", "horizontal press"), movers = setOf("chest")),
+            Slot("Vertical Push",   required = true,  count = 1,
+                patterns = setOf("vertical push", "vertical press"),   movers = setOf("shoulders")),
+            Slot("Triceps (Elbow Extension)", required = false, count = 1,
+                patterns = setOf("elbow extension", "extension", "pressdown"), movers = setOf("triceps")),
+            Slot("Shoulder Isolation", required = false, count = 1,
+                patterns = setOf("shoulder abduction"), movers = setOf("shoulders")),
+            Slot("Finisher (Locomotion/Core)", required = false, count = 1,
+                patterns = setOf("locomotion", "rotate", "anti rotate"), movers = emptySet())
         )
         "pull" -> listOf(
-            Slot("Horizontal Pull",  required = true,  count = 1, patterns = setOf("horizontal pull"), movers = setOf("back")),
-            Slot("Vertical Pull",    required = true,  count = 1, patterns = setOf("vertical pull","pull-up"), movers = setOf("back","lats")),
-            Slot("Row Variant",      required = false, count = 1, patterns = setOf("horizontal pull"), movers = setOf("back")),
-            Slot("Rear Delt",        required = false, count = 1, movers = setOf("rear delts","shoulders")),
-            Slot("Biceps",           required = false, count = 1, patterns = setOf("curl"), movers = setOf("biceps"))
+            Slot("Horizontal Pull", required = true,  count = 1,
+                patterns = setOf("horizontal pull"), movers = setOf("back")),
+            Slot("Vertical Pull",   required = true,  count = 1,
+                patterns = setOf("vertical pull", "pull-up"), movers = setOf("back","lats")),
+            Slot("Biceps (Elbow Flexion)", required = false, count = 1,
+                patterns = setOf("elbow flexion", "curl"), movers = setOf("biceps")),
+            Slot("Rear Delt / Scap", required = false, count = 1,
+                patterns = setOf("scapular retraction", "shoulder horizontal abduction"),
+                movers = setOf("rear delts","shoulders","back")),
+            Slot("Finisher (Locomotion/Core)", required = false, count = 1,
+                patterns = setOf("locomotion", "rotate", "anti rotate"), movers = emptySet())
         )
         "legs", "lower" -> listOf(
-            Slot("Squat",            required = true,  count = 1, patterns = setOf("squat","knee dominant"), movers = setOf("quads")),
-            Slot("Hinge",            required = true,  count = 1, patterns = setOf("hinge","hip hinge","deadlift"), movers = setOf("glutes","hamstrings")),
-            Slot("Unilateral",       required = false, count = 1, patterns = setOf("lunge","split squat","step-up"), movers = setOf("glutes","quads")),
-            Slot("Posterior Chain",  required = false, count = 1, movers = setOf("glutes","hamstrings")),
-            Slot("Calves/Core",      required = false, count = 1, movers = setOf("calves","core","abs"))
+            Slot("Squat / Knee", required = true, count = 1,
+                patterns = setOf("squat","knee dominant"), movers = setOf("quads")),
+            Slot("Hinge / Hip",  required = true, count = 1,
+                patterns = setOf("hinge","hip hinge","deadlift"), movers = setOf("glutes","hamstrings")),
+            Slot("Unilateral / Accessory", required = false, count = 1,
+                patterns = emptySet(), movers = setOf("glutes","quads","hamstrings")),
+            Slot("Finisher (Locomotion/Core)", required = false, count = 1,
+                patterns = setOf("locomotion", "rotate", "anti rotate"), movers = emptySet())
         )
         "upper" -> listOf(
-            Slot("Horizontal Press", required = true,  count = 1, patterns = setOf("horizontal press"), movers = setOf("chest")),
-            Slot("Horizontal Pull",  required = true,  count = 1, patterns = setOf("horizontal pull"), movers = setOf("back")),
-            Slot("Vertical Press",   required = false, count = 1, patterns = setOf("vertical press"), movers = setOf("shoulders")),
-            Slot("Vertical Pull",    required = false, count = 1, patterns = setOf("vertical pull","pull-up"), movers = setOf("back","lats")),
-            Slot("Arm/Delts",        required = false, count = 1, movers = setOf("biceps","triceps","rear delts","shoulders"))
+            Slot("Horizontal Push", required = true, count = 1,
+                patterns = setOf("horizontal push","horizontal press"), movers = setOf("chest")),
+            Slot("Horizontal Pull", required = true, count = 1,
+                patterns = setOf("horizontal pull"), movers = setOf("back")),
+            Slot("Vertical Push", required = false, count = 1,
+                patterns = setOf("vertical push","vertical press"), movers = setOf("shoulders")),
+            Slot("Vertical Pull", required = false, count = 1,
+                patterns = setOf("vertical pull","pull-up"), movers = setOf("back","lats")),
+            Slot("Arms / Rear Delts", required = false, count = 1,
+                patterns = setOf("elbow flexion","elbow extension","shoulder horizontal abduction","scapular retraction"),
+                movers = setOf("biceps","triceps","rear delts","shoulders"))
         )
         "full body" -> listOf(
-            Slot("Squat/Knee",       required = true,  count = 1, patterns = setOf("squat","knee dominant"), movers = setOf("quads")),
-            Slot("Hinge",            required = true,  count = 1, patterns = setOf("hinge","hip hinge","deadlift"), movers = setOf("glutes","hamstrings")),
-            Slot("Horizontal Press", required = false, count = 1, patterns = setOf("horizontal press"), movers = setOf("chest")),
-            Slot("Horizontal Pull",  required = false, count = 1, patterns = setOf("horizontal pull"), movers = setOf("back")),
-            Slot("Accessory",        required = false, count = 1, movers = setOf("core","abs","calves","rear delts","biceps","triceps"))
+            Slot("Squat / Knee", required = true, count = 1,
+                patterns = setOf("squat","knee dominant"), movers = setOf("quads")),
+            Slot("Hinge / Hip", required = true, count = 1,
+                patterns = setOf("hinge","hip hinge","deadlift"), movers = setOf("glutes","hamstrings")),
+            Slot("Horizontal Push", required = false, count = 1,
+                patterns = setOf("horizontal push","horizontal press"), movers = setOf("chest")),
+            Slot("Horizontal Pull", required = false, count = 1,
+                patterns = setOf("horizontal pull"), movers = setOf("back")),
+            Slot("Accessory / Core / Locomotion", required = false, count = 1,
+                patterns = setOf("elbow flexion","elbow extension","scapular retraction","shoulder horizontal abduction","locomotion","rotate","anti rotate"),
+                movers = setOf("core","abs","calves","rear delts","biceps","triceps"))
         )
         else -> templateForSplit("full body")
     }
 
-    /** How many currently-chosen items plausibly satisfy this slot. */
+    /** How many currently-chosen items satisfy this slot. */
     private fun countInSlot(chosen: List<CsvExercise>, slot: Slot): Int =
         chosen.count { ex ->
             val p = canonLabel(ex.movementPatternPretty)
             val m = canonLabel(ex.primaryMoverPretty)
-            (slot.patterns.isEmpty() || (p != null && p in slot.patterns)) ||
-                    (slot.movers.isEmpty() || (m != null && m in slot.movers))
+            val patternOk = slot.patterns.isNotEmpty() && p != null && p in slot.patterns
+            val moverOk   = slot.movers.isNotEmpty()   && m != null && m in slot.movers
+            (slot.patterns.isEmpty() || patternOk) && (slot.movers.isEmpty() || moverOk)
         }
 
     /** Score candidate for a given slot. */
@@ -248,7 +261,6 @@ object gitWorkoutEngine {
     ): Double {
         var score = 0.0
 
-        // Pattern / mover match
         val p = canonLabel(ex.movementPatternPretty)
         val m = canonLabel(ex.primaryMoverPretty)
         if (slot.patterns.isNotEmpty() && p != null && p in slot.patterns) score += 1.2
@@ -282,14 +294,14 @@ object gitWorkoutEngine {
         return score
     }
 
-    // Diversity
+    // Diversity (STRICT 1-per-pattern)
     private fun passesDiversity(
         ex: CsvExercise,
         seenBase: Map<String, Int>,
         seenPattern: Map<String, Int>,
         seenMover: Map<String, Int>,
         soft: Boolean,
-        caps: Caps = Caps(base = 1, pattern = 2, mover = 2)
+        caps: Caps = Caps(base = 1, pattern = 1, mover = 2)
     ): Boolean {
         val base = baseKey(ex.name)
         if ((seenBase[base] ?: 0) >= caps.base) return false
@@ -480,11 +492,220 @@ object gitWorkoutEngine {
 
     private fun canonLabel(raw: String?): String? {
         if (raw.isNullOrBlank()) return null
-        val s = raw.lowercase()
+        var s = raw.lowercase()
             .replace('_', ' ')
             .replace('-', ' ')
             .replace(Regex("\\s+"), " ")
             .trim()
+
+        // Map common synonyms so duplicates collapse
+        if (s == "horizontal press") s = "horizontal push"
+        if (s == "vertical press") s = "vertical push"
+        if (s == "anti-rotate") s = "anti rotate"
+
         return s.ifEmpty { null }
+    }
+
+    // ------------------------------------------------------------
+    // Smart replacement helpers
+    // ------------------------------------------------------------
+
+    /** Single removed item → ranked alternatives. */
+    fun suggestAlternatives(
+        context: Context,
+        removedExerciseName: String,
+        split: String,
+        focus: String,
+        ownedEquipCanonical: Set<String>,
+        limit: Int = 20
+    ): List<String> {
+        val all = loadCsv(context)
+        val canonSplit = normSplit(split)
+        val canonFocus = normFocus(focus)
+
+        val filtered = all
+            .asSequence()
+            .filter { matchesSplit(it.split, canonSplit) }
+            .filter { isAllowedByEquipment(it.equipment, ownedEquipCanonical) }
+            .distinctBy { it.nameKey }
+            .toList()
+
+        val refNameKey = norm(removedExerciseName)
+        val refBase = baseKey(removedExerciseName)
+        val ref: CsvExercise? =
+            all.firstOrNull { it.nameKey == refNameKey }
+                ?: all.firstOrNull { baseKey(it.name) == refBase }
+
+        if (ref == null) {
+            return filtered.map { it.name }.sorted().take(limit)
+        }
+
+        val refPat = canonLabel(ref.movementPatternPretty)
+        val refMover = canonLabel(ref.primaryMoverPretty)
+
+        var candidates = filtered
+            .filter { it.nameKey != ref.nameKey }
+            .filter { ex -> refPat != null && canonLabel(ex.movementPatternPretty) == refPat }
+
+        if (candidates.size < limit && refMover != null) {
+            val moverMatches = filtered
+                .filter { it.nameKey != ref.nameKey }
+                .filter { ex -> canonLabel(ex.primaryMoverPretty) == refMover }
+            val seen = candidates.map { it.nameKey }.toMutableSet()
+            moverMatches.forEach { if (seen.add(it.nameKey)) (candidates as MutableList).add(it) }
+        }
+
+        if (candidates.size < limit) {
+            val rest = filtered.filter { it.nameKey != ref.nameKey && it !in candidates }
+            (candidates as MutableList).addAll(rest)
+        }
+
+        fun jaccard(a: List<String>, b: List<String>): Double {
+            if (a.isEmpty() && b.isEmpty()) return 1.0
+            val sa = a.toSet(); val sb = b.toSet()
+            val inter = sa.intersect(sb).size.toDouble()
+            val union = sa.union(sb).size.toDouble().coerceAtLeast(1.0)
+            return inter / union
+        }
+
+        fun simScore(refEx: CsvExercise, c: CsvExercise): Double {
+            var s = 0.0
+            val cPat = canonLabel(c.movementPatternPretty)
+            val cMov = canonLabel(c.primaryMoverPretty)
+            if (refPat != null && cPat == refPat) s += 1.2
+            if (baseKey(refEx.name) == baseKey(c.name)) s += 1.0
+            if (refMover != null && cMov == refMover) s += 0.6
+            s += 0.6 * jaccard(refEx.equipment, c.equipment)
+            s += when (c.focus) {
+                canonFocus -> 0.3
+                "general", "any" -> 0.2
+                else -> 0.1
+            }
+            s += (0.6 - (kotlin.math.abs(refEx.complexity - c.complexity) * 0.2)).coerceAtLeast(0.0)
+            val cBwOnly = c.equipment.size == 1 && c.equipment.first() == "bodyweight"
+            if (ownedEquipCanonical.any { it != "bodyweight" }) {
+                if (!cBwOnly) s += 0.1 else s -= 0.05
+            }
+            return s + Random.nextDouble(0.0, 0.03)
+        }
+
+        return candidates
+            .sortedByDescending { simScore(ref, it) }
+            .map { it.name }
+            .distinctBy { norm(it) }
+            .take(limit)
+    }
+
+    /** NEW: Multiple removed items → one combined, recency-weighted suggestion list. */
+    fun buildAddablePoolForReplacementsBatch(
+        context: Context,
+        removedExerciseNames: List<String>,   // most-recent first is best
+        split: String,
+        focus: String,
+        ownedEquipCanonical: Set<String>,
+        currentPlanNames: List<String>,
+        limit: Int = 50
+    ): List<String> {
+        val all = loadCsv(context)
+        val canonSplit = normSplit(split)
+        val canonFocus = normFocus(focus)
+
+        val filtered = all
+            .asSequence()
+            .filter { matchesSplit(it.split, canonSplit) }
+            .filter { isAllowedByEquipment(it.equipment, ownedEquipCanonical) }
+            .distinctBy { it.nameKey }
+            .toList()
+
+        // Resolve removed refs
+        val refs: List<CsvExercise> = removedExerciseNames.mapNotNull { name ->
+            val nk = norm(name)
+            val bk = baseKey(name)
+            all.firstOrNull { it.nameKey == nk } ?: all.firstOrNull { baseKey(it.name) == bk }
+        }
+        if (refs.isEmpty()) {
+            return filtered
+                .map { it.name }
+                .filter { f -> currentPlanNames.none { it.equals(f, ignoreCase = true) } }
+                .sorted()
+                .take(limit)
+        }
+
+        // Exclude what’s already in the plan or exactly removed
+        val excludeKeys = (currentPlanNames + removedExerciseNames).map { norm(it) }.toSet()
+        val candidates = filtered.filter { it.nameKey !in excludeKeys }
+
+        fun jaccard(a: List<String>, b: List<String>): Double {
+            if (a.isEmpty() && b.isEmpty()) return 1.0
+            val sa = a.toSet(); val sb = b.toSet()
+            val inter = sa.intersect(sb).size.toDouble()
+            val union = sa.union(sb).size.toDouble().coerceAtLeast(1.0)
+            return inter / union
+        }
+        fun simScoreTo(ref: CsvExercise, c: CsvExercise): Double {
+            var s = 0.0
+            val refPat = canonLabel(ref.movementPatternPretty)
+            val refMov = canonLabel(ref.primaryMoverPretty)
+            val cPat = canonLabel(c.movementPatternPretty)
+            val cMov = canonLabel(c.primaryMoverPretty)
+            if (refPat != null && cPat == refPat) s += 1.2
+            if (baseKey(ref.name) == baseKey(c.name)) s += 1.0
+            if (refMov != null && cMov == refMov) s += 0.6
+            s += 0.6 * jaccard(ref.equipment, c.equipment)
+            s += when (c.focus) {
+                canonFocus -> 0.3
+                "general", "any" -> 0.2
+                else -> 0.1
+            }
+            s += (0.6 - (kotlin.math.abs(ref.complexity - c.complexity) * 0.2)).coerceAtLeast(0.0)
+            val cBwOnly = c.equipment.size == 1 && c.equipment.first() == "bodyweight"
+            if (ownedEquipCanonical.any { it != "bodyweight" }) {
+                if (!cBwOnly) s += 0.1 else s -= 0.05
+            }
+            return s
+        }
+
+        // Recency weights: 1.0, 0.9, 0.8, ...
+        val weights = refs.mapIndexed { idx, _ -> (1.0 - idx * 0.1).coerceAtLeast(0.6) }
+
+        // Aggregate score = weighted max(sim) across refs (strong bias to latest)
+        val scored = candidates.map { c ->
+            var best = 0.0
+            for (i in refs.indices) {
+                val s = simScoreTo(refs[i], c) * weights[i]
+                if (s > best) best = s
+            }
+            c to (best + Random.nextDouble(0.0, 0.03))
+        }
+
+        return scored
+            .sortedByDescending { it.second }
+            .map { it.first.name }
+            .distinctBy { norm(it) }
+            .take(limit)
+    }
+
+    /** Convenience: single removed fallback to generic pool if needed. */
+    fun buildAddablePoolForReplacement(
+        context: Context,
+        removedExerciseName: String,
+        split: String,
+        focus: String,
+        ownedEquipCanonical: Set<String>,
+        limit: Int = 30
+    ): List<String> {
+        val alts = suggestAlternatives(context, removedExerciseName, split, focus, ownedEquipCanonical, limit)
+        if (alts.isNotEmpty()) return alts
+        val all = loadCsv(context)
+        val canonSplit = normSplit(split)
+        return all
+            .asSequence()
+            .filter { matchesSplit(it.split, canonSplit) }
+            .filter { isAllowedByEquipment(it.equipment, ownedEquipCanonical) }
+            .distinctBy { it.nameKey }
+            .map { it.name }
+            .sorted()
+            .take(limit)
+            .toList()
     }
 }

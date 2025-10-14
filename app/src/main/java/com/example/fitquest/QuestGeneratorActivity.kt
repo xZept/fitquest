@@ -1,6 +1,8 @@
 package com.example.fitquest
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -12,24 +14,19 @@ import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.example.fitquest.database.ActiveQuest
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.datastore.DataStoreManager
 import com.example.fitquest.models.QuestExercise
+import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import com.example.fitquest.workout.gitWorkoutEngine
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.example.fitquest.database.ActiveQuest
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import com.example.fitquest.ui.widgets.SpriteSheetDrawable
-import kotlinx.coroutines.delay
 import android.view.MotionEvent
-import android.widget.AdapterView
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-
 
 class QuestGeneratorActivity : AppCompatActivity() {
 
@@ -52,8 +49,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
     private val splitHelp  = "How your training days are grouped.\n• Push/Pull/Legs → muscles by movement\n• Upper/Legs →  body regions."
     private val focusHelp  = "• General → balanced\n• Hypertrophy → ~8–12 reps for size\n• Strength → lower reps, heavier loads"
 
-
-
     private val previewLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { res ->
@@ -62,8 +57,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
         val names = res.data!!.getStringArrayListExtra("RESULT_NAMES") ?: arrayListOf()
         val split = res.data!!.getStringExtra("SPLIT") ?: "Push"
         val focus = res.data!!.getStringExtra("FOCUS") ?: "General"
-
-
 
         if (names.isEmpty()) {
             Toast.makeText(this, "Nothing selected.", Toast.LENGTH_SHORT).show()
@@ -107,7 +100,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
                 })
                 finish()
             }
-
         }
     }
 
@@ -117,12 +109,7 @@ class QuestGeneratorActivity : AppCompatActivity() {
 
         val root = findViewById<View>(R.id.root)
 
-        val opts = BitmapFactory.Options().apply {
-            inPreferredConfig = Bitmap.Config.ARGB_8888
-        }
-
-
-
+        val opts = BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.ARGB_8888 }
         bgBitmap = BitmapFactory.decodeResource(resources, R.drawable.bg_page_dashboard_spritesheet0, opts)
 
         val rows = 1
@@ -142,29 +129,21 @@ class QuestGeneratorActivity : AppCompatActivity() {
 
         showBubble(welcomeMsg)
 
-
         val welcome = findViewById<View>(R.id.welcome_bubble)
-
         // Show with a quick fade-in
         welcome.alpha = 0f
         welcome.visibility = View.VISIBLE
-        welcome.animate()
-            .alpha(1f)
-            .setDuration(250)
-            .start()
+        welcome.animate().alpha(1f).setDuration(250).start()
 
         // Auto-hide after 6 seconds with a fade-out
         lifecycleScope.launch {
             delay(6000)
-            // If activity is still alive, fade out and hide
             welcome.animate()
                 .alpha(0f)
                 .setDuration(250)
                 .withEndAction { welcome.visibility = View.GONE }
                 .start()
         }
-
-
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
         hideSystemBars()
@@ -184,7 +163,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
             false // don't consume; let the spinner open
         }
 
-
         // --- Focus: show help on tap; detail after selection ---
         var focusTouched = false
         spFocus.setOnTouchListener { _, event ->
@@ -194,8 +172,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
             }
             false
         }
-
-
 
         val splits: Array<String> = try { resources.getStringArray(R.array.splits) }
         catch (_: Exception) { arrayOf("Push", "Pull", "Legs", "Upper", "Lower", "Full Body") }
@@ -217,11 +193,7 @@ class QuestGeneratorActivity : AppCompatActivity() {
             finish()
             overridePendingTransition(0, 0)
         }
-
-
-
     }
-
 
     override fun onStart() {
         super.onStart()
@@ -265,8 +237,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
         }
     }
 
-
-
     /** Build one structured plan and go straight to preview (no Basic/Advanced dialog). */
     private fun generateAndOpenPreview() {
         lifecycleScope.launch {
@@ -282,11 +252,16 @@ class QuestGeneratorActivity : AppCompatActivity() {
             val focus = spFocus.selectedItem?.toString()
                 ?: (spFocus.adapter?.getItem(0)?.toString() ?: "General")
 
-            // User equipment
+            // User equipment (normalize to simple lowercase tokens; your DB already stores canonical keys)
             val settings = db.userSettingsDao().getByUserId(uid)
             val ownedEquip: Set<String> = settings?.equipmentCsv
-                ?.split('|')?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet()
+                ?.split('|')
+                ?.mapNotNull { it.trim().lowercase().ifEmpty { null } }
+                ?.toSet()
                 ?: emptySet()
+
+            // Split-aware target size for “one-per-pattern (+ finisher)”
+            val targetItems = computeTargetItems(split)
 
             // Build structured plan
             val planResult = gitWorkoutEngine.buildStructuredPlan(
@@ -294,9 +269,9 @@ class QuestGeneratorActivity : AppCompatActivity() {
                 split = split,
                 focus = focus,
                 ownedEquipCanonical = ownedEquip,
-                targetItems = 8
+                targetItems = targetItems
             )
-            val initialList = planResult.first     // <-- no destructuring – fixes your error
+            val initialList = planResult.first
             val addablePool = planResult.second
 
             if (initialList.isEmpty() && addablePool.isEmpty()) {
@@ -327,7 +302,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
                 previewLauncher.launch(intent)
                 overridePendingTransition(0, 0)
             }
-
         }
     }
 
@@ -351,4 +325,17 @@ class QuestGeneratorActivity : AppCompatActivity() {
 
     private fun norm(name: String) =
         name.trim().lowercase().replace(Regex("[^a-z0-9]"), "")
+
+    /** Split-aware target list length to align with 1-per-pattern (+ finisher). */
+    private fun computeTargetItems(split: String): Int {
+        val s = split.trim().lowercase()
+        return when {
+            s.contains("push") -> 5     // horiz push + vert push + triceps + shoulder iso + finisher
+            s.contains("pull") -> 5     // horiz pull + vert pull + biceps + rear/scap + finisher
+            s.contains("leg") || s.contains("lower") -> 4 // squat + hinge + accessory + finisher
+            s.contains("upper") -> 5    // horiz push + horiz pull + (vert push/pull) + arms/rear
+            s.contains("full") && s.contains("body") -> 5 // knee + hinge + push + pull + accessory
+            else -> 5
+        }
+    }
 }
