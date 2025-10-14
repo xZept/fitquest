@@ -36,40 +36,43 @@ class WeeklyHistoryFragment : Fragment() {
 
             val repo = ProgressRepository(db)
 
-            // last 4 full weeks (Mon–Sun) ending this week
-            val today    = LocalDate.now(zone)
-            val thisMon  = today.with(DayOfWeek.MONDAY)
-            val weeks    = (0..3).map { n ->
-                val start = thisMon.minusWeeks(n.toLong())
-                val end   = start.plusDays(6)
-                start to end
+            // NEW: only weeks that actually have data (no prebuilt Mon–Sun loop)
+            val weeks = withContext(Dispatchers.IO) {
+                repo.weeklyHistory(uid, limitWeeks = 12)
             }
 
-            val inf = LayoutInflater.from(ctx)
             list.removeAllViews()
+            val inf = LayoutInflater.from(ctx)
 
-            for ((start, end) in weeks) {
-                // 7 daily summaries -> aggregate
-                val dayKeys = (0..6).map { d ->
-                    val ld = start.plusDays(d.toLong())
-                    ld.year*10000 + ld.monthValue*100 + ld.dayOfMonth
+            weeks.forEach { w ->
+                // --- Derive start/end dayKey safely ---
+                // If your WeeklySummary exposes start/end directly, prefer those:
+                // val startDk = w.from          // or w.startDayKey
+                // val endDk   = w.endDayKey
+                // Otherwise, derive from the contained days:
+                val daysList = w.days           // adjust if your property name differs
+                val startDk = daysList.minOf { it.dayKey }
+                val endDk   = daysList.maxOf { it.dayKey }
+
+                fun dkToDate(dk: Int): LocalDate {
+                    val y = dk / 10_000
+                    val m = (dk / 100) % 100
+                    val d = dk % 100
+                    return LocalDate.of(y, m, d)
                 }
-                val daily = withContext(Dispatchers.IO) {
-                    dayKeys.map { dk -> repo.dailySummary(uid, dk) }
-                }
+                val startDate = dkToDate(startDk)
+                val endDate   = dkToDate(endDk)
 
-                val daysCount = daily.size.coerceAtLeast(1)
-                val totalCals = daily.sumOf { it.calories }
-                val totalPlan = daily.sumOf { it.planCalories }
-                val workouts  = daily.sumOf { it.workoutsCompletedToday }
-
-                val avgCals   = (totalCals / daysCount)
-                val avgPlan   = (totalPlan / daysCount).coerceAtLeast(0)
-                val dev       = if (avgPlan > 0) (avgCals - avgPlan) else 0
+                // --- Compute the text you already show ---
+                val avgCals = daysList.map { it.calories }.average().toInt()
+                val avgPlan = daysList.map { it.planCalories }.average().toInt()
+                val dev     = if (avgPlan > 0) (avgCals - avgPlan) else 0
+                // If WeeklySummary already has total workouts, you can use w.workouts instead
+                val workouts = daysList.sumOf { it.workoutsCompletedToday }
 
                 val row = inf.inflate(R.layout.item_weekly_history_row, list, false)
                 row.findViewById<TextView>(R.id.tv_week_range).text =
-                    "${start.format(fmt)} – ${end.format(fmt)}"
+                    "${startDate.format(fmt)} – ${endDate.format(fmt)}"
 
                 row.findViewById<TextView>(R.id.tv_week_stats).text =
                     if (avgPlan > 0)
@@ -81,4 +84,5 @@ class WeeklyHistoryFragment : Fragment() {
             }
         }
     }
+
 }

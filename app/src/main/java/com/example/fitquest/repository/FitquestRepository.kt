@@ -59,6 +59,7 @@ class FitquestRepository(context: Context) {
 
 
 
+
     // Macro calculation
     suspend fun computeAndSaveMacroPlan(userId: Int): MacroPlan {
         val user = userDAO.getUserById(userId)
@@ -82,28 +83,46 @@ class FitquestRepository(context: Context) {
 
         macroPlanDao.upsert(plan)
 
-        // Mirror plan into today's MacroDiary (preserve actual intake so far)
+        // Update today's plan *only if* a diary row already exists or there's actual intake today.
         val zone = java.time.ZoneId.of("Asia/Manila")
         val now  = java.time.ZonedDateTime.now(zone)
         val dk   = now.year * 10_000 + now.monthValue * 100 + now.dayOfMonth
 
         val totals = db.foodLogDao().totalsForDay(userId, dk)
+        val hasIntake = (totals.calories > 0.0 || totals.protein > 0.0 || totals.carbohydrate > 0.0 || totals.fat > 0.0)
+        val existingToday = db.macroDiaryDao().get(userId, dk)
 
-        db.macroDiaryDao().upsert(
-            com.example.fitquest.database.MacroDiary(
-                userId = userId,
-                dayKey = dk,
-                calories = totals.calories.toInt(),
-                protein  = totals.protein.toInt(),
-                carbs    = totals.carbohydrate.toInt(),
-                fat      = totals.fat.toInt(),
-                planCalories = plan.calories,
-                planProtein  = plan.protein,
-                planCarbs    = plan.carbs,
-                planFat      = plan.fat,
-                capturedAt   = System.currentTimeMillis()
+        if (existingToday != null) {
+            // Keep the actual intake values; just refresh the plan fields
+            db.macroDiaryDao().upsert(
+                existingToday.copy(
+                    planCalories = plan.calories,
+                    planProtein  = plan.protein,
+                    planCarbs    = plan.carbs,
+                    planFat      = plan.fat,
+                    capturedAt   = System.currentTimeMillis()
+                )
             )
-        )
+        } else if (hasIntake) {
+            // Only create a new row if there’s real intake
+            db.macroDiaryDao().upsert(
+                com.example.fitquest.database.MacroDiary(
+                    userId = userId,
+                    dayKey = dk,
+                    calories = totals.calories.toInt(),
+                    protein  = totals.protein.toInt(),
+                    carbs    = totals.carbohydrate.toInt(),
+                    fat      = totals.fat.toInt(),
+                    planCalories = plan.calories,
+                    planProtein  = plan.protein,
+                    planCarbs    = plan.carbs,
+                    planFat      = plan.fat,
+                    capturedAt   = System.currentTimeMillis()
+                )
+            )
+        }
+        // else: no existing row and no intake → do nothing (don’t create noise)
+
         return plan
     }
 

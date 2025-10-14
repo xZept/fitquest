@@ -37,25 +37,26 @@ class DailyHistoryFragment : Fragment() {
 
             val repo = ProgressRepository(db)
 
-            // last 14 days (including today)
-            val days = (0..13).map { n ->
-                val d  = LocalDate.now(zone).minusDays(n.toLong())
-                val dk = d.year*10000 + d.monthValue*100 + d.dayOfMonth
-                Pair(d, dk)
-            }
-
+            // NEW: only days that actually have data (no prebuilt 0..13 loop)
             val summaries = withContext(Dispatchers.IO) {
-                days.map { (d, dk) -> d to repo.dailySummary(uid, dk) }
+                repo.dailyHistory(uid, limit = 30)   // <- uses activeDayKeys under the hood
             }
 
             list.removeAllViews()
             val inf = LayoutInflater.from(ctx)
-            summaries.forEach { (date, s) ->
+
+            summaries.forEach { s ->
                 val row = inf.inflate(R.layout.item_daily_history_row, list, false)
+
+                // Convert dayKey -> LocalDate for the label you already show
+                val y = s.dayKey / 10_000
+                val m = (s.dayKey / 100) % 100
+                val d = s.dayKey % 100
+                val date = LocalDate.of(y, m, d)
                 row.findViewById<TextView>(R.id.tv_day).text = date.format(fmt)
 
                 val dev = s.calories - s.planCalories
-                val devTxt = if (s.planCalories > 0) "(${if (dev>0) "+$dev" else "$dev"})" else ""
+                val devTxt = if (s.planCalories > 0) "(${if (dev > 0) "+$dev" else "$dev"})" else ""
                 val workouts = s.workoutsCompletedToday
 
                 row.findViewById<TextView>(R.id.tv_stats).text =
@@ -68,4 +69,5 @@ class DailyHistoryFragment : Fragment() {
             }
         }
     }
+
 }

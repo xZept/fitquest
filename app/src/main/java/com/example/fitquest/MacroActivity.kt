@@ -92,22 +92,27 @@ class MacroActivity : AppCompatActivity() {
             val existing = db.macroDiaryDao().get(userId, yesterdayKey)
             if (existing == null) {
                 val totals = db.foodLogDao().totalsForDay(userId, yesterdayKey)
-                val plan = db.macroPlanDao().getLatestForUser(userId)
-                db.macroDiaryDao().upsert(
-                    com.example.fitquest.database.MacroDiary(
-                        userId = userId,
-                        dayKey = yesterdayKey,
-                        calories = totals.calories.roundToInt(),
-                        protein = totals.protein.roundToInt(),
-                        carbs = totals.carbohydrate.roundToInt(),
-                        fat = totals.fat.roundToInt(),
-                        planCalories = plan?.calories ?: 0,
-                        planProtein = plan?.protein ?: 0,
-                        planCarbs = plan?.carbs ?: 0,
-                        planFat = plan?.fat ?: 0
+                val hasIntakeYesterday = (totals.calories > 0.0 || totals.protein > 0.0 || totals.carbohydrate > 0.0 || totals.fat > 0.0)
+                if (hasIntakeYesterday) {
+                    val plan = db.macroPlanDao().getLatestForUser(userId)
+                    db.macroDiaryDao().upsert(
+                        com.example.fitquest.database.MacroDiary(
+                            userId = userId,
+                            dayKey = yesterdayKey,
+                            calories = totals.calories.roundToInt(),
+                            protein  = totals.protein.roundToInt(),
+                            carbs    = totals.carbohydrate.roundToInt(),
+                            fat      = totals.fat.roundToInt(),
+                            planCalories = plan?.calories ?: 0,
+                            planProtein  = plan?.protein  ?: 0,
+                            planCarbs    = plan?.carbs    ?: 0,
+                            planFat      = plan?.fat      ?: 0
+                        )
                     )
-                )
+                }
+                // else: no intake yesterday → skip making a row
             }
+
         }
     }
 

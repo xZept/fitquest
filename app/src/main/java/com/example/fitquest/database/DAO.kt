@@ -275,6 +275,16 @@ interface MacroDiaryDao {
     """)
 
     suspend fun between(uid: Int, fromDayKey: Int, toDayKey: Int): List<MacroDiary>
+
+    @Query("""
+    DELETE FROM macroDiary
+    WHERE userId = :uid AND calories = 0 AND protein = 0 AND carbs = 0 AND fat = 0
+""")
+    suspend fun deleteEmptyForUser(uid: Int)
+
+    @Query("SELECT DISTINCT dayKey FROM macroDiary WHERE userId = :uid ORDER BY dayKey DESC LIMIT :limit")
+    suspend fun distinctDayKeys(uid: Int, limit: Int = 90): List<Int>
+
 }
 
 @Dao
@@ -422,6 +432,11 @@ interface FoodLogDao {
         ORDER BY loggedAt ASC
     """)
     suspend fun entriesForDay(uid: Int, dayKey: Int): List<FoodLog>
+
+    @Query("SELECT DISTINCT dayKey FROM foodLog WHERE userId = :uid ORDER BY dayKey DESC LIMIT :limit")
+    suspend fun distinctDayKeys(uid: Int, limit: Int = 90): List<Int>
+
+
 }
 
 data class FoodLogRow(
