@@ -150,19 +150,30 @@ class ProgressRepository(private val db: AppDatabase) {
         }
 
     private suspend fun toDaily(md: MacroDiary, userId: Int): DailySummary {
-        val proteinPct = if (md.planProtein > 0) ((md.protein * 100.0) / md.planProtein).toInt() else 0
-        val workouts = db.workoutSessionDao().countCompletedBetween(userId, startOfDayMs(md.dayKey), endOfDayMs(md.dayKey))
+        // Fallback to latest plan if the snapshot’s plan fields are zeroed
+        val latest = db.macroPlanDao().getLatestForUser(userId)
+        val planCalories = if (md.planCalories > 0) md.planCalories else (latest?.calories ?: 0)
+        val planProtein  = if (md.planProtein  > 0) md.planProtein  else (latest?.protein  ?: 0)
+        val planCarbs    = if (md.planCarbs    > 0) md.planCarbs    else (latest?.carbs    ?: 0)
+        val planFat      = if (md.planFat      > 0) md.planFat      else (latest?.fat      ?: 0)
+
+        val proteinPct = if (planProtein > 0) ((md.protein * 100.0) / planProtein).toInt() else 0
+        val workouts = db.workoutSessionDao().countCompletedBetween(
+            userId, startOfDayMs(md.dayKey), endOfDayMs(md.dayKey)
+        )
+
         return DailySummary(
             md.dayKey,
-            md.calories, md.planCalories,
-            md.protein, md.planProtein,
-            md.carbs, md.planCarbs,
-            md.fat, md.planFat,
-            kcalDeviation = (md.calories - md.planCalories),
+            md.calories, planCalories,
+            md.protein,  planProtein,
+            md.carbs,    planCarbs,
+            md.fat,      planFat,
+            kcalDeviation = (md.calories - planCalories),
             proteinHitPct = proteinPct.coerceIn(0, 200),
             workoutsCompletedToday = workouts
         )
     }
+
 
     // decrement by N days using DayKey arithmetic (YYYYMMDD)
     private fun decrementDayKey(dayKey: Int, days: Int): Int {

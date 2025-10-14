@@ -14,6 +14,7 @@ import com.example.fitquest.data.repository.FoodRepository
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
+import com.example.fitquest.MidnightSnapshotScheduler
 
 class FitQuestApp : Application() {
     lateinit var fdcService: FdcService
@@ -27,6 +28,7 @@ class FitQuestApp : Application() {
 
         ReminderScheduler.scheduleNext6am(this)
         ReminderScheduler.scheduleNext2359PHT(this) // NEW
+        MidnightSnapshotScheduler.schedule(this)
 
         // For debugging
         val key = BuildConfig.FDC_API_KEY

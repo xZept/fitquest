@@ -36,21 +36,23 @@ class WeeklyHistoryFragment : Fragment() {
 
             val repo = ProgressRepository(db)
 
-            // NEW: only weeks that actually have data (no prebuilt Mon–Sun loop)
+            // Only weeks that actually have data
             val weeks = withContext(Dispatchers.IO) {
                 repo.weeklyHistory(uid, limitWeeks = 12)
+            }
+
+            // ✅ Fetch latest plan ONCE (outside the loop)
+            val latestPlanCals = withContext(Dispatchers.IO) {
+                db.macroPlanDao().getLatestForUser(uid)?.calories ?: 0
             }
 
             list.removeAllViews()
             val inf = LayoutInflater.from(ctx)
 
             weeks.forEach { w ->
-                // --- Derive start/end dayKey safely ---
-                // If your WeeklySummary exposes start/end directly, prefer those:
-                // val startDk = w.from          // or w.startDayKey
-                // val endDk   = w.endDayKey
-                // Otherwise, derive from the contained days:
-                val daysList = w.days           // adjust if your property name differs
+                // If your WeeklySummary has explicit start/end, use them.
+                val daysList = w.days  // List<DailySummary>
+
                 val startDk = daysList.minOf { it.dayKey }
                 val endDk   = daysList.maxOf { it.dayKey }
 
@@ -63,11 +65,15 @@ class WeeklyHistoryFragment : Fragment() {
                 val startDate = dkToDate(startDk)
                 val endDate   = dkToDate(endDk)
 
+                // ✅ Fallback to latest plan when planCalories == 0
+                val planPerDay = daysList.map { s ->
+                    if (s.planCalories > 0) s.planCalories else latestPlanCals
+                }
+                val avgPlan = if (planPerDay.isNotEmpty()) planPerDay.average().toInt() else 0
+
                 // --- Compute the text you already show ---
                 val avgCals = daysList.map { it.calories }.average().toInt()
-                val avgPlan = daysList.map { it.planCalories }.average().toInt()
                 val dev     = if (avgPlan > 0) (avgCals - avgPlan) else 0
-                // If WeeklySummary already has total workouts, you can use w.workouts instead
                 val workouts = daysList.sumOf { it.workoutsCompletedToday }
 
                 val row = inf.inflate(R.layout.item_weekly_history_row, list, false)
@@ -76,13 +82,14 @@ class WeeklyHistoryFragment : Fragment() {
 
                 row.findViewById<TextView>(R.id.tv_week_stats).text =
                     if (avgPlan > 0)
-                        "Avg: $avgCals / $avgPlan kcal (${if (dev>0) "+$dev" else "$dev"}) • $workouts workout${if (workouts==1) "" else "s"}"
+                        "Avg: $avgCals / $avgPlan kcal (${if (dev > 0) "+$dev" else "$dev"}) • $workouts workout${if (workouts == 1) "" else "s"}"
                     else
-                        "Avg: $avgCals kcal • $workouts workout${if (workouts==1) "" else "s"}"
+                        "Avg: $avgCals kcal • $workouts workout${if (workouts == 1) "" else "s"}"
 
                 list.addView(row)
             }
         }
     }
+
 
 }
