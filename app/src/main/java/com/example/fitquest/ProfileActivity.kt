@@ -356,17 +356,34 @@ class ProfileActivity : AppCompatActivity() {
                         return@launch
                     }
                     else {
-                        AlertDialog.Builder(this@ProfileActivity)
-                            .setTitle("Use Edit Profile Ticket?")
-                            .setMessage("Use 1 ticket to unlock editing now. It will be consumed when you save.")
-                            .setPositiveButton("Use Ticket") { _, _ ->
-                                unlockEditing(true)
-                                Toast.makeText(this@ProfileActivity, "Editing unlocked. Make your changes and press Save.", Toast.LENGTH_LONG).show()
-                            }
-                            .setNegativeButton("Not now", null)
-                            .show()
+                        val view = layoutInflater.inflate(R.layout.dialog_use_ticket, null)
+
+                        val dlg = com.google.android.material.dialog.MaterialAlertDialogBuilder(this@ProfileActivity)
+                            .setView(view)
+                            .create()
+
+                        dlg.setOnShowListener {
+                            dlg.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                        }
+
+                        // Wire image buttons
+                        view.findViewById<ImageButton>(R.id.btn_use_ticket).setOnClickListener {
+                            unlockEditing(true)
+                            Toast.makeText(
+                                this@ProfileActivity,
+                                "Editing unlocked. Make your changes and press Save.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            dlg.dismiss()
+                        }
+                        view.findViewById<ImageButton>(R.id.btn_cancel).setOnClickListener {
+                            dlg.dismiss()
+                        }
+
+                        dlg.show()
                         return@launch
                     }
+
                 }
 
                 // validate height/weight before saving (once unlocked)

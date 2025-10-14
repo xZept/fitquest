@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <!-- Background image -->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
+        android:scaleType="fitXY"
+        android:src="@drawable/container_handler" />
+
+    <!-- Foreground content -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_gravity="center_vertical"
+        android:layout_marginHorizontal="40dp"
+        android:layout_marginTop="15dp"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Use Edit Profile Ticket?"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textColor="@android:color/black" />
+
+        <TextView
+            android:id="@+id/tv_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Use 1 ticket to unlock editing now. It will be consumed when you save."
+            android:textSize="15sp"
+            android:textColor="@android:color/black" />
+
+        <!-- Button row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginTop="66dp">
+
+            <!-- Cancel -->
+            <ImageButton
+                android:id="@+id/btn_cancel"
+                android:layout_width="120dp"
+                android:layout_height="40dp"
+                android:background="@drawable/button_not_now"
+                android:contentDescription="Not now"
+                android:adjustViewBounds="true"
+                android:padding="0dp" />
+
+
+            <Space
+                android:layout_width="12dp"
+                android:layout_height="1dp" />
+
+            <!-- Use Ticket (temp: uses button_open_shop.png art) -->
+            <ImageButton
+                android:id="@+id/btn_use_ticket"
+                android:layout_width="120dp"
+                android:layout_height="40dp"
+                android:background="@drawable/button_use_ticket"
+                android:contentDescription="Use Ticket"
+                android:adjustViewBounds="true"
+                android:padding="0dp" />
+
+
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

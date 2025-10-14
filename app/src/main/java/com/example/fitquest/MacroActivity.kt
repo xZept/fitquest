@@ -40,6 +40,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import android.graphics.BitmapFactory
+import androidx.annotation.DrawableRes
+import com.example.fitquest.ui.widgets.SpriteSheetDrawable
+
 
 class MacroActivity : AppCompatActivity() {
 
@@ -52,10 +56,21 @@ class MacroActivity : AppCompatActivity() {
     private lateinit var dinnerContainer: LinearLayout
     private lateinit var repository: FitquestRepository
     private var macroPlan: MacroPlan? = null
-    private lateinit var capybaraView: ImageView
+    private val capybaraView by lazy(LazyThreadSafetyMode.NONE) {
+        findViewById<ImageView>(R.id.iv_capybara)
+    }
 
     private val foodRepo by lazy { (application as FitQuestApp).foodRepository }
     private val TAG = "MacroActivity"
+
+
+    // Cache sprites so we don’t re-decode on every update
+    private var spriteSkinny: SpriteSheetDrawable? = null
+    private var spriteNormal: SpriteSheetDrawable? = null
+    private var spriteFat: SpriteSheetDrawable? = null
+
+    // tune to your sheet’s grid & speed
+
 
 
     data class MealItem(
@@ -72,8 +87,14 @@ class MacroActivity : AppCompatActivity() {
 
     private lateinit var pressAnim: android.view.animation.Animation
 
+    override fun onPause() {
+        (capybaraView.drawable as? SpriteSheetDrawable)?.stop()
+        super.onPause()
+    }
+
     override fun onResume() {
         super.onResume()
+        (capybaraView.drawable as? SpriteSheetDrawable)?.start()
         macroPlan = null
         if (currentUserId > 0) {
             refreshTodayMeals()
@@ -117,14 +138,22 @@ class MacroActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Capybara
-        capybaraView = findViewById(R.id.iv_capybara)
-
         // Initialize repo
         repository = FitquestRepository(this)
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_macro)
+
+        // decode once
+        spriteSkinny = buildSprite(R.drawable.capybara_skinny)
+        spriteNormal = buildSprite(R.drawable.capybara_normal)
+        spriteFat    = buildSprite(R.drawable.capybara_fat)
+
+// show an initial animation
+        capybaraView.setImageDrawable(spriteSkinny)
+        spriteSkinny?.start()
+
+
 
         // INIT FIRST so any early clicks won’t crash
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
@@ -225,6 +254,35 @@ class MacroActivity : AppCompatActivity() {
 
         setupNavigationBar()
     }
+
+    private fun buildSprite(@DrawableRes id: Int): SpriteSheetDrawable {
+        val opts = BitmapFactory.Options().apply { inScaled = false } // keep exact frame size
+        val bmp  = BitmapFactory.decodeResource(resources, id, opts)
+        return SpriteSheetDrawable(
+            sheet = bmp,
+            rows = 1,
+            cols = 12,
+            fps  = 12,
+            loop = true,
+            scaleMode = SpriteSheetDrawable.ScaleMode.FIT_CENTER
+        )
+    }
+
+    private fun swapSprite(newSprite: SpriteSheetDrawable) {
+        val cur = (capybaraView.drawable as? SpriteSheetDrawable)
+        if (cur === newSprite) {
+            if (!cur.isRunning()) cur.start()
+            return
+        }
+        capybaraView.animate().alpha(0f).setDuration(120).withEndAction {
+            cur?.stop()
+            capybaraView.setImageDrawable(newSprite)
+            newSprite.resetToStart()
+            newSprite.start()
+            capybaraView.animate().alpha(1f).setDuration(120).start()
+        }.start()
+    }
+
 
     private fun displayMacroTip() {
         val tips = TipsLoader.loadTips(this)
@@ -926,32 +984,21 @@ class MacroActivity : AppCompatActivity() {
         doneCalories: Int, doneProtein: Int, doneCarbs: Int, doneFat: Int,
         goalCalories: Int, goalProtein: Int, goalCarbs: Int, goalFat: Int
     ) {
-
-        // Capybara
-        capybaraView = findViewById(R.id.iv_capybara)
-
-        // Nothing logged = all zeros
         val nothingLogged = (doneCalories == 0 && doneProtein == 0 && doneCarbs == 0 && doneFat == 0)
-
-        // Bloated if ANY macro OR calories is over the plan
         val anyOver = (doneCalories > goalCalories) ||
-                (doneProtein > goalProtein) ||
-                (doneCarbs > goalCarbs) ||
-                (doneFat > goalFat)
+                (doneProtein  > goalProtein) ||
+                (doneCarbs    > goalCarbs) ||
+                (doneFat      > goalFat)
 
-        val (drawableRes, desc) = when {
-            nothingLogged -> R.drawable.capybara_hungry to "Hungry capybara"
-            anyOver      -> R.drawable.capybara_bloated to "Bloated capybara"
-            else         -> R.drawable.capybara_fulfilled to "Fulfilled capybara"
-        }
+        val next = when {
+            nothingLogged -> spriteSkinny
+            anyOver      -> spriteFat
+            else         -> spriteNormal
+        } ?: return
 
-        // Simple fade to make the change feel alive
-        capybaraView.animate().alpha(0f).setDuration(120).withEndAction {
-            capybaraView.setImageResource(drawableRes)
-            capybaraView.contentDescription = desc
-            capybaraView.animate().alpha(1f).setDuration(120).start()
-        }.start()
+        swapSprite(next)
     }
+
 
 
 }

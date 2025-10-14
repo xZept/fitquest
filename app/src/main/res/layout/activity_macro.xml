@@ -256,6 +256,16 @@
                         android:textSize="18sp" />
                 </com.google.android.flexbox.FlexboxLayout>
             </com.google.android.flexbox.FlexboxLayout>
+            <!-- Capybara between progress and meals -->
+            <ImageView
+                android:id="@+id/iv_capybara"
+                android:layout_width="380dp"
+                android:layout_height="92dp"
+                android:src="@drawable/capybara_hungry"
+                android:contentDescription="Capybara mood"
+                android:elevation="20dp"
+                app:layout_alignSelf="center" />
+
 
             <!-- Meals Section -->
             <LinearLayout
@@ -422,29 +432,19 @@
     <!-- Add Meal Button -->
     <!-- Fixed floating action just above the navbar -->
 
-    <ImageView
-        android:id="@+id/iv_capybara"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:src="@drawable/capybara_hungry"
-        android:contentDescription="Capybara mood"
-        android:elevation="20dp"
-        app:layout_constraintStart_toStartOf="@id/btn_buy_food"
-        app:layout_constraintEnd_toEndOf="@id/btn_buy_food"
-        app:layout_constraintBottom_toTopOf="@id/btn_buy_food"
-        android:layout_marginBottom="2dp" />
-
+    <!-- Buy Food button: bottom is above the capybara (not the nav) -->
     <ImageButton
         android:id="@+id/btn_buy_food"
         android:layout_width="wrap_content"
         android:layout_height="@dimen/buy_food_size"
         android:background="@drawable/button_buy_food"
         android:contentDescription="Add meal"
-        android:layout_marginBottom="@dimen/buy_food_margin"
         android:elevation="16dp"
         app:layout_constraintBottom_toTopOf="@id/bottom_nav"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+
 
     <!-- Bottom Navigation -->
     <com.google.android.flexbox.FlexboxLayout
