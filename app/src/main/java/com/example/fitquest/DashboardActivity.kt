@@ -278,9 +278,9 @@ class DashboardActivity : AppCompatActivity() {
             axisMinimum = 0f
             granularity = 1f
 
-            textColor = Color.WHITE     //  label color
-            textSize  = 12f             // label size
-            gridColor = Color.parseColor("#22FFFFFF") // optional light grid
+            textColor = Color.parseColor("#000000")        // ← axis labels: BLACK
+            textSize  = 12f
+            gridColor = Color.parseColor("#11000000")      // subtle grid (optional)
             axisLineColor = Color.TRANSPARENT
         }
 
@@ -291,17 +291,18 @@ class DashboardActivity : AppCompatActivity() {
             valueFormatter = IndexAxisValueFormatter(splits)
             labelRotationAngle = 0f
 
-
-            textColor = Color.WHITE     //  label color
+            textColor = Color.parseColor("#000000")        // ← x labels: BLACK
             textSize  = 12f
         }
 
         chart.data?.let { data ->
-            data.setValueTextColor(Color.WHITE)  // 👈 bar value color
-            data.setValueTextSize(12f)           // 👈 bar value size
+            data.setValueTextColor(Color.BLACK)  //  bar value color
+            data.setValueTextSize(12f)           //  bar value size
             chart.invalidate()
         }
         chart.setNoDataText("No completed sets yet.")
+        chart.setNoDataTextColor(Color.parseColor("#000000")) // ← no-data text: BLACK
+
         chart.setFitBars(true)
 
         // Space between the chart content and its edges (left, top, right, bottom) in px
@@ -437,16 +438,20 @@ class DashboardActivity : AppCompatActivity() {
                 com.github.mikephil.charting.data.BarEntry(idx.toFloat(), (counts[label] ?: 0).toFloat())
             }
 
+            val black = Color.parseColor("#000000")
+
+
             val dataSet = BarDataSet(entries, "Splits").apply {
-                setDrawValues(true)
-                color = Color.parseColor("#593A07")   // ← set bar color here
-                valueTextColor = Color.WHITE
+                setDrawValues(true)                 // make sure values are shown
+                color = Color.parseColor("#593A07") // bar color
+                valueTextColor = black              // ← data labels on bars: BLACK
                 valueTextSize = 12f
             }
 
             val data = com.github.mikephil.charting.data.BarData(dataSet).apply {
                 barWidth = 0.6f
                 setValueTextSize(12f)
+                setValueTextColor(black)
                 // show integers on bar labels
                 setValueFormatter(object : com.github.mikephil.charting.formatter.ValueFormatter() {
                     override fun getBarLabel(e: com.github.mikephil.charting.data.BarEntry?): String {
