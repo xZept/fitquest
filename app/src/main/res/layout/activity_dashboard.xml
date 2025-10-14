@@ -5,16 +5,17 @@
     android:id="@+id/dashboard_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".DashboardActivity">
+    tools:context=".DashboardActivity"
+    android:background="@drawable/bg_dashboard">
 
-    <!-- Background Image -->
-    <ImageView
-        android:id="@+id/dashboard_bg"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="centerCrop"
-        android:contentDescription="Dashboard Background"
-        android:alpha="1.0" />
+<!--    &lt;!&ndash; Background Image &ndash;&gt;-->
+<!--    <ImageView-->
+<!--        android:id="@+id/dashboard_bg"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="match_parent"-->
+<!--        android:scaleType="centerCrop"-->
+<!--        android:contentDescription="Dashboard Background"-->
+<!--        android:alpha="1.0" />-->
 
     <!-- STICKY HEADER (outside the scroll view) -->
     <LinearLayout
@@ -88,263 +89,294 @@
                 android:background="@drawable/tip_general" />
 
 
-            <!-- Daily Summary (two columns: kcal left, workouts right) -->
-            <LinearLayout
-                android:id="@+id/card_daily_summary"
+            <!-- Horizontally scrollable cards -->
+            <HorizontalScrollView
+                android:id="@+id/summary_scroller"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:layout_marginHorizontal="16dp"
-                android:orientation="vertical"
-                android:padding="20dp"
-                android:background="@drawable/container_user_info">
+                android:scrollbars="none"
+                android:overScrollMode="never"
+                android:fadingEdgeLength="0dp"
+                android:clipToPadding="true"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:background="@android:color/transparent">
 
-                <TextView
-                    android:id="@+id/tv_daily_title"
+                <LinearLayout
+                    android:id="@+id/summary_track"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Today’s Summary"
-                    android:textSize="18sp"
-                    android:textColor="@color/white"
-                    android:paddingBottom="8dp"/>
-
-                <!-- Row that splits in half -->
-                <LinearLayout
-                    android:id="@+id/summary_row"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:baselineAligned="false">
+                    android:background="@android:color/transparent">
 
-                    <!-- LEFT: Calories -->
+                    <!-- DAILY CARD (same content, minor margin tweaks) -->
                     <LinearLayout
-                        android:id="@+id/col_kcal"
-                        android:layout_width="0dp"
+                        android:id="@+id/card_daily_summary"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
+                        android:layout_marginStart="5dp"
+                        android:layout_marginEnd="12dp"
                         android:orientation="vertical"
-                        android:gravity="center_horizontal">
+                        android:padding="20dp"
+                        android:background="@drawable/container_user_info">
 
                         <TextView
-                            android:id="@+id/tv_kcal"
+                            android:id="@+id/tv_daily_title"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0 / 0 kcal (±0)"
-                            android:textColor="@color/white" />
+                            android:text="Today’s Summary"
+                            android:textSize="18sp"
+                            android:textColor="@color/white"
+                            android:paddingBottom="8dp"/>
 
-                        <FrameLayout
-                            android:id="@+id/kcal_ring"
-                            android:layout_width="90dp"
-                            android:layout_height="90dp"
-                            android:layout_marginTop="8dp">
+                        <!-- Row that splits in half -->
+                        <LinearLayout
+                            android:id="@+id/summary_row"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false">
 
-                            <com.google.android.material.progressindicator.CircularProgressIndicator
-                                android:id="@+id/pb_kcal_circle"
-                                android:layout_width="match_parent"
+                            <!-- LEFT: Calories -->
+                            <LinearLayout
+                                android:id="@+id/col_kcal"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="center_horizontal">
+
+                                <TextView
+                                    android:id="@+id/tv_kcal"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="0 / 0 kcal (±0)"
+                                    android:textColor="@color/white" />
+
+                                <FrameLayout
+                                    android:id="@+id/kcal_ring"
+                                    android:layout_width="90dp"
+                                    android:layout_height="90dp"
+                                    android:layout_marginTop="8dp">
+
+                                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                                        android:id="@+id/pb_kcal_circle"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent"
+                                        app:indicatorSize="80dp"
+                                        app:trackThickness="7dp"
+                                        app:indicatorDirectionCircular="clockwise"
+                                        app:showAnimationBehavior="inward"
+                                        app:hideAnimationBehavior="outward" />
+
+                                    <TextView
+                                        android:id="@+id/tv_kcal_center"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent"
+                                        android:gravity="center"
+                                        android:text="0%"
+                                        android:textColor="@android:color/white"
+                                        android:textStyle="bold"
+                                        android:textSize="14sp"/>
+                                </FrameLayout>
+                            </LinearLayout>
+
+                            <!-- Divider (optional) -->
+                            <View
+                                android:layout_width="1dp"
                                 android:layout_height="match_parent"
-                                app:indicatorSize="80dp"
-                                app:trackThickness="7dp"
-                                app:indicatorDirectionCircular="clockwise"
-                                app:showAnimationBehavior="inward"
-                                app:hideAnimationBehavior="outward" />
+                                android:layout_marginHorizontal="8dp"
+                                android:background="#22FFFFFF" />
+
+                            <!-- RIGHT: Workouts -->
+                            <LinearLayout
+                                android:id="@+id/col_workouts"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="center_horizontal">
+
+                                <TextView
+                                    android:id="@+id/tv_workouts_title"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Workouts"
+                                    android:textColor="@color/white"
+                                    android:textStyle="bold"
+                                    android:textSize="16sp" />
+
+                                <TextView
+                                    android:id="@+id/tv_workouts"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="0"
+                                    android:textColor="@color/white"
+                                    android:layout_gravity="center_horizontal"
+                                    android:textSize="50sp"
+                                    android:layout_marginTop="15dp" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- WEEKLY CARD (same content, minor margin tweaks) -->
+                    <LinearLayout
+                        android:id="@+id/card_weekly_summary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="0dp"
+                        android:layout_marginEnd="5dp"
+                        android:orientation="vertical"
+                        android:padding="20dp"
+                        android:background="@drawable/container_user_info">
+
+                        <TextView
+                            android:id="@+id/tv_weekly_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="This Week Period"
+                            android:textSize="18sp"
+                            android:textColor="@color/white"
+                            android:paddingBottom="4dp" />
+
+                        <LinearLayout
+                            android:id="@+id/weekly_ranges_row"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
 
                             <TextView
-                                android:id="@+id/tv_kcal_center"
-                                android:layout_width="match_parent"
+                                android:id="@+id/tv_weekly_range"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="—"
+                                android:textSize="12sp"
+                                android:textColor="@color/white"
+                                android:alpha="0.85"
+                                android:maxLines="1"
+                                android:ellipsize="end"
+                                android:paddingBottom="2dp"
+                                android:layout_marginStart="25dp"/>
+
+                            <TextView
+                                android:id="@+id/tv_weekly_next_range"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Next: —"
+                                android:textSize="12sp"
+                                android:textColor="@color/white"
+                                android:alpha="0.8"
+                                android:maxLines="1"
+                                android:ellipsize="end"
+                                android:paddingBottom="8dp"
+                                android:layout_marginEnd="25dp"/>
+                        </LinearLayout>
+
+                        <!-- Row that splits in half -->
+                        <LinearLayout
+                            android:id="@+id/weekly_summary_row"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false">
+
+                            <!-- LEFT: Avg Calories (label + ring) -->
+                            <LinearLayout
+                                android:id="@+id/col_weekly_kcal"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="center_horizontal">
+
+                                <TextView
+                                    android:id="@+id/tv_weekly_kcal_label"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Avg: —"
+                                    android:textColor="@color/white" />
+
+                                <FrameLayout
+                                    android:id="@+id/weekly_kcal_ring"
+                                    android:layout_width="90dp"
+                                    android:layout_height="90dp"
+                                    android:layout_marginTop="8dp">
+
+                                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                                        android:id="@+id/pb_weekly_kcal_circle"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent"
+                                        app:indicatorSize="80dp"
+                                        app:trackThickness="7dp"
+                                        app:indicatorDirectionCircular="clockwise"
+                                        app:showAnimationBehavior="inward"
+                                        app:hideAnimationBehavior="outward" />
+
+                                    <TextView
+                                        android:id="@+id/tv_weekly_kcal_center"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="match_parent"
+                                        android:gravity="center"
+                                        android:text="0%"
+                                        android:textColor="@android:color/white"
+                                        android:textStyle="bold"
+                                        android:textSize="14sp" />
+                                </FrameLayout>
+                            </LinearLayout>
+
+                            <!-- Divider -->
+                            <View
+                                android:layout_width="1dp"
                                 android:layout_height="match_parent"
-                                android:gravity="center"
-                                android:text="0%"
-                                android:textColor="@android:color/white"
-                                android:textStyle="bold"
-                                android:textSize="14sp"/>
-                        </FrameLayout>
-                    </LinearLayout>
+                                android:layout_marginHorizontal="8dp"
+                                android:background="#22FFFFFF" />
 
-                    <!-- Divider (optional) -->
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="match_parent"
-                        android:layout_marginHorizontal="8dp"
-                        android:background="#22FFFFFF" />
+                            <!-- RIGHT: Workouts (title + big number) -->
+                            <LinearLayout
+                                android:id="@+id/col_weekly_workouts"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical"
+                                android:gravity="center_horizontal">
 
-                    <!-- RIGHT: Workouts -->
-                    <LinearLayout
-                        android:id="@+id/col_workouts"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center_horizontal">
+                                <TextView
+                                    android:id="@+id/tv_weekly_workouts_title"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="Workouts"
+                                    android:textColor="@color/white"
+                                    android:textStyle="bold"
+                                    android:textSize="16sp" />
 
-                        <!-- Title -->
-                        <TextView
-                            android:id="@+id/tv_workouts_title"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Workouts"
-                            android:textColor="@color/white"
-                            android:textStyle="bold"
-                            android:textSize="16sp" />
-
-                        <!-- Counter (keeps the same id so your Kotlin still finds it) -->
-                        <TextView
-                            android:id="@+id/tv_workouts"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textColor="@color/white"
-                            android:layout_gravity="center_horizontal"
-                            android:textSize="50sp"
-                            android:layout_marginTop="15dp" />
+                                <TextView
+                                    android:id="@+id/tv_weekly_workouts"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="0"
+                                    android:textColor="@color/white"
+                                    android:layout_gravity="center_horizontal"
+                                    android:textSize="50sp"
+                                    android:layout_marginTop="15dp" />
+                            </LinearLayout>
+                        </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
-            </LinearLayout>
+            </HorizontalScrollView>
 
-            <!-- Weekly Summary (mirrors the daily card layout) -->
-            <LinearLayout
-                android:id="@+id/card_weekly_summary"
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tv_weight_title"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:layout_marginHorizontal="16dp"
-                android:orientation="vertical"
-                android:padding="20dp"
-                android:background="@drawable/container_user_info">
-
-                <TextView
-                    android:id="@+id/tv_weekly_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="This Week Period"
-                    android:textSize="18sp"
-                    android:textColor="@color/white"
-                    android:paddingBottom="4dp" />
-
-                <LinearLayout
-                    android:id="@+id/weekly_ranges_row"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <TextView
-                        android:id="@+id/tv_weekly_range"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="—"
-                        android:textSize="12sp"
-                        android:textColor="@color/white"
-                        android:alpha="0.85"
-                        android:maxLines="1"
-                        android:ellipsize="end"
-                        android:paddingBottom="2dp"
-                        android:layout_marginStart="25dp"/>
-
-                    <TextView
-                        android:id="@+id/tv_weekly_next_range"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Next: —"
-                        android:textSize="12sp"
-                        android:textColor="@color/white"
-                        android:alpha="0.8"
-                        android:maxLines="1"
-                        android:ellipsize="end"
-                        android:paddingBottom="8dp"
-                        android:layout_marginEnd="25dp"/>
-                </LinearLayout>
-
-                <!-- Row that splits in half -->
-                <LinearLayout
-                    android:id="@+id/weekly_summary_row"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:baselineAligned="false">
-
-                    <!-- LEFT: Avg Calories (label + ring) -->
-                    <LinearLayout
-                        android:id="@+id/col_weekly_kcal"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center_horizontal">
-
-                        <!-- label like: Avg: 1800 / 2000 kcal (+100) -->
-                        <TextView
-                            android:id="@+id/tv_weekly_kcal_label"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Avg: —"
-                            android:textColor="@color/white" />
-
-                        <FrameLayout
-                            android:id="@+id/weekly_kcal_ring"
-                            android:layout_width="90dp"
-                            android:layout_height="90dp"
-                            android:layout_marginTop="8dp">
-
-                            <com.google.android.material.progressindicator.CircularProgressIndicator
-                                android:id="@+id/pb_weekly_kcal_circle"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                app:indicatorSize="80dp"
-                                app:trackThickness="7dp"
-                                app:indicatorDirectionCircular="clockwise"
-                                app:showAnimationBehavior="inward"
-                                app:hideAnimationBehavior="outward" />
-
-                            <TextView
-                                android:id="@+id/tv_weekly_kcal_center"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:gravity="center"
-                                android:text="0%"
-                                android:textColor="@android:color/white"
-                                android:textStyle="bold"
-                                android:textSize="14sp" />
-                        </FrameLayout>
-                    </LinearLayout>
-
-                    <!-- Divider -->
-                    <View
-                        android:layout_width="1dp"
-                        android:layout_height="match_parent"
-                        android:layout_marginHorizontal="8dp"
-                        android:background="#22FFFFFF" />
-
-                    <!-- RIGHT: Workouts (title + big number) -->
-                    <LinearLayout
-                        android:id="@+id/col_weekly_workouts"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:gravity="center_horizontal">
-
-                        <TextView
-                            android:id="@+id/tv_weekly_workouts_title"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Workouts"
-                            android:textColor="@color/white"
-                            android:textStyle="bold"
-                            android:textSize="16sp" />
-
-                        <TextView
-                            android:id="@+id/tv_weekly_workouts"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0"
-                            android:textColor="@color/white"
-                            android:layout_gravity="center_horizontal"
-                            android:textSize="50sp"
-                            android:layout_marginTop="15dp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </LinearLayout>
+                android:text="Weight history"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:textColor="@android:color/white"
+                android:letterSpacing="0.02"
+                android:paddingBottom="8dp"/>
 
 
             <!-- Weight line chart -->
@@ -355,13 +387,16 @@
                 android:layout_marginTop="12dp"
                 android:layout_marginHorizontal="16dp"
                 android:background="@drawable/container_graph"
-                android:padding="12dp">
+                android:padding="12dp"
+                android:gravity="center">
 
                 <com.github.mikephil.charting.charts.LineChart
                     android:id="@+id/weightChart"
                     android:layout_width="match_parent"
-                    android:layout_height="220dp" />
+                    android:layout_height="250dp"
+                    android:layout_gravity="center" />
             </FrameLayout>
+
 
             <!-- Splits bar chart -->
             <FrameLayout

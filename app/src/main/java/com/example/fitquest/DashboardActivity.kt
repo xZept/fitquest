@@ -1,8 +1,6 @@
 package com.example.fitquest
 
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -20,7 +18,6 @@ import androidx.core.view.WindowInsetsCompat.Type
 import androidx.lifecycle.lifecycleScope
 import com.example.fitquest.database.AppDatabase
 import com.example.fitquest.datastore.DataStoreManager
-import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import com.example.fitquest.utils.TipsLoader
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -68,7 +65,6 @@ class DashboardActivity : AppCompatActivity() {
 
     private lateinit var dashboardTip: TextView
     private lateinit var pressAnim: android.view.animation.Animation
-    private var bgAnim: SpriteSheetDrawable? = null
     private lateinit var db: AppDatabase
     private lateinit var chart: BarChart
 
@@ -169,28 +165,12 @@ class DashboardActivity : AppCompatActivity() {
 
 
 
-        // Animated spritesheet background (repo)
-        val bgView = findViewById<ImageView>(R.id.dashboard_bg)
-        val opts = BitmapFactory.Options().apply {
-            inScaled = false
-            inPreferredConfig = Bitmap.Config.ARGB_8888
-        }
-        val sheet = BitmapFactory.decodeResource(resources, R.drawable.bg_page_dashboard_spritesheet0, opts)
-        bgAnim = SpriteSheetDrawable(
-            sheet = sheet,
-            rows = 1,
-            cols = 12,
-            fps = 12,
-            loop = true,
-            scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
-        )
-        bgView.setImageDrawable(bgAnim)
-
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         tvKcal = findViewById(R.id.tv_kcal)
         tvWorkouts = findViewById(R.id.tv_workouts)
         cardDaily = findViewById(R.id.card_daily_summary)
+
 
 
 
@@ -259,7 +239,6 @@ class DashboardActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        bgAnim?.start()
     }
 
     override fun onResume() {
@@ -277,7 +256,6 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
-        bgAnim?.stop()
         super.onStop()
     }
 
@@ -360,6 +338,9 @@ class DashboardActivity : AppCompatActivity() {
                 weightChart.isVisible = true
             }
 
+            val weightRed = Color.parseColor("#C73212")     // red
+            val weightFill = Color.parseColor("#33EF4444")  // 20% alpha red (#AA RR GG BB)
+
             val entries = rows.map { r ->
                 val x = java.time.Instant.ofEpochMilli(r.loggedAt)
                     .atZone(java.time.ZoneId.of("Asia/Manila"))
@@ -376,6 +357,12 @@ class DashboardActivity : AppCompatActivity() {
                 mode = LineDataSet.Mode.CUBIC_BEZIER
                 setDrawValues(false)
                 setDrawFilled(true)
+
+
+                color = weightRed
+                setCircleColor(weightRed)
+                fillColor = weightFill
+                highLightColor = weightRed
             }
 
             weightChart.data = LineData(ds)
@@ -388,27 +375,43 @@ class DashboardActivity : AppCompatActivity() {
 
             val minY = rows.minOf { it.weightKg }.toFloat()
             val maxY = rows.maxOf { it.weightKg }.toFloat()
-            val pad  = ((maxY - minY).coerceAtLeast(1f)) * 0.1f
-            weightChart.axisLeft.axisMinimum = (minY - pad)
-            weightChart.axisLeft.axisMaximum = (maxY + pad)
 
             val goalKg = withContext(Dispatchers.IO) {
                 AppDatabase.getInstance(this@DashboardActivity)
                     .userProfileDAO()
-                    .getProfileByUserId(userId)          // was: userId unresolved when var was uid
+                    .getProfileByUserId(userId)
                     ?.goalWeight
                     ?.toDouble()
             } ?: 0.0
 
-            if (goalKg > 0.0) {
-                val ll = LimitLine(goalKg.toFloat(), "Goal")
-                ll.lineWidth = 1.5f
-                ll.enableDashedLine(10f, 10f, 0f)
+            val goalY = goalKg.toFloat()
+            val maxForAxis = maxOf(maxY, if (goalY > 0f) goalY else 0f)
+            val headroom = (maxForAxis * 0.05f).coerceAtLeast(1f) // ~5% or at least 1 kg
+
+            weightChart.axisLeft.apply {
+                axisMinimum = 0f                 // force zero baseline
+                axisMaximum = maxForAxis + headroom
+                granularity = 1f                 // whole-number ticks (optional)
+                setDrawZeroLine(true)            // draw baseline
+                // zeroLineColor = Color.WHITE
+                // zeroLineWidth = 1f
+            }
+
+            val goalBlue = Color.parseColor("#0F5ADB") // blue
+
+            if (goalY > 0f) {
+                val ll = LimitLine(goalY, "Goal").apply {
+                    lineWidth = 1.5f
+                    enableDashedLine(10f, 10f, 0f)
+                    lineColor = goalBlue
+                    textColor = goalBlue
+                }
                 weightChart.axisLeft.removeAllLimitLines()
                 weightChart.axisLeft.addLimitLine(ll)
             }
 
             weightChart.invalidate()
+
         }
     }
 
