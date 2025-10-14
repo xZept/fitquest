@@ -157,13 +157,19 @@ class DashboardActivity : AppCompatActivity() {
 
         val header = findViewById<LinearLayout>(R.id.header_bar)
         header.bringToFront()  // make sure it’s above everything
+
+
+        val basePadLeft   = header.paddingLeft
+        val basePadTop    = header.paddingTop    // <-- important
+        val basePadRight  = header.paddingRight
+        val basePadBottom = header.paddingBottom
+
+        // Apply status-bar inset *without* stacking
         ViewCompat.setOnApplyWindowInsetsListener(header) { v, insets ->
-            val top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
-            v.setPadding(v.paddingLeft, top + v.paddingTop, v.paddingRight, v.paddingBottom)
-            insets
+            val topInset = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            v.setPadding(basePadLeft, basePadTop + topInset, basePadRight, basePadBottom)
+            insets // don't consume; lets others (like root) take bottom inset
         }
-
-
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 

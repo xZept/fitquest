@@ -8,15 +8,6 @@
     tools:context=".DashboardActivity"
     android:background="@drawable/bg_dashboard">
 
-<!--    &lt;!&ndash; Background Image &ndash;&gt;-->
-<!--    <ImageView-->
-<!--        android:id="@+id/dashboard_bg"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="match_parent"-->
-<!--        android:scaleType="centerCrop"-->
-<!--        android:contentDescription="Dashboard Background"-->
-<!--        android:alpha="1.0" />-->
-
     <!-- STICKY HEADER (outside the scroll view) -->
     <LinearLayout
         android:id="@+id/header_bar"

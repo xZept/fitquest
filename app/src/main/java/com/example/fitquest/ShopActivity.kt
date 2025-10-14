@@ -160,7 +160,7 @@ class ShopActivity : AppCompatActivity() {
                 code = EDIT_TICKET_CODE,
                 name = "Edit Profile Ticket",
                 spriteRes = "ticket_change",
-                price = 1000,
+                price = 10,
                 consumable = true,
                 category = "ticket",
                 description = "Unlock editing your profile once. Consumed when you save."

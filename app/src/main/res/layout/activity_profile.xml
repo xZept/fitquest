@@ -41,7 +41,19 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
 
-        <!-- Diary button (bottom-left, above nav). Kept simple to avoid disrupting UI -->
+
+        <!-- NEW: Ticket button (left of Diary) -->
+        <ImageButton
+            android:id="@+id/btn_unlock_edit"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="12dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/icon_ticket"
+            android:contentDescription="Use Edit Ticket to unlock profile editing"
+            android:padding="4dp" />
+
+
         <!-- Diary button (bottom-left, above nav). Kept simple to avoid disrupting UI -->
         <ImageButton
             android:id="@+id/btn_diary"
@@ -429,18 +441,6 @@
                 android:textSize="18sp" />
         </LinearLayout>
     </ScrollView>
-
-    <ImageButton
-        android:id="@+id/btn_unlock_edit"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_above="@id/btn_save_profile"
-        android:layout_marginBottom="8dp"
-        android:background="@null"
-        android:src="@drawable/ic_settings"
-        android:contentDescription="Use Edit Ticket to unlock profile editing" />
-
 
     <ImageButton
         android:id="@+id/btn_save_profile"

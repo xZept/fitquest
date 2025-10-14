@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <!-- Full-bleed background image -->
+    <ImageView
+        android:id="@+id/bg_image"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:adjustViewBounds="true"
+        android:scaleType="fitXY"
+        android:src="@drawable/container_handler" />
+
+    <!-- Content over the image -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_gravity="center_vertical"
+        android:layout_marginHorizontal="40dp"
+        android:layout_marginTop="20dp"
+        android:padding="20dp">
+
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Editing locked"
+            android:textStyle="bold"
+            android:textSize="18sp"
+            android:textColor="@android:color/black"/>
+
+        <TextView
+            android:id="@+id/tv_message"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Editing your profile requires an Edit Profile Ticket."
+            android:textSize="15sp"
+            android:textColor="@android:color/black"/>
+
+        <!-- Button row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginTop="66dp">
+
+            <!-- Cancel -->
+            <ImageButton
+                android:id="@+id/btn_cancel"
+                android:layout_width="120dp"
+                android:layout_height="40dp"
+                android:background="@drawable/button_cancel"
+                android:contentDescription="Cancel"
+                android:adjustViewBounds="true"
+                android:padding="0dp" />
+
+            <!-- Spacer -->
+            <Space
+                android:layout_width="12dp"
+                android:layout_height="1dp" />
+
+            <!-- Open Shop -->
+            <ImageButton
+                android:id="@+id/btn_open_shop"
+                android:layout_width="120dp"
+                android:layout_height="40dp"
+                android:background="@drawable/button_open_shop"
+                android:contentDescription="Open Shop"
+                android:adjustViewBounds="true"
+                android:padding="0dp" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

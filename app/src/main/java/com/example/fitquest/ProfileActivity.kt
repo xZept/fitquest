@@ -46,6 +46,7 @@ import com.example.fitquest.shop.ShopRepository
  * - Unlock requires owning an Edit Profile Ticket (consumed on Save).
  * - If no ticket, redirect to Shop Items tab.
  */
+
 class ProfileActivity : AppCompatActivity() {
 
     // ----- New gating state -----
@@ -282,23 +283,43 @@ class ProfileActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 val have = withContext(Dispatchers.IO) { repoShop.getItemQuantity(userId, EDIT_TICKET_CODE) }
                 if (have <= 0) {
-                    AlertDialog.Builder(this@ProfileActivity)
-                        .setTitle("Edit Ticket required")
-                        .setMessage("Buy an Edit Profile Ticket in the Shop to unlock editing. Open Shop now?")
-                        .setPositiveButton("Open Shop") { _, _ ->
-                            startActivity(Intent(this@ProfileActivity, ShopActivity::class.java).apply {
-                                putExtra(EXTRA_SHOP_TAB, TAB_ITEMS)
-                            })
-                            overridePendingTransition(0, 0)
-                        }
-                        .setNegativeButton("Cancel", null)
-                        .show()
+                    // Inflate the custom layout that uses container_handler.png as bg
+                    val view = layoutInflater.inflate(R.layout.dialog_edit_locked, null)
+                    view.findViewById<TextView>(R.id.tv_title).text = "Edit Ticket required"
+                    view.findViewById<TextView>(R.id.tv_message).text =
+                        "Buy an Edit Profile Ticket in the Shop to unlock editing."
+
+                    val dlg = com.google.android.material.dialog.MaterialAlertDialogBuilder(this@ProfileActivity)
+                        .setView(view)
+                        .create()
+
+                    // Transparent window so the image shows edge-to-edge
+                    dlg.setOnShowListener { dlg.window?.setBackgroundDrawableResource(android.R.color.transparent) }
+
+                    // ImageButtons: button_open_shop.png and buttons_cancel.png
+                    view.findViewById<ImageButton>(R.id.btn_open_shop).setOnClickListener {
+                        startActivity(Intent(this@ProfileActivity, ShopActivity::class.java).apply {
+                            putExtra(EXTRA_SHOP_TAB, TAB_ITEMS)
+                        })
+                        overridePendingTransition(0, 0)
+                        dlg.dismiss()
+                    }
+                    view.findViewById<ImageButton>(R.id.btn_cancel).setOnClickListener {
+                        dlg.dismiss()
+                    }
+
+                    dlg.show()
                 } else {
                     unlockEditing(true)
-                    Toast.makeText(this@ProfileActivity, "Editing unlocked. Ticket will be used when you save.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Editing unlocked. Ticket will be used when you save.",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
+
 
         btnSave.setOnClickListener {
             it.startAnimation(pressAnim)
@@ -307,20 +328,34 @@ class ProfileActivity : AppCompatActivity() {
                 // If not unlocked yet, handle gating here
                 if (!editingUnlocked) {
                     val have = withContext(Dispatchers.IO) { repoShop.getItemQuantity(userId, EDIT_TICKET_CODE) }
+
                     if (have <= 0) {
-                        AlertDialog.Builder(this@ProfileActivity)
-                            .setTitle("Editing locked")
-                            .setMessage("Editing your profile requires an Edit Profile Ticket.")
-                            .setPositiveButton("Open Shop") { _, _ ->
-                                startActivity(Intent(this@ProfileActivity, ShopActivity::class.java).apply {
-                                    putExtra(EXTRA_SHOP_TAB, TAB_ITEMS)
-                                })
-                                overridePendingTransition(0, 0)
-                            }
-                            .setNegativeButton("Cancel", null)
-                            .show()
+                        val view = layoutInflater.inflate(R.layout.dialog_edit_locked, null)
+
+                        val dlg = com.google.android.material.dialog.MaterialAlertDialogBuilder(this@ProfileActivity)
+                            .setView(view)     // uses the ImageButtons from the custom layout
+                            .create()
+
+                        dlg.setOnShowListener {
+                            dlg.window?.setBackgroundDrawableResource(android.R.color.transparent)
+                        }
+
+                        // Wire the ImageButtons
+                        view.findViewById<ImageButton>(R.id.btn_open_shop).setOnClickListener {
+                            startActivity(Intent(this@ProfileActivity, ShopActivity::class.java).apply {
+                                putExtra(EXTRA_SHOP_TAB, TAB_ITEMS)
+                            })
+                            overridePendingTransition(0, 0)
+                            dlg.dismiss()
+                        }
+                        view.findViewById<ImageButton>(R.id.btn_cancel).setOnClickListener {
+                            dlg.dismiss()
+                        }
+
+                        dlg.show()
                         return@launch
-                    } else {
+                    }
+                    else {
                         AlertDialog.Builder(this@ProfileActivity)
                             .setTitle("Use Edit Profile Ticket?")
                             .setMessage("Use 1 ticket to unlock editing now. It will be consumed when you save.")
