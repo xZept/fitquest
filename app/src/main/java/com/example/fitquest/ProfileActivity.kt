@@ -39,6 +39,8 @@ import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 import android.view.MotionEvent
 import android.text.method.DigitsKeyListener
 import com.example.fitquest.shop.ShopRepository
+import com.example.fitquest.database.WeightLog
+
 
 /**
  * ProfileActivity with Edit Ticket gating:
@@ -402,23 +404,50 @@ class ProfileActivity : AppCompatActivity() {
 
                 val plan = withContext(Dispatchers.IO) {
                     val existing = db.userProfileDAO().getProfileByUserId(userId)
+                    val prevWeightInt = existing?.weight
+
+                    // Use the decimal the user typed for logging; store rounded in profile (matches schema)
+                    val typedWeightDouble = etWeight.text.toString().toDoubleOrNull()
+                    val newWeightInt = typedWeightDouble?.roundToInt()
+                        ?: existing?.weight
+                        ?: 0
+
                     val updated = (existing?.copy(
                         height = etHeight.text.toString().toIntOrNull() ?: existing.height,
-                        weight = etWeight.text.toString().toDoubleOrNull()?.roundToInt() ?: existing.weight,
+                        weight = newWeightInt,
                         goalWeight = etGoalWeight.text.toString().toDoubleOrNull()?.roundToInt(),
                         activityLevel = spActivityLevel.selectedItem?.toString(),
                         goal = spFitnessGoal.selectedItem?.toString()
                     ) ?: UserProfile(
                         profileId = 0, userId = userId,
                         height = etHeight.text.toString().toInt(),
-                        weight = etWeight.text.toString().toDouble().roundToInt(),
+                        weight = newWeightInt,
                         goalWeight = etGoalWeight.text.toString().toDoubleOrNull()?.roundToInt(),
                         activityLevel = spActivityLevel.selectedItem?.toString(),
                         goal = spFitnessGoal.selectedItem?.toString(),
                         equipment = null
                     ))
 
-                    if (existing == null) db.userProfileDAO().insert(updated) else db.userProfileDAO().update(updated)
+                    if (existing == null) {
+                        db.userProfileDAO().insert(updated)
+                    } else {
+                        db.userProfileDAO().update(updated)
+                    }
+
+                    // ✨ NEW: write to weight history when ticket changes the weight
+                    // Only log if the weight actually changed OR there was no previous value.
+                    if (prevWeightInt == null || prevWeightInt != newWeightInt) {
+                        val weightForLog = (typedWeightDouble?.toFloat()) ?: newWeightInt.toFloat()
+                        db.weightLogDao().insert(
+                            WeightLog(
+                                userId = userId,
+                                loggedAt = System.currentTimeMillis(),
+                                weightKg = weightForLog
+                            )
+                        )
+                    }
+
+                    // Recompute macros as you already do
                     repository.computeAndSaveMacroPlan(userId)
                 }
 
