@@ -29,6 +29,10 @@ import kotlinx.coroutines.withContext
 import android.view.MotionEvent
 import com.example.fitquest.cosmetics.BgCosmetics         // <-- NEW
 import com.example.fitquest.shop.ShopRepository          // <-- NEW
+import com.getkeepsafe.taptargetview.TapTarget
+import com.getkeepsafe.taptargetview.TapTargetSequence
+import com.getkeepsafe.taptargetview.TapTargetView
+import androidx.core.content.ContextCompat
 
 class QuestGeneratorActivity : AppCompatActivity() {
 
@@ -170,6 +174,7 @@ class QuestGeneratorActivity : AppCompatActivity() {
         findViewById<ImageButton?>(R.id.btn_cancel)?.setOnClickListener {
             it.startAnimation(pressAnim); finish(); overridePendingTransition(0, 0)
         }
+
     }
 
     override fun onStart() { super.onStart(); bgSprite?.start() }
@@ -262,6 +267,17 @@ class QuestGeneratorActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        bgSprite?.start()
+
+        lifecycleScope.launch {
+            val uid = DataStoreManager.getUserId(this@QuestGeneratorActivity).first()
+            if (uid > 0) showQuestTourIfNeeded(uid)
+        }
+    }
+
+
     private fun norm(name: String) =
         name.trim().lowercase().replace(Regex("[^a-z0-9]"), "")
 
@@ -277,4 +293,82 @@ class QuestGeneratorActivity : AppCompatActivity() {
             else -> 5
         }
     }
+    companion object {
+        private const val TOUR_PREFS = "onboarding"
+        private const val QUEST_TOUR_DONE_KEY_PREFIX = "quest_tour_done_v1_u_" // per-user key
+        private const val FORCE_TOUR = false                                   // set true to test a user
+        private val questTourShownUsersThisProcess = mutableSetOf<Int>()        // per-process guard (per user)
+    }
+
+
+    private fun TapTarget.applyQuestTourStyle(): TapTarget = apply {
+        // Scrim/background color — pass a *resource*, not an ARGB int here
+        dimColor(R.color.tour_white_80)      // 80% white in colors.xml (#CCFFFFFF)
+
+        // Make BOTH texts the same bright color
+        titleTextColor(R.color.tour_orange)   // or android.R.color.black
+        descriptionTextColor(R.color.tour_orange)
+
+        // Ring/target styling
+        outerCircleColor(R.color.white) // subtle ring, then use alpha below
+        outerCircleAlpha(0.12f)              // keep ring faint over light scrim
+        targetCircleColor(R.color.white)
+
+        tintTarget(true)
+        transparentTarget(true)
+        cancelable(true)
+        drawShadow(false)
+    }
+
+    private fun showQuestTourIfNeeded(userId: Int) {
+        if (userId <= 0) return
+
+        val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+        val userDoneKey = "$QUEST_TOUR_DONE_KEY_PREFIX$userId"
+
+        // DEV ONLY: force-show while testing a specific user
+        if (FORCE_TOUR && BuildConfig.DEBUG) {
+            prefs.edit().remove(userDoneKey).apply()
+            questTourShownUsersThisProcess.remove(userId)
+        }
+
+        // Guard: once per process (per user) + once per install (per user)
+        if (questTourShownUsersThisProcess.contains(userId) || prefs.getBoolean(userDoneKey, false)) return
+        questTourShownUsersThisProcess.add(userId)
+
+        val split  = findViewById<View>(R.id.sp_split)
+        val focus  = findViewById<View>(R.id.sp_focus)
+        val forge  = findViewById<View>(R.id.btn_generate)
+        val cancel = findViewById<View>(R.id.btn_cancel)
+        val root   = findViewById<View>(R.id.root)
+
+        // Start after layout to avoid zero-size targets
+        root.post {
+            val targets = buildList {
+                split?.let  { add(TapTarget.forView(it, "Choose a Split: Group days by movement (Push/Pull/Legs), region (Upper/Lower), or Full Body.", "").applyQuestTourStyle()) }
+                focus?.let  { add(TapTarget.forView(it, "Pick a Focus: General = balanced • Hypertrophy = ~8–12 reps • Strength = lower reps/heavier loads.", "").applyQuestTourStyle()) }
+                forge?.let  { add(TapTarget.forView(it, "Build a plan and review exercises before starting.", "").applyQuestTourStyle()) }
+                cancel?.let { add(TapTarget.forView(it, "Back out without creating a quest.", "").applyQuestTourStyle()) }
+            }
+
+            if (targets.isEmpty()) {
+                prefs.edit().putBoolean(userDoneKey, true).apply()
+                return@post
+            }
+
+            TapTargetSequence(this@QuestGeneratorActivity)
+                .targets(targets)
+                .listener(object : TapTargetSequence.Listener {
+                    override fun onSequenceFinish() {
+                        prefs.edit().putBoolean(userDoneKey, true).apply()
+                    }
+                    override fun onSequenceCanceled(lastTarget: TapTarget) {
+                        prefs.edit().putBoolean(userDoneKey, true).apply()
+                    }
+                    override fun onSequenceStep(lastTarget: TapTarget, targetClicked: Boolean) {}
+                })
+                .start()
+        }
+    }
+
 }

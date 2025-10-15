@@ -23,6 +23,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.getkeepsafe.taptargetview.TapTarget
+import com.getkeepsafe.taptargetview.TapTargetSequence
+import com.getkeepsafe.taptargetview.TapTargetView
+
+
 
 class ShopActivity : AppCompatActivity() {
 
@@ -31,7 +36,13 @@ class ShopActivity : AppCompatActivity() {
         const val TAB_MONSTERS = "monsters"
         const val TAB_ITEMS = "items"
         private const val EDIT_TICKET_CODE = "edit_profile_ticket"
+
+        private const val TOUR_PREFS = "onboarding"
+        private const val SHOP_TOUR_DONE_KEY_PREFIX = "shop_tour_done_v1_u_" // per-user key
+        // per-process guard (per user)
+        private val shopTourShownUsersThisProcess = mutableSetOf<Int>()
     }
+
 
     private lateinit var pressAnim: android.view.animation.Animation
     private lateinit var db: AppDatabase
@@ -58,7 +69,6 @@ class ShopActivity : AppCompatActivity() {
     // Animations using your SpriteSheetDrawable API
     private var bgDrawable: SpriteSheetDrawable? = null
     private var coinDrawable: SpriteSheetDrawable? = null
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shop)
@@ -130,12 +140,197 @@ class ShopActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // keep balances/buttons fresh when returning from Profile or elsewhere
-        refreshCoins(alsoRefreshButtons = true)
-        if (activeTab == TAB_ITEMS) refreshItems() else refreshMonsters()
-        // Background might have changed if user bought a shop tier
-        updateShopBackground()
+
+        lifecycleScope.launch {
+            // make sure we have the current user id *now*
+            userId = DataStoreManager.getUserId(this@ShopActivity).first()
+
+            // keep balances/buttons fresh
+            refreshCoins(alsoRefreshButtons = true)
+            if (activeTab == TAB_ITEMS) refreshItems() else refreshMonsters()
+            updateShopBackground()
+
+            if (userId > 0) showShopTourIfNeeded(userId)
+        }
     }
+
+
+    /* ---------------- Shop Tour ---------------- */
+
+    private fun TapTarget.applyShopTourStyle(): TapTarget = apply {
+        // 80% white scrim + black text (same as your other tours)
+        dimColor(R.color.tour_white_80)      // 80% white in colors.xml (#CCFFFFFF)
+
+        // Make BOTH texts the same bright color
+        titleTextColor(R.color.tour_orange)   // or android.R.color.black
+        descriptionTextColor(R.color.tour_orange)
+
+        // Ring/target styling
+        outerCircleColor(R.color.white) // subtle ring, then use alpha below
+        outerCircleAlpha(0.12f)              // keep ring faint over light scrim
+        targetCircleColor(R.color.white)
+
+        tintTarget(true)
+        transparentTarget(true)
+        cancelable(true)
+        drawShadow(false)
+    }
+
+
+
+    private fun showShopTourIfNeeded(userId: Int) {
+        if (userId <= 0) return
+
+        val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+        val userDoneKey = "$SHOP_TOUR_DONE_KEY_PREFIX$userId"
+
+        // DEV ONLY: force-show while testing a specific user
+        if (BuildConfig.DEBUG) {
+            // Uncomment while testing:
+            // prefs.edit().remove(userDoneKey).apply()
+            // shopTourShownUsersThisProcess.remove(userId)
+        }
+
+        // per-process (per user) + persisted (per user) guards
+        if (shopTourShownUsersThisProcess.contains(userId) || prefs.getBoolean(userDoneKey, false)) return
+
+        val coins    = findViewById<View>(R.id.tv_coins_badge)
+        val tabMons  = findViewById<View>(R.id.tab_monsters)
+        val root     = findViewById<View>(R.id.shop_layout)
+
+        root.post {
+            // mark as shown for this user in this process
+            shopTourShownUsersThisProcess.add(userId)
+
+            val firstTargets = mutableListOf<TapTarget>().apply {
+                coins?.let {
+                    add(
+                        TapTarget.forView(it, "Your balance for buying monsters and items.", "")
+                            .applyShopTourStyle()
+                    )
+                }
+                tabMons?.let {
+                    add(
+                        TapTarget.forView(it, "Collect monsters. Some unlock after earlier ones.", "")
+                            .applyShopTourStyle()
+                    )
+                }
+            }
+
+            if (firstTargets.isEmpty()) {
+                finishShopTour(prefs, userDoneKey)
+                return@post
+            }
+
+            TapTargetSequence(this)
+                .targets(firstTargets)
+                .listener(object : TapTargetSequence.Listener {
+                    override fun onSequenceFinish() {
+                        // After intro, highlight first MONSTER item’s Buy button (if visible),
+                        // then switch to Items and do the same there.
+                        showFirstListItemThenItemsStage(prefs, userDoneKey)
+                    }
+                    override fun onSequenceStep(lastTarget: TapTarget, targetClicked: Boolean) {}
+                    override fun onSequenceCanceled(lastTarget: TapTarget) {
+                        prefs.edit().putBoolean(userDoneKey, true).apply()
+                    }
+                })
+                .start()
+        }
+    }
+
+
+    private fun showFirstListItemThenItemsStage(
+        prefs: android.content.SharedPreferences,
+        userDoneKey: String
+    ) {
+        waitForRecyclerPopulation {
+            val btn = findFirstBuyButtonInRecycler()
+            if (btn != null) {
+                TapTargetView.showFor(
+                    this,
+                    TapTarget.forView(btn, "Tap to purchase monster if you have enough coins.", "")
+                        .applyShopTourStyle(),
+                    object : TapTargetView.Listener() {
+                        override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
+                            showItemsStage(prefs, userDoneKey)
+                        }
+                    }
+                )
+            } else {
+                showItemsStage(prefs, userDoneKey)
+            }
+        }
+    }
+
+    private fun showItemsStage(
+        prefs: android.content.SharedPreferences,
+        userDoneKey: String
+    ) {
+        switchTab(TAB_ITEMS)
+        val itemsTab = findViewById<View>(R.id.tab_items)
+
+        TapTargetView.showFor(
+            this,
+            TapTarget.forView(itemsTab, "Buy tickets and background upgrades here.", "")
+                .applyShopTourStyle(),
+            object : TapTargetView.Listener() {
+                override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
+                    waitForRecyclerPopulation {
+                        val btn = findFirstBuyButtonInRecycler()
+                        if (btn != null) {
+                            TapTargetView.showFor(
+                                this@ShopActivity,
+                                TapTarget.forView(btn, "Purchase tickets or background tiers.", "")
+                                    .applyShopTourStyle(),
+                                object : TapTargetView.Listener() {
+                                    override fun onTargetDismissed(v: TapTargetView?, userInitiated: Boolean) {
+                                        finishShopTour(prefs, userDoneKey)
+                                    }
+                                }
+                            )
+                        } else {
+                            finishShopTour(prefs, userDoneKey)
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    private fun finishShopTour(
+        prefs: android.content.SharedPreferences,
+        userDoneKey: String
+    ) {
+        prefs.edit().putBoolean(userDoneKey, true).apply()
+    }
+
+
+
+    /** Wait until the RecyclerView has at least one child (bound view), with a few retries. */
+    private fun waitForRecyclerPopulation(maxTries: Int = 10, delayMs: Long = 140, onReady: () -> Unit) {
+        fun check(tries: Int) {
+            if (recycler.childCount > 0) {
+                onReady()
+            } else if (tries < maxTries) {
+                recycler.postDelayed({ check(tries + 1) }, delayMs)
+            } else {
+                onReady() // give up gracefully
+            }
+        }
+        check(0)
+    }
+
+    /** Finds the first visible item’s Buy button inside the RecyclerView, if present. */
+    private fun findFirstBuyButtonInRecycler(): View? {
+        for (i in 0 until recycler.childCount) {
+            val child = recycler.getChildAt(i) ?: continue
+            val btn = child.findViewById<ImageButton?>(R.id.btn_buy)
+            if (btn != null && btn.visibility == View.VISIBLE) return btn
+        }
+        return null
+    }
+
 
     /* ---------------- Seeding ---------------- */
 
@@ -526,4 +721,6 @@ class ShopActivity : AppCompatActivity() {
             }
         }
     }
+
+
 }

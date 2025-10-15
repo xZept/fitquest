@@ -40,6 +40,8 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.listeners.Abs
 import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTubePlayerView
 import com.example.fitquest.guides.ExerciseGuides
 import androidx.core.widget.addTextChangedListener
+import com.getkeepsafe.taptargetview.TapTarget
+import com.getkeepsafe.taptargetview.TapTargetView
 
 
 class WorkoutSessionActivity : AppCompatActivity() {
@@ -74,7 +76,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private var isResting = false
 
     private var mandatoryRest: Boolean = false
-
 
 
     // Sprite sheet animations
@@ -119,6 +120,20 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private lateinit var btnExerciseHelp: ImageButton
 
     private lateinit var pressAnim: android.view.animation.Animation
+
+    // ---- Session tour flags/keys ----
+    private var sessionTourScheduling = false
+
+    companion object {
+        // Per-process guard keyed by user id
+        private val sessionTourShownUsersThisProcess = mutableSetOf<Int>()
+
+        // Persisted per-user key prefix
+        private const val SESSION_TOUR_DONE_KEY_PREFIX = "session_tour_done_v1_u_"
+        private const val TOUR_PREFS = "onboarding"
+    }
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -223,6 +238,17 @@ class WorkoutSessionActivity : AppCompatActivity() {
             wireButtons()
             setResting(false)
 
+            // DEV-only: reset tour on every run so you can see it again
+//            if (BuildConfig.DEBUG) {
+//                val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+//                prefs.edit().remove(SESSION_TOUR_DONE_KEY).apply()
+//                sessionTourShownThisProcess = false
+//            }
+
+// schedule tour once UI is ready
+            maybeStartSessionTour()
+
+
             // 🔒 Only show once and only if preference allows
             if (savedInstanceState == null &&
                 supportFragmentManager.findFragmentByTag("warmup_tips") == null
@@ -233,6 +259,142 @@ class WorkoutSessionActivity : AppCompatActivity() {
             }
         }
     }
+
+    private fun TapTarget.applySessionTourStyle(): TapTarget = apply {
+        dimColor(R.color.tour_white_80)         // translucent white overlay
+        titleTextColor(R.color.tour_orange)
+        descriptionTextColor(R.color.tour_orange)
+        outerCircleColor(R.color.white)
+        outerCircleAlpha(0.12f)
+        targetCircleColor(R.color.white)
+        tintTarget(true)
+        transparentTarget(true)
+        cancelable(true)
+        drawShadow(false)
+    }
+
+    private fun waitUntilReady(
+        maxTries: Int = 12,
+        stepMs: Long = 80,
+        ready: () -> Boolean,
+        onReady: () -> Unit
+    ) {
+        // Try a known host; fall back to decorView so postDelayed never NPEs
+        val host = findViewById<View?>(R.id.scene_host) ?: window.decorView
+        fun loop(tries: Int) {
+            if (ready()) onReady()
+            else if (tries < maxTries) host.postDelayed({ loop(tries + 1) }, stepMs)
+        }
+        loop(0)
+    }
+
+
+    private fun maybeStartSessionTour() {
+        if (isFinishing || isDestroyed) return
+        if (isResting) return                     // don’t interrupt the rest dialog
+        if (sessionTourScheduling) return
+
+        if (userId <= 0) return                   // need a real user id
+
+        val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+        val userDoneKey = "$SESSION_TOUR_DONE_KEY_PREFIX$userId"
+
+        // Per-process + persisted guards
+        if (sessionTourShownUsersThisProcess.contains(userId) ||
+            prefs.getBoolean(userDoneKey, false)) {
+            return
+        }
+
+        sessionTourScheduling = true
+
+        val hpFrame     = findViewById<View>(R.id.hp_bar_frame)
+        val tvExerciseV = findViewById<View>(R.id.tv_exercise)
+        val btnCompleteV= findViewById<View>(R.id.btn_complete_set)
+        val btnEndV     = findViewById<View>(R.id.btn_end_session)
+
+        waitUntilReady(
+            ready = {
+                hpFrame.width  > 0 && hpFrame.height   > 0 &&
+                        tvExerciseV.width > 0 && tvExerciseV.height > 0 &&
+                        btnCompleteV.width>0 && btnCompleteV.height>0 &&
+                        btnEndV.width>0 && btnEndV.height>0
+            },
+            onReady = {
+                showSessionTour(userDoneKey)
+            }
+        )
+    }
+
+
+    private fun showSessionTour(userDoneKey: String) {
+        val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+
+        // Double-check guards
+        if (sessionTourShownUsersThisProcess.contains(userId) ||
+            prefs.getBoolean(userDoneKey, false)) {
+            sessionTourScheduling = false
+            return
+        }
+        sessionTourShownUsersThisProcess.add(userId)
+
+        val targets = listOfNotNull(
+            TapTarget.forView(
+                findViewById(R.id.hp_bar_frame),
+                "Each completed set deals damage. Clear your sets to defeat the monster!",
+                ""
+            ).applySessionTourStyle(),
+            TapTarget.forView(
+                findViewById(R.id.tv_exercise),
+                "Tap the exercise name for video and instructions.",
+                ""
+            ).applySessionTourStyle(),
+            TapTarget.forView(
+                findViewById(R.id.btn_complete_set),
+                "Log your set to progress and earn coins.",
+                ""
+            ).applySessionTourStyle(),
+            TapTarget.forView(
+                findViewById(R.id.btn_end_session),
+                "Stop early if you have to — but you won’t receive rewards.",
+                ""
+            ).applySessionTourStyle()
+        )
+
+        if (targets.isEmpty()) {
+            prefs.edit().putBoolean(userDoneKey, true).apply()
+            sessionTourScheduling = false
+            return
+        }
+
+        showTargetsSequentially(
+            targets = targets,
+            index = 0,
+            onFinish = {
+                prefs.edit().putBoolean(userDoneKey, true).apply()
+                sessionTourScheduling = false
+            }
+        )
+    }
+
+
+    private fun showTargetsSequentially(
+        targets: List<TapTarget>,
+        index: Int,
+        onFinish: () -> Unit
+    ) {
+        if (index >= targets.size) { onFinish(); return }
+        TapTargetView.showFor(
+            this,
+            targets[index],
+            object : TapTargetView.Listener() {
+                override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
+                    showTargetsSequentially(targets, index + 1, onFinish)
+                }
+            }
+        )
+    }
+
+
 
     private fun showExerciseGuideDialog(exName: String) {
         val guide = ExerciseGuides.findByName(exName)
@@ -425,6 +587,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (!isResting) maybeStartSessionTour()
         if (!isResting) showIdle()
         lifecycleScope.launch {
             val latest = withContext(Dispatchers.IO) { db.monsterDao().getLatestOwnedForUser(userId) }

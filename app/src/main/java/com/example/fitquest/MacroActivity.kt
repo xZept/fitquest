@@ -88,14 +88,13 @@ class MacroActivity : AppCompatActivity() {
         val dietType: String
     )
 
-    private val TOUR_PREFS = "onboarding"
-    private val MACRO_TOUR_DONE_KEY = "macro_tour_done_v1"
-
     companion object {
-        private var macroTourShownThisProcess = false
-        private const val MACRO_TOUR_DONE_KEY = "macro_tour_done_v1"
         private const val TOUR_PREFS = "onboarding"
+        private const val MACRO_TOUR_DONE_KEY_PREFIX = "macro_tour_done_v2_u_" // per-user key
+        private const val FORCE_TOUR = false                                   // set true TEMPORARILY to test
+        private val macroTourShownUsersThisProcess = mutableSetOf<Int>()        // per-process guard (per user)
     }
+
 
 
 
@@ -109,12 +108,22 @@ class MacroActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        showMacroTourIfNeeded()
+
         (capybaraView.drawable as? SpriteSheetDrawable)?.start()
         macroPlan = null
-        if (currentUserId > 0) {
-            refreshTodayMeals()
-            refreshTodayTotals()
+
+        lifecycleScope.launch {
+            // Always re-fetch the active user (in case of account switch)
+            currentUserId = DataStoreManager.getUserId(this@MacroActivity).first()
+
+            if (currentUserId > 0) {
+                // Show the tour for THIS user only
+                showMacroTourIfNeeded(currentUserId)
+
+                // Keep UI fresh
+                refreshTodayMeals()
+                refreshTodayTotals()
+            }
         }
 
         // Catch up remaining days if the device was off for days
@@ -122,10 +131,7 @@ class MacroActivity : AppCompatActivity() {
             val zone = java.time.ZoneId.of("Asia/Manila")
             val userId = currentUserId
             if (userId <= 0) return@launch
-
-            val todayKey = (java.time.LocalDate.now(zone).let { it.year * 10000 + it.monthValue * 100 + it.dayOfMonth })
-            val yesterdayKey = (java.time.LocalDate.now(zone).minusDays(1).let { it.year * 10000 + it.monthValue * 100 + it.dayOfMonth })
-
+            val yesterdayKey = java.time.LocalDate.now(zone).minusDays(1).let { it.year * 10000 + it.monthValue * 100 + it.dayOfMonth }
             val existing = db.macroDiaryDao().get(userId, yesterdayKey)
             if (existing == null) {
                 val totals = db.foodLogDao().totalsForDay(userId, yesterdayKey)
@@ -147,11 +153,10 @@ class MacroActivity : AppCompatActivity() {
                         )
                     )
                 }
-                // else: no intake yesterday → skip making a row
             }
-
         }
     }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Initialize repo
@@ -1034,16 +1039,21 @@ class MacroActivity : AppCompatActivity() {
         drawShadow(false)
     }
 
-    private fun showMacroTourIfNeeded() {
-        val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+    private fun showMacroTourIfNeeded(userId: Int) {
+        if (userId <= 0) return
 
-        // DEV ONLY: force-show while testing
-        if (BuildConfig.DEBUG) {
-            prefs.edit().remove(MACRO_TOUR_DONE_KEY).apply()
-            macroTourShownThisProcess = false
+        val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+        val userDoneKey = "$MACRO_TOUR_DONE_KEY_PREFIX$userId"
+
+        // DEV ONLY: force-show while testing one account
+        if (FORCE_TOUR && BuildConfig.DEBUG) {
+            prefs.edit().remove(userDoneKey).apply()
+            macroTourShownUsersThisProcess.remove(userId)
         }
 
-        if (macroTourShownThisProcess || prefs.getBoolean(MACRO_TOUR_DONE_KEY, false)) return
+        // Guard: once per process (per user) AND once per install (per user)
+        if (macroTourShownUsersThisProcess.contains(userId) || prefs.getBoolean(userDoneKey, false)) return
+        macroTourShownUsersThisProcess.add(userId)
 
         val scroll: androidx.core.widget.NestedScrollView? = findViewById(R.id.content_scroll)
 
@@ -1056,51 +1066,50 @@ class MacroActivity : AppCompatActivity() {
         val carbsPb: View?   = findViewById(R.id.carbs_progress)
         val fatPb: View?     = findViewById(R.id.fat_progress)
 
-        // ⬇️ NEW: meal section titles you pasted
         val breakfastTitle: View? = findViewById(R.id.breakfastText)
         val snackTitle: View?     = findViewById(R.id.snackText)
         val lunchTitle: View?     = findViewById(R.id.lunchText)
         val dinnerTitle: View?    = findViewById(R.id.dinnerText)
 
-        // First batch (what’s usually on screen initially)
         val firstTargets = mutableListOf<TapTarget>().apply {
-            addFood?.let    { add(TapTarget.forView(it, "Search and log foods here.", "").applyMacroTourStyle()) }
-            calories?.let   { add(TapTarget.forView(it, "Progress vs your calorie goal.", "").applyMacroTourStyle()) }
-            proteinPb?.let  { add(TapTarget.forView(it, "Protein: Hit protein to support recovery.", "").applyMacroTourStyle()) }
-            carbsPb?.let    { add(TapTarget.forView(it, "Carbohydrates: Fuel for workouts and energy.", "").applyMacroTourStyle()) }
-            fatPb?.let      { add(TapTarget.forView(it, "Fat: Keep healthy fats within target.", "").applyMacroTourStyle()) }
-            diary?.let      { add(TapTarget.forView(it, "Review your food history.", "").applyMacroTourStyle()) }
-            settings?.let   { add(TapTarget.forView(it, "Adjust your macro plan anytime.", "").applyMacroTourStyle()) }
+            addFood?.let  { add(TapTarget.forView(it, "Search and log foods here.", "").applyMacroTourStyle()) }
+            calories?.let { add(TapTarget.forView(it, "Progress vs your calorie goal.", "").applyMacroTourStyle()) }
+            proteinPb?.let{ add(TapTarget.forView(it, "Protein: support recovery.", "").applyMacroTourStyle()) }
+            carbsPb?.let  { add(TapTarget.forView(it, "Carbohydrates: fuel your workouts.", "").applyMacroTourStyle()) }
+            fatPb?.let    { add(TapTarget.forView(it, "Fats: keep within target.", "").applyMacroTourStyle()) }
+            diary?.let    { add(TapTarget.forView(it, "Review your food history.", "").applyMacroTourStyle()) }
+            settings?.let { add(TapTarget.forView(it, "Adjust your macro plan.", "").applyMacroTourStyle()) }
         }
 
-        if (firstTargets.isEmpty()) return
-        macroTourShownThisProcess = true
+        if (firstTargets.isEmpty()) {
+            prefs.edit().putBoolean(userDoneKey, true).apply()
+            return
+        }
 
         TapTargetSequence(this)
             .targets(firstTargets)
             .listener(object : TapTargetSequence.Listener {
                 override fun onSequenceFinish() {
-                    // After the first batch, walk the meal sections with scrolling
                     showMealsSectionTour(
                         scroll,
                         listOf(
                             breakfastTitle to ("Your breakfast items live here." to ""),
-                            snackTitle     to ("Snacks you’ve logged for the day."     to ""),
-                            lunchTitle     to ("Mid-day meals and entries."     to ""),
-                            dinnerTitle    to ("Evening meals and entries."    to "")
+                            snackTitle     to ("Snacks you’ve logged for the day." to ""),
+                            lunchTitle     to ("Mid-day meals and entries." to ""),
+                            dinnerTitle    to ("Evening meals and entries." to "")
                         )
                     ) {
-                        prefs.edit().putBoolean(MACRO_TOUR_DONE_KEY, true).apply()
+                        prefs.edit().putBoolean(userDoneKey, true).apply()
                     }
                 }
                 override fun onSequenceStep(lastTarget: TapTarget, targetClicked: Boolean) {}
                 override fun onSequenceCanceled(lastTarget: TapTarget) {
-                    // If user cancels early, still finish the meals tour or mark done — your call.
-                    prefs.edit().putBoolean(MACRO_TOUR_DONE_KEY, true).apply()
+                    prefs.edit().putBoolean(userDoneKey, true).apply()
                 }
             })
             .start()
     }
+
 
     private fun showMealsSectionTour(
         scroll: androidx.core.widget.NestedScrollView?,

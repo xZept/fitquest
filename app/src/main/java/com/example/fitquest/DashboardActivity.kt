@@ -45,6 +45,7 @@ import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.IntentFilter
+import android.content.SharedPreferences
 import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowInsetsCompat
@@ -67,6 +68,13 @@ import com.getkeepsafe.taptargetview.TapTargetSequence
 import com.getkeepsafe.taptargetview.TapTargetView
 import kotlin.math.max
 
+
+private const val TOUR_PREFS = "onboarding"
+private const val TOUR_DONE_KEY_PREFIX = "dash_tour_done_v2_u_" // v2 kept, but now per user
+private const val FORCE_TOUR = false
+
+// per-process guard: which userIds already showed a tour in this app process
+private val tourShownUsersThisProcess = mutableSetOf<Int>()
 
 class DashboardActivity : AppCompatActivity() {
 
@@ -96,8 +104,8 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var tvWeeklyKcalCenter: TextView
     private lateinit var tvWeeklyNextRange: TextView
 
-    private val TOUR_PREFS = "onboarding"
-    private val TOUR_DONE_KEY = "dash_tour_done_v1"
+
+
 
     private val requestNotifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -252,6 +260,7 @@ class DashboardActivity : AppCompatActivity() {
     companion object {
         const val ACTION_WEIGHT_LOGGED = "com.example.fitquest.WEIGHT_LOGGED"
         private var tourShownThisProcess = false   // prevent re-entry while app is alive
+
     }
 
     private val weightLoggedReceiver = object : BroadcastReceiver() {
@@ -278,14 +287,18 @@ class DashboardActivity : AppCompatActivity() {
         super.onResume()
         loadWeightSeries()
         backfillInitialWeightIfMissing()
-        showDashboardTourIfNeeded()
+
         lifecycleScope.launch {
             val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
             hasActiveQuest = db.activeQuestDao().getActiveForUser(uid) != null
             quickAction.isEnabled = !hasActiveQuest
             quickAction.alpha = if (hasActiveQuest) 0.5f else 1f
+
+            // 👇 show the tour AFTER we have the uid
+            showDashboardTourIfNeeded(uid)
         }
     }
+
 
     override fun onStop() {
         super.onStop()
@@ -822,20 +835,20 @@ class DashboardActivity : AppCompatActivity() {
         }
     }
 
-    private fun showDashboardTourIfNeeded() {
+    private fun showDashboardTourIfNeeded(userId: Int) {
+        if (userId <= 0) return // no user → skip
+
         val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+        val userDoneKey = "$TOUR_DONE_KEY_PREFIX$userId"
 
-        // DEV ONLY: force-show while testing. Comment out for release.
-//        if (BuildConfig.DEBUG) {
-//            prefs.edit()
-//                .remove(TOUR_DONE_KEY)
-//                .remove("dash_tour_seen_v4") // old key you used before
-//                .apply()
-//            tourShownThisProcess = false
-//        }
+        // Optional test hook (only if you need to re-test on a specific user)
+        if (FORCE_TOUR && BuildConfig.DEBUG) {
+            prefs.edit().remove(userDoneKey).apply()
+            tourShownUsersThisProcess.remove(userId)
+        }
 
-        // Only once per install + guard per process
-        if (tourShownThisProcess || prefs.getBoolean(TOUR_DONE_KEY, false)) return
+        // Per-process + per-user guard
+        if (tourShownUsersThisProcess.contains(userId) || prefs.getBoolean(userDoneKey, false)) return
 
         val root    = findViewById<View>(R.id.dashboard_root)
         val vScroll = findViewById<androidx.core.widget.NestedScrollView>(R.id.scroll_content)
@@ -848,71 +861,52 @@ class DashboardActivity : AppCompatActivity() {
         val weight  = findViewById<View>(R.id.weightChart)
         val splits  = findViewById<View>(R.id.chart_splits)
 
-        // Start only after the window has focus and layout is complete.
         fun startWhenReady(attempt: Int = 0) {
-            if (!hasWindowFocus()) {
-                root.postDelayed({ startWhenReady(attempt) }, 120L)
-                return
-            }
-            if (!root.isLaidOut) {
-                root.post { startWhenReady(attempt) }
-                return
-            }
+            if (!hasWindowFocus()) { root.postDelayed({ startWhenReady(attempt) }, 120L); return }
+            if (!root.isLaidOut) { root.post { startWhenReady(attempt) }; return }
 
-            // Ensure Daily card is visible to begin with
-            if (daily != null && hScroll != null) {
-                scrollHToCenter(hScroll, daily)
-            }
+            if (daily != null && hScroll != null) scrollHToCenter(hScroll, daily)
 
-            // Build initial targets (only ones that are visible & laid out)
             val initialTargets = buildList {
                 if (quick?.isLaidOut == true) add(
-                    TapTarget.forView(
-                        quick, "Generate a workout quest from your plan.", ""
-                    ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
+                    TapTarget.forView(quick, "Generate a workout quest from your plan.", "")
+                        .cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
                 )
                 if (diary?.isLaidOut == true) add(
-                    TapTarget.forView(
-                        diary, "Review your logs and history.", ""
-                    ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
+                    TapTarget.forView(diary, "Review your logs and history.", "")
+                        .cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
                 )
                 if (daily?.isLaidOut == true) add(
-                    TapTarget.forView(
-                        daily, "Calories ring and your workouts for today.", ""
-                    ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
+                    TapTarget.forView(daily, "Calories ring and your workouts for today.", "")
+                        .cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
                 )
                 if (weight?.isShown == true && weight.isLaidOut) add(
-                    TapTarget.forView(
-                        weight, "Tracks your logged weight over time.", ""
-                    ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
+                    TapTarget.forView(weight, "Tracks your logged weight over time.", "")
+                        .cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
                 )
             }
 
-            // If nothing is ready yet, retry a few times gracefully.
             if (initialTargets.isEmpty()) {
-                if (attempt < 8) { // ~1s total worst-case
-                    root.postDelayed({ startWhenReady(attempt + 1) }, 130L)
-                }
+                if (attempt < 8) { root.postDelayed({ startWhenReady(attempt + 1) }, 130L) }
                 return
             }
 
-            tourShownThisProcess = true
+            // Mark as shown for this user in this process
+            tourShownUsersThisProcess.add(userId)
 
             val finishTour: () -> Unit = {
-                prefs.edit().putBoolean(TOUR_DONE_KEY, true).apply()
+                prefs.edit().putBoolean(userDoneKey, true).apply() // persist per-user
             }
 
             val showRest: () -> Unit = {
-                // Scroll to WEEKLY, then SPLITS
                 if (weekly != null && hScroll != null) {
                     hScroll.post {
                         scrollHToCenter(hScroll, weekly)
                         weekly.postDelayed({
                             TapTargetView.showFor(
                                 this@DashboardActivity,
-                                TapTarget.forView(
-                                    weekly, "Averages and total workouts for the period.", ""
-                                ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
+                                TapTarget.forView(weekly, "Averages and total workouts for the period.", "")
+                                    .cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
                                 object : TapTargetView.Listener() {
                                     override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
                                         if (splits != null && vScroll != null) {
@@ -921,20 +915,15 @@ class DashboardActivity : AppCompatActivity() {
                                                 splits.postDelayed({
                                                     TapTargetView.showFor(
                                                         this@DashboardActivity,
-                                                        TapTarget.forView(
-                                                            splits, "See Push / Pull / Legs / Upper counts.", ""
-                                                        ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
+                                                        TapTarget.forView(splits, "See Push / Pull / Legs / Upper counts.", "")
+                                                            .cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
                                                         object : TapTargetView.Listener() {
-                                                            override fun onTargetDismissed(v2: TapTargetView?, ui: Boolean) {
-                                                                finishTour()
-                                                            }
+                                                            override fun onTargetDismissed(v2: TapTargetView?, ui: Boolean) { finishTour() }
                                                         }
                                                     )
                                                 }, 320L)
                                             }
-                                        } else {
-                                            finishTour()
-                                        }
+                                        } else finishTour()
                                     }
                                 }
                             )
@@ -946,23 +935,17 @@ class DashboardActivity : AppCompatActivity() {
                         splits.postDelayed({
                             TapTargetView.showFor(
                                 this@DashboardActivity,
-                                TapTarget.forView(
-                                    splits, "See Push / Pull / Legs / Upper counts.", ""
-                                ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
+                                TapTarget.forView(splits, "See Push / Pull / Legs / Upper counts.", "")
+                                    .cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
                                 object : TapTargetView.Listener() {
-                                    override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
-                                        finishTour()
-                                    }
+                                    override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) { finishTour() }
                                 }
                             )
                         }, 320L)
                     }
-                } else {
-                    finishTour()
-                }
+                } else finishTour()
             }
 
-            // Run the first batch, then the rest
             TapTargetSequence(this@DashboardActivity)
                 .targets(initialTargets)
                 .continueOnCancel(true)
@@ -974,9 +957,9 @@ class DashboardActivity : AppCompatActivity() {
                 .start()
         }
 
-        // Kick it off
         root.postDelayed({ startWhenReady() }, 200L)
     }
+
 
     /** Center a child horizontally inside a HorizontalScrollView before showing the target. */
     private fun scrollHToCenter(hs: android.widget.HorizontalScrollView, child: View) {
@@ -995,7 +978,6 @@ class DashboardActivity : AppCompatActivity() {
         val targetY = (r.centerY() - ns.height / 2).coerceAtLeast(0)
         ns.smoothScrollTo(0, targetY)
     }
-
 
 
     private fun showWeeklyThenSplits(
@@ -1064,25 +1046,6 @@ class DashboardActivity : AppCompatActivity() {
         }
     }
 
-
-
-    private fun showProfileThenFinish(prefs: android.content.SharedPreferences, profileNav: View?) {
-        if (profileNav == null) {
-            prefs.edit().putBoolean("dash_tour_seen_v4", true).apply()
-            return
-        }
-        com.getkeepsafe.taptargetview.TapTargetView.showFor(
-            this,
-            com.getkeepsafe.taptargetview.TapTarget.forView(
-                profileNav, "Profile", "Edit stats and goals; use tickets for weight edits."
-            ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
-            object : com.getkeepsafe.taptargetview.TapTargetView.Listener() {
-                override fun onTargetDismissed(view: com.getkeepsafe.taptargetview.TapTargetView?, userInitiated: Boolean) {
-                    prefs.edit().putBoolean("dash_tour_seen_v4", true).apply()
-                }
-            }
-        )
-    }
 
     private fun scrollHToView(hs: android.widget.HorizontalScrollView, child: View, leftPadDp: Int = 12) {
         val r = android.graphics.Rect()

@@ -41,6 +41,9 @@ import android.text.method.DigitsKeyListener
 import com.example.fitquest.shop.ShopRepository
 import com.example.fitquest.database.WeightLog
 import com.example.fitquest.cosmetics.BgCosmetics // <-- NEW
+import com.getkeepsafe.taptargetview.TapTarget
+import com.getkeepsafe.taptargetview.TapTargetView
+
 
 class ProfileActivity : AppCompatActivity() {
 
@@ -53,6 +56,11 @@ class ProfileActivity : AppCompatActivity() {
         private const val EDIT_TICKET_CODE = "edit_profile_ticket"
         private const val EXTRA_SHOP_TAB = "shop_tab"
         private const val TAB_ITEMS = "items"
+
+        private const val TOUR_PREFS = "onboarding"
+        private const val PROFILE_TOUR_DONE_KEY_PREFIX = "profile_tour_done_v1_u_" // per-user key
+        private const val FORCE_TOUR = false                                       // set true temporarily to test
+        private val profileTourShownUsersThisProcess = mutableSetOf<Int>()          // per-process guard (per user)
     }
 
     private lateinit var repository: FitquestRepository
@@ -485,7 +493,17 @@ class ProfileActivity : AppCompatActivity() {
         spriteView.post { iconAnim?.start() }
     }
 
-    override fun onResume() { super.onResume(); iconAnim?.start(); bgSprite?.start() }
+    override fun onResume() {
+        super.onResume()
+        iconAnim?.start()
+        bgSprite?.start()
+
+        lifecycleScope.launch {
+            userId = DataStoreManager.getUserId(this@ProfileActivity).first()
+            if (userId > 0) showProfileTourIfNeeded(userId)
+        }
+    }
+
     override fun onPause() { bgSprite?.stop(); iconAnim?.stop(); super.onPause() }
     override fun onDestroy() { bgView.setImageDrawable(null); bgSprite = null; super.onDestroy() }
 
@@ -720,4 +738,131 @@ class ProfileActivity : AppCompatActivity() {
             window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
         }
     }
+    private fun TapTarget.applyProfileTourStyle(): TapTarget = apply {
+        // Scrim/background color — pass a *resource*, not an ARGB int here
+        dimColor(R.color.tour_white_80)      // 80% white in colors.xml (#CCFFFFFF)
+
+        // Make BOTH texts the same bright color
+        titleTextColor(R.color.tour_orange)   // or android.R.color.black
+        descriptionTextColor(R.color.tour_orange)
+
+        // Ring/target styling
+        outerCircleColor(R.color.white) // subtle ring, then use alpha below
+        outerCircleAlpha(0.12f)              // keep ring faint over light scrim
+        targetCircleColor(R.color.white)
+
+        tintTarget(true)
+        transparentTarget(true)
+        cancelable(true)
+        drawShadow(false)
+    }
+    private fun relativeTopInScroll(child: View, parent: ScrollView): Int {
+        var y = 0
+        var v: View? = child
+        while (v != null && v !== parent) {
+            y += v.top
+            v = (v.parent as? View)
+        }
+        return y
+    }
+    private fun ensureVisible(scroll: ScrollView, target: View, extraTopPx: Int = dp(80)) {
+        scroll.post {
+            val y = (relativeTopInScroll(target, scroll) - extraTopPx).coerceAtLeast(0)
+            scroll.smoothScrollTo(0, y)
+        }
+    }
+
+    private fun showProfileTourIfNeeded(userId: Int) {
+        if (userId <= 0) return
+
+        val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+        val userDoneKey = "$PROFILE_TOUR_DONE_KEY_PREFIX$userId"
+
+        // DEV ONLY: uncomment during testing for a specific user
+        if (FORCE_TOUR && BuildConfig.DEBUG) {
+            prefs.edit().remove(userDoneKey).apply()
+            profileTourShownUsersThisProcess.remove(userId)
+        }
+
+        // Guard once per process (per user) + once per install (per user)
+        if (profileTourShownUsersThisProcess.contains(userId) || prefs.getBoolean(userDoneKey, false)) return
+        profileTourShownUsersThisProcess.add(userId)
+
+        val root   = findViewById<View>(R.id.profile_layout)
+        val scroll = findViewById<ScrollView>(R.id.profile_scroll)
+
+        // Build targets
+        val steps = mutableListOf<Step>()
+        findViewById<View>(R.id.btn_unlock_edit)?.let {
+            steps += Step(it, "Use an Edit Ticket to enable profile changes.", "")
+        }
+        findViewById<View>(R.id.sp_activity_level)?.let {
+            steps += Step(it, "Pick how active you are on rest days.", "", needsScroll = true)
+        }
+        findViewById<View>(R.id.sp_fitness_goal)?.let {
+            steps += Step(it, "Choose fat loss, maintenance, or muscle gain.", "", needsScroll = true)
+        }
+        findViewById<View>(R.id.et_height)?.let {
+            steps += Step(it, "Enter your height in cm.", "", needsScroll = true)
+        }
+        findViewById<View>(R.id.et_weight)?.let {
+            steps += Step(it, "Enter your current weight (kg).", "", needsScroll = true)
+        }
+        findViewById<View>(R.id.et_goal_weight)?.let {
+            steps += Step(it, "Set the weight you're aiming for (kg).", "", needsScroll = true)
+        }
+        findViewById<View>(R.id.tv_bmi_value)?.let {
+            steps += Step(it, "Auto-calculated from height and weight.", "", needsScroll = true)
+        }
+        findViewById<View>(R.id.btn_save_profile)?.let {
+            steps += Step(it, "Uses one Edit Ticket when you save your changes.", "", needsScroll = true)
+        }
+        findViewById<View>(R.id.btn_diary)?.let {
+            steps += Step(it, "Review your logs and history in Diary.", "")
+        }
+        findViewById<View>(R.id.btn_settings)?.let {
+            steps += Step(it, "Adjust timers and equipment in Settings.", "")
+        }
+
+        if (steps.isEmpty()) {
+            prefs.edit().putBoolean(userDoneKey, true).apply()
+            return
+        }
+
+        root.post {
+            fun showStep(i: Int) {
+                if (i >= steps.size) {
+                    prefs.edit().putBoolean(userDoneKey, true).apply()
+                    return
+                }
+                val s = steps[i]
+                if (s.needsScroll && scroll != null) ensureVisible(scroll, s.view)
+
+                s.view.postDelayed({
+                    TapTargetView.showFor(
+                        this@ProfileActivity,
+                        TapTarget.forView(s.view, s.title, s.desc).applyProfileTourStyle(),
+                        object : TapTargetView.Listener() {
+                            override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
+                                showStep(i + 1)
+                            }
+                        }
+                    )
+                }, 180)
+            }
+            showStep(0)
+        }
+    }
+
+
+    private data class Step(
+        val view: View,
+        val title: String,
+        val desc: String,
+        val needsScroll: Boolean = false
+    )
+
+
+
+
 }

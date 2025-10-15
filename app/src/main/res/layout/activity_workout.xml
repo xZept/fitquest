@@ -78,7 +78,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/tipsScroll"
         android:layout_above="@id/quest_actions"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="25dp"
         android:layout_marginBottom="8dp">
 
         <LinearLayout
@@ -87,7 +87,7 @@
             android:layout_height="wrap_content"
             android:textAlignment="center"
             android:layout_centerInParent="true"
-            android:layout_marginBottom="68dp"
+            android:layout_marginBottom="60dp"
             android:orientation="horizontal"
             android:gravity="center"/>
     </RelativeLayout>

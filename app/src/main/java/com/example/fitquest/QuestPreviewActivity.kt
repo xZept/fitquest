@@ -28,6 +28,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.fitquest.cosmetics.BgCosmetics          // <-- NEW
 import com.example.fitquest.shop.ShopRepository           // <-- NEW
+import com.getkeepsafe.taptargetview.TapTarget
+import com.getkeepsafe.taptargetview.TapTargetSequence
+import com.getkeepsafe.taptargetview.TapTargetView
+import androidx.core.content.ContextCompat
+
 
 class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
 
@@ -146,6 +151,13 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
     override fun onResume() {
         super.onResume()
         bgDrawable?.start()
+
+        lifecycleScope.launch {
+            val uid = DataStoreManager.getUserId(this@QuestPreviewActivity).first()
+            if (uid > 0) showQuestPreviewTourIfNeeded(uid)
+        }
+
+        // keep your existing code in onResume (e.g., monster skin background) — it’s fine to leave it
         lifecycleScope.launch {
             val uid = DataStoreManager.getUserId(this@QuestPreviewActivity).first()
             val latestCode = withContext(Dispatchers.IO) {
@@ -154,6 +166,7 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
             setRvContainerBackgroundForCode(latestCode)
         }
     }
+
 
     override fun onPause() { bgDrawable?.stop(); super.onPause() }
     override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); if (hasFocus) hideNavBar() }
@@ -226,6 +239,149 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
         itemTouchHelper.startDrag(viewHolder)
         viewHolder.itemView.performHapticFeedback(android.view.HapticFeedbackConstants.DRAG_START)
     }
+
+    companion object {
+        private const val TOUR_PREFS = "onboarding"
+        private const val QUEST_PREVIEW_TOUR_DONE_KEY_PREFIX = "quest_preview_tour_done_v1_u_" // per-user key
+        private const val FORCE_TOUR = false                                                   // set true to test a user
+        private val questPreviewTourShownUsersThisProcess = mutableSetOf<Int>()                // per-process guard (per user)
+    }
+
+
+    private fun TapTarget.applyQuestPreviewTourStyle(): TapTarget = apply {
+        // Scrim/background color — pass a *resource*, not an ARGB int here
+        dimColor(R.color.tour_white_80)      // 80% white in colors.xml (#CCFFFFFF)
+
+        // Make BOTH texts the same bright color
+        titleTextColor(R.color.tour_orange)   // or android.R.color.black
+        descriptionTextColor(R.color.tour_orange)
+
+        // Ring/target styling
+        outerCircleColor(R.color.white) // subtle ring, then use alpha below
+        outerCircleAlpha(0.12f)              // keep ring faint over light scrim
+        targetCircleColor(R.color.white)
+
+        tintTarget(true)
+        transparentTarget(true)
+        cancelable(true)
+        drawShadow(false)
+    }
+
+    private fun waitForRecyclerPopulation(maxTries: Int = 10, delayMs: Long = 140, onReady: () -> Unit) {
+        fun check(tries: Int) {
+            if (rv.childCount > 0) onReady()
+            else if (tries < maxTries) rv.postDelayed({ check(tries + 1) }, delayMs)
+            else onReady()
+        }
+        check(0)
+    }
+
+    private fun findFirstDragHandle(): View? {
+        for (i in 0 until rv.childCount) {
+            val child = rv.getChildAt(i) ?: continue
+            val handle = child.findViewById<View?>(R.id.drag_handle)
+            if (handle != null && handle.visibility == View.VISIBLE) return handle
+        }
+        return null
+    }
+
+    private fun showQuestPreviewTourIfNeeded(userId: Int) {
+        if (userId <= 0) return
+
+        val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+        val userDoneKey = "$QUEST_PREVIEW_TOUR_DONE_KEY_PREFIX$userId"
+
+        // DEV ONLY: force-show while testing this specific user
+        if (FORCE_TOUR && BuildConfig.DEBUG) {
+            prefs.edit().remove(userDoneKey).apply()
+            questPreviewTourShownUsersThisProcess.remove(userId)
+        }
+
+        // Per-process (per user) + persisted (per user) guards
+        if (questPreviewTourShownUsersThisProcess.contains(userId) || prefs.getBoolean(userDoneKey, false)) return
+
+        val root = findViewById<View>(R.id.quest_root)
+        val add  = findViewById<View>(R.id.btn_add)
+        val save = findViewById<View>(R.id.btn_save)
+        val back = findViewById<View>(R.id.btn_cancel)
+
+        root.post {
+            // mark shown for this user in this process
+            questPreviewTourShownUsersThisProcess.add(userId)
+
+            // First try to highlight a drag handle; then show buttons stage.
+            waitForRecyclerPopulation {
+                val handle = findFirstDragHandle()
+                if (handle != null) {
+                    TapTargetView.showFor(
+                        this@QuestPreviewActivity,
+                        TapTarget.forView(
+                            handle,
+                            "Press and drag to change the order of your exercises.",
+                            ""
+                        ).applyQuestPreviewTourStyle(),
+                        object : TapTargetView.Listener() {
+                            override fun onTargetDismissed(v: TapTargetView?, userInitiated: Boolean) {
+                                showButtonsStage(prefs, userDoneKey)
+                            }
+                        }
+                    )
+                } else {
+                    showButtonsStage(prefs, userDoneKey)
+                }
+            }
+        }
+    }
+
+    private fun showButtonsStage(
+        prefs: android.content.SharedPreferences,
+        userDoneKey: String
+    ) {
+        val targets = mutableListOf<TapTarget>()
+
+        if (mode == "advanced" && btnAdd.visibility == View.VISIBLE) {
+            targets += TapTarget.forView(
+                btnAdd,
+                "Pick from suggested lists based on your chosen split and focus.",
+                ""
+            ).applyQuestPreviewTourStyle()
+        }
+
+        targets += TapTarget.forView(
+            btnSave,
+            "Save your current order and selections.",
+            ""
+        ).applyQuestPreviewTourStyle()
+
+        targets += TapTarget.forView(
+            btnBack,
+            "Return without saving changes.",
+            ""
+        ).applyQuestPreviewTourStyle()
+
+        if (targets.isEmpty()) {
+            prefs.edit().putBoolean(userDoneKey, true).apply()
+            return
+        }
+
+        TapTargetSequence(this)
+            .targets(targets)
+            .listener(object : TapTargetSequence.Listener {
+                override fun onSequenceFinish() {
+                    prefs.edit().putBoolean(userDoneKey, true).apply()
+                }
+                override fun onSequenceCanceled(lastTarget: TapTarget) {
+                    prefs.edit().putBoolean(userDoneKey, true).apply()
+                }
+                override fun onSequenceStep(lastTarget: TapTarget, targetClicked: Boolean) {}
+            })
+            .start()
+    }
+
+
+
+
+
 
     // --- Add dialog helpers ---
 

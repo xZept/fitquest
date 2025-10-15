@@ -28,9 +28,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import com.getkeepsafe.taptargetview.TapTarget
+import com.getkeepsafe.taptargetview.TapTargetSequence
+import com.getkeepsafe.taptargetview.TapTargetView
+private var workoutTourActiveSchedulePending = false
+private var currentUserId: Int = -1
 
 
 class WorkoutActivity : AppCompatActivity() {
+
+
 
     private lateinit var pressAnim: android.view.animation.Animation
     private lateinit var db: AppDatabase
@@ -39,6 +46,9 @@ class WorkoutActivity : AppCompatActivity() {
 
     // overlay host
     private val overlayHost: View by lazy { findViewById(R.id.overlay_host) }
+    // top of class
+    private var hasActiveQuest: Boolean = false
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +62,8 @@ class WorkoutActivity : AppCompatActivity() {
         setupNavigationBar()
 
         db = AppDatabase.getInstance(applicationContext)
+
+
 
         // Render saved quest if one exists; otherwise show overlay
         lifecycleScope.launch { renderFromState() }
@@ -67,9 +79,45 @@ class WorkoutActivity : AppCompatActivity() {
 
     // -------------------- State & overlay --------------------
 
+    private fun waitUntilReady(maxTries: Int = 10, stepMs: Long = 80, ready: () -> Boolean, onReady: () -> Unit) {
+        fun loop(tries: Int) {
+            if (ready()) onReady()
+            else if (tries < maxTries) overlayHost.postDelayed({ loop(tries + 1) }, stepMs)
+        }
+        loop(0)
+    }
+
+    private fun maybeStartWorkoutTour() {
+        if (!hasActiveQuest) return
+        if (workoutTourActiveSchedulePending) return
+        workoutTourActiveSchedulePending = true
+
+        val actions    = findViewById<View>(R.id.quest_actions)
+        val start      = findViewById<View>(R.id.btn_start_quest)
+        val cancel     = findViewById<View>(R.id.btn_cancel_quest)
+        val workoutTip = findViewById<View>(R.id.workoutTip)
+
+        waitUntilReady(
+            ready = {
+                hasActiveQuest &&
+                        actions.visibility == View.VISIBLE &&
+                        workoutTip.width > 0 && workoutTip.height > 0 &&
+                        start.width > 0 && start.height > 0 &&
+                        cancel.width > 0 && cancel.height > 0
+            },
+            onReady = { showWorkoutTourIfNeeded(currentUserId) } // <-- pass user id
+        )
+    }
+
+
+
+
+
+
     private suspend fun renderFromState() {
         val container = findViewById<LinearLayout>(R.id.workout_container)
         val uid = DataStoreManager.getUserId(this@WorkoutActivity).first()
+        currentUserId = uid
         val active = db.activeQuestDao().getActiveForUser(uid)
 
         // 🔑 get the most recent monster code on IO thread
@@ -81,22 +129,25 @@ class WorkoutActivity : AppCompatActivity() {
         withContext(Dispatchers.Main) {
             container.removeAllViews()
             if (active != null) {
+                hasActiveQuest = true
                 setOverlayVisible(false)
-                val title =
-                    if (!active.split.isNullOrBlank() && !active.modifier.isNullOrBlank())
-                        "${active.split} • ${active.modifier}"
-                    else
-                        "Your Quest"
+                val title = if (!active.split.isNullOrBlank() && !active.modifier.isNullOrBlank())
+                    "${active.split} • ${active.modifier}" else "Your Quest"
 
-                // 🔑 pass the code (or rely on the 2-arg overload that reads the updated field)
                 container.addView(buildDayCardFromQuest(title, active.exercises, currentMonsterCode))
-
                 updateActionButtons(visible = true, dayTitle = title, items = active.exercises)
             } else {
+                hasActiveQuest = false
                 setOverlayVisible(true)
                 updateActionButtons(visible = false, dayTitle = null, items = emptyList())
             }
+
+            // >>> Start the tour AFTER UI is ready
+            maybeStartWorkoutTour()  // ✅
+
+
         }
+
     }
 
 
@@ -501,4 +552,103 @@ class WorkoutActivity : AppCompatActivity() {
                 .firstOrNull { it.size == 2 && it[0].equals("embed", true) }?.get(1)
         } else null
     } catch (_: Exception) { null }
+
+    companion object {
+        // Per-process guards keyed by user
+        private val workoutTourActiveShownUsersThisProcess = mutableSetOf<Int>()
+
+        // If you really need a one-time dev reset, toggle this manually
+        private var workoutTourDebugResetDone = false
+
+        // Per-user done-key prefixes
+        private const val WORKOUT_TOUR_ACTIVE_DONE_KEY_PREFIX = "workout_tour_active_done_v1_u_"
+        // (you can add a NO-QUEST prefix later if you build that tour)
+        private const val TOUR_PREFS = "onboarding"
+    }
+
+
+
+    private fun TapTarget.applyWorkoutTourStyle(): TapTarget = apply {
+        dimColor(R.color.tour_white_80)         // #CCFFFFFF
+        titleTextColor(R.color.tour_orange)
+        descriptionTextColor(R.color.tour_orange)
+        outerCircleColor(R.color.white)
+        outerCircleAlpha(0.12f)
+        targetCircleColor(R.color.white)
+        tintTarget(true)
+        transparentTarget(true)
+        cancelable(true)
+        drawShadow(false)
+    }
+
+    private fun showWorkoutTourIfNeeded(userId: Int) {
+        val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+
+        // Only run for active quest
+        if (!hasActiveQuest) { workoutTourActiveSchedulePending = false; return }
+        if (userId <= 0) { workoutTourActiveSchedulePending = false; return }
+
+        val userDoneKey = "$WORKOUT_TOUR_ACTIVE_DONE_KEY_PREFIX$userId"
+
+        // Optional dev reset (do this only when testing a specific user):
+//    if (BuildConfig.DEBUG) {
+//        prefs.edit().remove(userDoneKey).apply()
+//        workoutTourActiveShownUsersThisProcess.remove(userId)
+//    }
+
+        // Per-process + persisted guards
+        if (workoutTourActiveShownUsersThisProcess.contains(userId) ||
+            prefs.getBoolean(userDoneKey, false)) {
+            workoutTourActiveSchedulePending = false
+            return
+        }
+
+        workoutTourActiveShownUsersThisProcess.add(userId)
+        workoutTourActiveSchedulePending = false
+
+        val workoutTip = findViewById<View>(R.id.workoutTip)
+        val start      = findViewById<View>(R.id.btn_start_quest)
+        val cancel     = findViewById<View>(R.id.btn_cancel_quest)
+
+        val targets = listOfNotNull(
+            TapTarget.forView(workoutTip, "Workout tips and recovery ideas to keep you sharp.", "")
+                .applyWorkoutTourStyle(),
+            TapTarget.forView(start, "Begin your workout session.", "")
+                .applyWorkoutTourStyle(),
+            TapTarget.forView(cancel, "Clear today’s plan if you want to rebuild.", "")
+                .applyWorkoutTourStyle()
+        )
+
+        if (targets.isEmpty()) {
+            prefs.edit().putBoolean(userDoneKey, true).apply()
+            return
+        }
+
+        showTargetsSequentially(
+            targets = targets,
+            index = 0,
+            onFinish = { prefs.edit().putBoolean(userDoneKey, true).apply() }
+        )
+    }
+
+
+
+
+    private fun showTargetsSequentially(
+        targets: List<TapTarget>,
+        index: Int,
+        onFinish: () -> Unit
+    ) {
+        if (index >= targets.size) { onFinish(); return }
+        TapTargetView.showFor(
+            this,
+            targets[index],
+            object : TapTargetView.Listener() {
+                override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
+                    showTargetsSequentially(targets, index + 1, onFinish)
+                }
+            }
+        )
+    }
+
 }
