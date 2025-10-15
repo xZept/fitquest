@@ -43,6 +43,9 @@ import kotlin.math.roundToInt
 import android.graphics.BitmapFactory
 import androidx.annotation.DrawableRes
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
+import com.getkeepsafe.taptargetview.TapTarget
+import com.getkeepsafe.taptargetview.TapTargetSequence
+import com.getkeepsafe.taptargetview.TapTargetView
 
 
 class MacroActivity : AppCompatActivity() {
@@ -85,6 +88,18 @@ class MacroActivity : AppCompatActivity() {
         val dietType: String
     )
 
+    private val TOUR_PREFS = "onboarding"
+    private val MACRO_TOUR_DONE_KEY = "macro_tour_done_v1"
+
+    companion object {
+        private var macroTourShownThisProcess = false
+        private const val MACRO_TOUR_DONE_KEY = "macro_tour_done_v1"
+        private const val TOUR_PREFS = "onboarding"
+    }
+
+
+
+
     private lateinit var pressAnim: android.view.animation.Animation
 
     override fun onPause() {
@@ -94,6 +109,7 @@ class MacroActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        showMacroTourIfNeeded()
         (capybaraView.drawable as? SpriteSheetDrawable)?.start()
         macroPlan = null
         if (currentUserId > 0) {
@@ -997,6 +1013,135 @@ class MacroActivity : AppCompatActivity() {
         } ?: return
 
         swapSprite(next)
+    }
+
+    private fun TapTarget.applyMacroTourStyle(): TapTarget = apply {
+        // Scrim/background color — pass a *resource*, not an ARGB int here
+        dimColor(R.color.tour_white_80)      // 80% white in colors.xml (#CCFFFFFF)
+
+        // Make BOTH texts the same bright color
+        titleTextColor(R.color.tour_orange)   // or android.R.color.black
+        descriptionTextColor(R.color.tour_orange)
+
+        // Ring/target styling
+        outerCircleColor(R.color.white) // subtle ring, then use alpha below
+        outerCircleAlpha(0.12f)              // keep ring faint over light scrim
+        targetCircleColor(R.color.white)
+
+        tintTarget(true)
+        transparentTarget(true)
+        cancelable(true)
+        drawShadow(false)
+    }
+
+    private fun showMacroTourIfNeeded() {
+        val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+
+        // DEV ONLY: force-show while testing
+        if (BuildConfig.DEBUG) {
+            prefs.edit().remove(MACRO_TOUR_DONE_KEY).apply()
+            macroTourShownThisProcess = false
+        }
+
+        if (macroTourShownThisProcess || prefs.getBoolean(MACRO_TOUR_DONE_KEY, false)) return
+
+        val scroll: androidx.core.widget.NestedScrollView? = findViewById(R.id.content_scroll)
+
+        val addFood: View?   = findViewById(R.id.btn_buy_food)
+        val diary: View?     = findViewById(R.id.btn_diary)
+        val settings: View?  = findViewById(R.id.btn_settings)
+
+        val calories: View?  = findViewById(R.id.calories_circle)
+        val proteinPb: View? = findViewById(R.id.protein_progress)
+        val carbsPb: View?   = findViewById(R.id.carbs_progress)
+        val fatPb: View?     = findViewById(R.id.fat_progress)
+
+        // ⬇️ NEW: meal section titles you pasted
+        val breakfastTitle: View? = findViewById(R.id.breakfastText)
+        val snackTitle: View?     = findViewById(R.id.snackText)
+        val lunchTitle: View?     = findViewById(R.id.lunchText)
+        val dinnerTitle: View?    = findViewById(R.id.dinnerText)
+
+        // First batch (what’s usually on screen initially)
+        val firstTargets = mutableListOf<TapTarget>().apply {
+            addFood?.let    { add(TapTarget.forView(it, "Search and log foods here.", "").applyMacroTourStyle()) }
+            calories?.let   { add(TapTarget.forView(it, "Progress vs your calorie goal.", "").applyMacroTourStyle()) }
+            proteinPb?.let  { add(TapTarget.forView(it, "Protein: Hit protein to support recovery.", "").applyMacroTourStyle()) }
+            carbsPb?.let    { add(TapTarget.forView(it, "Carbohydrates: Fuel for workouts and energy.", "").applyMacroTourStyle()) }
+            fatPb?.let      { add(TapTarget.forView(it, "Fat: Keep healthy fats within target.", "").applyMacroTourStyle()) }
+            diary?.let      { add(TapTarget.forView(it, "Review your food history.", "").applyMacroTourStyle()) }
+            settings?.let   { add(TapTarget.forView(it, "Adjust your macro plan anytime.", "").applyMacroTourStyle()) }
+        }
+
+        if (firstTargets.isEmpty()) return
+        macroTourShownThisProcess = true
+
+        TapTargetSequence(this)
+            .targets(firstTargets)
+            .listener(object : TapTargetSequence.Listener {
+                override fun onSequenceFinish() {
+                    // After the first batch, walk the meal sections with scrolling
+                    showMealsSectionTour(
+                        scroll,
+                        listOf(
+                            breakfastTitle to ("Your breakfast items live here." to ""),
+                            snackTitle     to ("Snacks you’ve logged for the day."     to ""),
+                            lunchTitle     to ("Mid-day meals and entries."     to ""),
+                            dinnerTitle    to ("Evening meals and entries."    to "")
+                        )
+                    ) {
+                        prefs.edit().putBoolean(MACRO_TOUR_DONE_KEY, true).apply()
+                    }
+                }
+                override fun onSequenceStep(lastTarget: TapTarget, targetClicked: Boolean) {}
+                override fun onSequenceCanceled(lastTarget: TapTarget) {
+                    // If user cancels early, still finish the meals tour or mark done — your call.
+                    prefs.edit().putBoolean(MACRO_TOUR_DONE_KEY, true).apply()
+                }
+            })
+            .start()
+    }
+
+    private fun showMealsSectionTour(
+        scroll: androidx.core.widget.NestedScrollView?,
+        sections: List<Pair<View?, Pair<String, String>>>,
+        onEnd: () -> Unit
+    ) {
+        fun next(i: Int) {
+            if (i >= sections.size) { onEnd(); return }
+            val pair = sections[i]
+            val v = pair.first
+            val title = pair.second.first
+            val desc  = pair.second.second
+
+            if (v == null) { next(i + 1); return }
+
+            // Scroll into view, then show the target
+            scroll?.post {
+                scrollVToView(scroll, v, 24)
+                v.postDelayed({
+                    TapTargetView.showFor(
+                        this@MacroActivity,
+                        TapTarget.forView(v, title, desc).applyMacroTourStyle(),
+                        object : TapTargetView.Listener() {
+                            override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
+                                next(i + 1)
+                            }
+                        }
+                    )
+                }, 280L)
+            } ?: run { next(i + 1) }
+        }
+        next(0)
+    }
+
+    /** Smooth-scroll a child inside a NestedScrollView so it’s nicely visible */
+    private fun scrollVToView(ns: androidx.core.widget.NestedScrollView, child: View, topPadDp: Int = 24) {
+        val r = android.graphics.Rect()
+        child.getDrawingRect(r)
+        ns.offsetDescendantRectToMyCoords(child, r)
+        val targetY = kotlin.math.max(0, r.top - (topPadDp * resources.displayMetrics.density).toInt())
+        ns.smoothScrollTo(0, targetY)
     }
 
 

@@ -62,7 +62,10 @@ import java.time.format.DateTimeFormatter
 import com.example.fitquest.utils.localDateFromDayKey
 import java.time.Instant
 import androidx.core.content.ContextCompat
-
+import com.getkeepsafe.taptargetview.TapTarget
+import com.getkeepsafe.taptargetview.TapTargetSequence
+import com.getkeepsafe.taptargetview.TapTargetView
+import kotlin.math.max
 
 
 class DashboardActivity : AppCompatActivity() {
@@ -93,7 +96,8 @@ class DashboardActivity : AppCompatActivity() {
     private lateinit var tvWeeklyKcalCenter: TextView
     private lateinit var tvWeeklyNextRange: TextView
 
-
+    private val TOUR_PREFS = "onboarding"
+    private val TOUR_DONE_KEY = "dash_tour_done_v1"
 
     private val requestNotifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -247,6 +251,7 @@ class DashboardActivity : AppCompatActivity() {
 
     companion object {
         const val ACTION_WEIGHT_LOGGED = "com.example.fitquest.WEIGHT_LOGGED"
+        private var tourShownThisProcess = false   // prevent re-entry while app is alive
     }
 
     private val weightLoggedReceiver = object : BroadcastReceiver() {
@@ -273,6 +278,7 @@ class DashboardActivity : AppCompatActivity() {
         super.onResume()
         loadWeightSeries()
         backfillInitialWeightIfMissing()
+        showDashboardTourIfNeeded()
         lifecycleScope.launch {
             val uid = DataStoreManager.getUserId(this@DashboardActivity).first()
             hasActiveQuest = db.activeQuestDao().getActiveForUser(uid) != null
@@ -682,6 +688,8 @@ class DashboardActivity : AppCompatActivity() {
     }
 
 
+
+
     private fun refreshDailySummary() {
         lifecycleScope.launch {
             try {
@@ -813,6 +821,310 @@ class DashboardActivity : AppCompatActivity() {
             else -> "${start.format(fmtMd)}–${end.dayOfMonth}, ${end.year}"
         }
     }
+
+    private fun showDashboardTourIfNeeded() {
+        val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
+
+        // DEV ONLY: force-show while testing. Comment out for release.
+//        if (BuildConfig.DEBUG) {
+//            prefs.edit()
+//                .remove(TOUR_DONE_KEY)
+//                .remove("dash_tour_seen_v4") // old key you used before
+//                .apply()
+//            tourShownThisProcess = false
+//        }
+
+        // Only once per install + guard per process
+        if (tourShownThisProcess || prefs.getBoolean(TOUR_DONE_KEY, false)) return
+
+        val root    = findViewById<View>(R.id.dashboard_root)
+        val vScroll = findViewById<androidx.core.widget.NestedScrollView>(R.id.scroll_content)
+        val hScroll = findViewById<android.widget.HorizontalScrollView>(R.id.summary_scroller)
+
+        val quick   = findViewById<View>(R.id.btn_quick_action)
+        val diary   = findViewById<View>(R.id.btn_diary)
+        val daily   = findViewById<View>(R.id.card_daily_summary)
+        val weekly  = findViewById<View>(R.id.card_weekly_summary)
+        val weight  = findViewById<View>(R.id.weightChart)
+        val splits  = findViewById<View>(R.id.chart_splits)
+
+        // Start only after the window has focus and layout is complete.
+        fun startWhenReady(attempt: Int = 0) {
+            if (!hasWindowFocus()) {
+                root.postDelayed({ startWhenReady(attempt) }, 120L)
+                return
+            }
+            if (!root.isLaidOut) {
+                root.post { startWhenReady(attempt) }
+                return
+            }
+
+            // Ensure Daily card is visible to begin with
+            if (daily != null && hScroll != null) {
+                scrollHToCenter(hScroll, daily)
+            }
+
+            // Build initial targets (only ones that are visible & laid out)
+            val initialTargets = buildList {
+                if (quick?.isLaidOut == true) add(
+                    TapTarget.forView(
+                        quick, "Generate a workout quest from your plan.", ""
+                    ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
+                )
+                if (diary?.isLaidOut == true) add(
+                    TapTarget.forView(
+                        diary, "Review your logs and history.", ""
+                    ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
+                )
+                if (daily?.isLaidOut == true) add(
+                    TapTarget.forView(
+                        daily, "Calories ring and your workouts for today.", ""
+                    ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
+                )
+                if (weight?.isShown == true && weight.isLaidOut) add(
+                    TapTarget.forView(
+                        weight, "Tracks your logged weight over time.", ""
+                    ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle()
+                )
+            }
+
+            // If nothing is ready yet, retry a few times gracefully.
+            if (initialTargets.isEmpty()) {
+                if (attempt < 8) { // ~1s total worst-case
+                    root.postDelayed({ startWhenReady(attempt + 1) }, 130L)
+                }
+                return
+            }
+
+            tourShownThisProcess = true
+
+            val finishTour: () -> Unit = {
+                prefs.edit().putBoolean(TOUR_DONE_KEY, true).apply()
+            }
+
+            val showRest: () -> Unit = {
+                // Scroll to WEEKLY, then SPLITS
+                if (weekly != null && hScroll != null) {
+                    hScroll.post {
+                        scrollHToCenter(hScroll, weekly)
+                        weekly.postDelayed({
+                            TapTargetView.showFor(
+                                this@DashboardActivity,
+                                TapTarget.forView(
+                                    weekly, "Averages and total workouts for the period.", ""
+                                ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
+                                object : TapTargetView.Listener() {
+                                    override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
+                                        if (splits != null && vScroll != null) {
+                                            vScroll.post {
+                                                scrollVToCenter(vScroll, splits)
+                                                splits.postDelayed({
+                                                    TapTargetView.showFor(
+                                                        this@DashboardActivity,
+                                                        TapTarget.forView(
+                                                            splits, "See Push / Pull / Legs / Upper counts.", ""
+                                                        ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
+                                                        object : TapTargetView.Listener() {
+                                                            override fun onTargetDismissed(v2: TapTargetView?, ui: Boolean) {
+                                                                finishTour()
+                                                            }
+                                                        }
+                                                    )
+                                                }, 320L)
+                                            }
+                                        } else {
+                                            finishTour()
+                                        }
+                                    }
+                                }
+                            )
+                        }, 280L)
+                    }
+                } else if (splits != null && vScroll != null) {
+                    vScroll.post {
+                        scrollVToCenter(vScroll, splits)
+                        splits.postDelayed({
+                            TapTargetView.showFor(
+                                this@DashboardActivity,
+                                TapTarget.forView(
+                                    splits, "See Push / Pull / Legs / Upper counts.", ""
+                                ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
+                                object : TapTargetView.Listener() {
+                                    override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
+                                        finishTour()
+                                    }
+                                }
+                            )
+                        }, 320L)
+                    }
+                } else {
+                    finishTour()
+                }
+            }
+
+            // Run the first batch, then the rest
+            TapTargetSequence(this@DashboardActivity)
+                .targets(initialTargets)
+                .continueOnCancel(true)
+                .listener(object : TapTargetSequence.Listener {
+                    override fun onSequenceFinish() = showRest()
+                    override fun onSequenceStep(lastTarget: TapTarget, targetClicked: Boolean) {}
+                    override fun onSequenceCanceled(lastTarget: TapTarget) = showRest()
+                })
+                .start()
+        }
+
+        // Kick it off
+        root.postDelayed({ startWhenReady() }, 200L)
+    }
+
+    /** Center a child horizontally inside a HorizontalScrollView before showing the target. */
+    private fun scrollHToCenter(hs: android.widget.HorizontalScrollView, child: View) {
+        val r = android.graphics.Rect()
+        child.getDrawingRect(r)
+        hs.offsetDescendantRectToMyCoords(child, r)
+        val targetX = (r.centerX() - hs.width / 2).coerceAtLeast(0)
+        hs.smoothScrollTo(targetX, 0)
+    }
+
+    /** Center a child vertically inside a NestedScrollView before showing the target. */
+    private fun scrollVToCenter(ns: androidx.core.widget.NestedScrollView, child: View) {
+        val r = android.graphics.Rect()
+        child.getDrawingRect(r)
+        ns.offsetDescendantRectToMyCoords(child, r)
+        val targetY = (r.centerY() - ns.height / 2).coerceAtLeast(0)
+        ns.smoothScrollTo(0, targetY)
+    }
+
+
+
+    private fun showWeeklyThenSplits(
+        hScroll: android.widget.HorizontalScrollView?,
+        vScroll: androidx.core.widget.NestedScrollView?,
+        weeklyCard: View?,
+        splitsChart: View?,
+        onEnd: () -> Unit
+    ) {
+        // 1) Scroll to WEEKLY, then highlight it
+        if (weeklyCard != null && hScroll != null) {
+            hScroll.post {
+                scrollHToView(hScroll, weeklyCard, 12)
+                weeklyCard.postDelayed({
+                    TapTargetView.showFor(
+                        this@DashboardActivity,
+                        TapTarget.forView(
+                            weeklyCard, "Averages and total workouts for the period.", ""
+                        ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
+                        object : TapTargetView.Listener() {
+                            override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
+                                // 2) Now scroll vertically to SPLITS and highlight
+                                if (splitsChart != null && vScroll != null) {
+                                    vScroll.post {
+                                        scrollVToView(vScroll, splitsChart, 24)
+                                        splitsChart.postDelayed({
+                                            TapTargetView.showFor(
+                                                this@DashboardActivity,
+                                                TapTarget.forView(
+                                                    splitsChart, "See Push / Pull / Legs / Upper counts.", ""
+                                                ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
+                                                object : TapTargetView.Listener() {
+                                                    override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
+                                                        onEnd()
+                                                    }
+                                                }
+                                            )
+                                        }, 350L)
+                                    }
+                                } else {
+                                    onEnd()
+                                }
+                            }
+                        }
+                    )
+                }, 320L)
+            }
+        } else if (splitsChart != null && vScroll != null) {
+            // Weekly not available; go straight to splits
+            vScroll.post {
+                scrollVToView(vScroll, splitsChart, 24)
+                splitsChart.postDelayed({
+                    TapTargetView.showFor(
+                        this@DashboardActivity,
+                        TapTarget.forView(
+                            splitsChart, "See Push / Pull / Legs / Upper counts.", ""
+                        ).cancelable(true).tintTarget(true).drawShadow(true),
+                        object : TapTargetView.Listener() {
+                            override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) = onEnd()
+                        }
+                    )
+                }, 350L)
+            }
+        } else {
+            onEnd()
+        }
+    }
+
+
+
+    private fun showProfileThenFinish(prefs: android.content.SharedPreferences, profileNav: View?) {
+        if (profileNav == null) {
+            prefs.edit().putBoolean("dash_tour_seen_v4", true).apply()
+            return
+        }
+        com.getkeepsafe.taptargetview.TapTargetView.showFor(
+            this,
+            com.getkeepsafe.taptargetview.TapTarget.forView(
+                profileNav, "Profile", "Edit stats and goals; use tickets for weight edits."
+            ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
+            object : com.getkeepsafe.taptargetview.TapTargetView.Listener() {
+                override fun onTargetDismissed(view: com.getkeepsafe.taptargetview.TapTargetView?, userInitiated: Boolean) {
+                    prefs.edit().putBoolean("dash_tour_seen_v4", true).apply()
+                }
+            }
+        )
+    }
+
+    private fun scrollHToView(hs: android.widget.HorizontalScrollView, child: View, leftPadDp: Int = 12) {
+        val r = android.graphics.Rect()
+        child.getDrawingRect(r)
+        hs.offsetDescendantRectToMyCoords(child, r)   // <-- convert to HS coords
+        hs.smoothScrollTo(max(0, r.left - leftPadDp.dp()), 0)
+    }
+
+    private fun scrollVToView(ns: androidx.core.widget.NestedScrollView, child: View, topPadDp: Int = 24) {
+        val r = android.graphics.Rect()
+        child.getDrawingRect(r)
+        ns.offsetDescendantRectToMyCoords(child, r)   // <-- convert to NS coords
+        val targetY = max(0, r.top - topPadDp.dp())
+        ns.smoothScrollTo(0, targetY)
+    }
+
+
+    private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
+
+    private fun TapTarget.applyTourStyle(): TapTarget = apply {
+        // Scrim/background color — pass a *resource*, not an ARGB int here
+        dimColor(R.color.tour_white_80)      // 80% white in colors.xml (#CCFFFFFF)
+
+        // Make BOTH texts the same bright color
+        titleTextColor(R.color.tour_orange)   // or android.R.color.black
+        descriptionTextColor(R.color.tour_orange)
+
+        // Ring/target styling
+        outerCircleColor(R.color.white) // subtle ring, then use alpha below
+        outerCircleAlpha(0.12f)              // keep ring faint over light scrim
+        targetCircleColor(R.color.white)
+
+        tintTarget(true)
+        transparentTarget(true)
+        cancelable(true)
+        drawShadow(false)
+    }
+
+
+
+
+
 
 
     private fun setupNavigationBar() {

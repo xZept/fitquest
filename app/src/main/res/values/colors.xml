@@ -13,5 +13,11 @@
     <color name="progress_ok">#66BB6A</color>
     <color name="progress_over">#EF5350</color>
     <color name="white_24">#3DFFFFFF</color>
+    <color name="tour_white">#FFFFFF</color>
+    <color name="tour_white_80">#FFFFFF</color>   <!-- 80% opaque white -->
+    <color name="tour_orange">#ff6600</color>        <!-- text color -->
+    <color name="tour_black_75">#BF000000</color>
+
+
 
 </resources>
