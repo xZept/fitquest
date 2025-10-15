@@ -434,18 +434,26 @@ class ProfileActivity : AppCompatActivity() {
                         db.userProfileDAO().update(updated)
                     }
 
-                    // ✨ NEW: write to weight history when ticket changes the weight
-                    // Only log if the weight actually changed OR there was no previous value.
+                    // after updating the UserProfile in the DB...
+// Only log if the weight changed (or there was no previous value).
                     if (prevWeightInt == null || prevWeightInt != newWeightInt) {
-                        val weightForLog = (typedWeightDouble?.toFloat()) ?: newWeightInt.toFloat()
+                        val weightForLog = typedWeightDouble?.toFloat() ?: newWeightInt.toFloat()
                         db.weightLogDao().insert(
                             WeightLog(
                                 userId = userId,
                                 loggedAt = System.currentTimeMillis(),
                                 weightKg = weightForLog
                             )
+
                         )
+
                     }
+                    sendBroadcast(
+                        Intent(DashboardActivity.ACTION_WEIGHT_LOGGED).apply {
+                            setPackage(packageName) // make it explicit to your app
+                        }
+                    )
+
 
                     // Recompute macros as you already do
                     repository.computeAndSaveMacroPlan(userId)

@@ -42,6 +42,9 @@ import android.app.AlarmManager
 import android.provider.Settings
 import android.net.Uri
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
 import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowInsetsCompat
@@ -51,13 +54,14 @@ import com.github.mikephil.charting.formatter.ValueFormatter
 import java.time.LocalDate
 import androidx.core.view.isVisible
 
-
 // MPAndroidChart for the line chart
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import java.time.format.DateTimeFormatter
 import com.example.fitquest.utils.localDateFromDayKey
+import java.time.Instant
+import androidx.core.content.ContextCompat
 
 
 
@@ -136,12 +140,10 @@ class DashboardActivity : AppCompatActivity() {
             }
         }
 
-        tvWeeklyRange       = findViewById(R.id.tv_weekly_range)
         tvWeeklyNextRange   = findViewById(R.id.tv_weekly_next_range)
         tvWeeklyKcalLabel   = findViewById(R.id.tv_weekly_kcal_label)
         pbWeeklyKcalCircle  = findViewById(R.id.pb_weekly_kcal_circle)
         tvWeeklyKcalCenter  = findViewById(R.id.tv_weekly_kcal_center)
-        tvWeeklyWorkouts    = findViewById(R.id.tv_weekly_workouts)
         tvWeeklyRange = findViewById(R.id.tv_weekly_range)
         tvWeeklyWorkouts = findViewById(R.id.tv_weekly_workouts)
         pbKcalCircle = findViewById(R.id.pb_kcal_circle)
@@ -243,9 +245,27 @@ class DashboardActivity : AppCompatActivity() {
         setupNavigationBar()
     }
 
+    companion object {
+        const val ACTION_WEIGHT_LOGGED = "com.example.fitquest.WEIGHT_LOGGED"
+    }
+
+    private val weightLoggedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            loadWeightSeries() // pull latest rows and redraw
+        }
+    }
+
     override fun onStart() {
         super.onStart()
+        val filter = IntentFilter(ACTION_WEIGHT_LOGGED)
+        ContextCompat.registerReceiver(
+            /* context = */ this,
+            /* receiver = */ weightLoggedReceiver,
+            /* filter = */ filter,
+            /* flags = */ ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
+
 
     override fun onResume() {
         refreshWeeklySummary()
@@ -263,6 +283,7 @@ class DashboardActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        unregisterReceiver(weightLoggedReceiver)
     }
 
     private fun setupChartAppearance() {
@@ -338,7 +359,7 @@ class DashboardActivity : AppCompatActivity() {
                     .sortedBy { it.loggedAt }
             }
 
-            if (rows.size < 2) {
+            if (rows.isEmpty()) {
                 weightChart.isVisible = false
                 return@launch
             } else {
@@ -349,13 +370,19 @@ class DashboardActivity : AppCompatActivity() {
             val weightFill = Color.parseColor("#33EF4444")  // 20% alpha red (#AA RR GG BB)
 
             val entries = rows.map { r ->
-                val x = java.time.Instant.ofEpochMilli(r.loggedAt)
-                    .atZone(java.time.ZoneId.of("Asia/Manila"))
+                val x = Instant.ofEpochMilli(r.loggedAt)
+                    .atZone(ZoneId.of("Asia/Manila"))
                     .toLocalDate()
                     .toEpochDay()
                     .toFloat()
-                Entry(x, r.weightKg.toFloat())
+                Entry(x, r.weightKg)
+            }.toMutableList()
+
+            if (entries.size == 1) {
+                val e = entries.first()
+                entries.add(0, Entry(e.x - 1f, e.y)) // add a flat point the day before
             }
+
 
             val ds = LineDataSet(entries, "Weight (kg)").apply {
                 setDrawCircles(true)
@@ -380,9 +407,7 @@ class DashboardActivity : AppCompatActivity() {
                 }
             }
 
-            val minY = rows.minOf { it.weightKg }.toFloat()
             val maxY = rows.maxOf { it.weightKg }.toFloat()
-
             val goalKg = withContext(Dispatchers.IO) {
                 AppDatabase.getInstance(this@DashboardActivity)
                     .userProfileDAO()
@@ -393,30 +418,33 @@ class DashboardActivity : AppCompatActivity() {
 
             val goalY = goalKg.toFloat()
             val maxForAxis = maxOf(maxY, if (goalY > 0f) goalY else 0f)
-            val headroom = (maxForAxis * 0.05f).coerceAtLeast(1f) // ~5% or at least 1 kg
+            val headroom = (maxForAxis * 0.05f).coerceAtLeast(1f)
 
             weightChart.axisLeft.apply {
-                axisMinimum = 0f                 // force zero baseline
+                axisMinimum = 0f
                 axisMaximum = maxForAxis + headroom
-                granularity = 1f                 // whole-number ticks (optional)
-                setDrawZeroLine(true)            // draw baseline
-                // zeroLineColor = Color.WHITE
-                // zeroLineWidth = 1f
+                granularity = 1f
+                setDrawZeroLine(true)
             }
 
-            val goalBlue = Color.parseColor("#0F5ADB") // blue
-
+// Always clear old limit lines first
+            weightChart.axisLeft.removeAllLimitLines()
             if (goalY > 0f) {
+                val goalBlue = Color.parseColor("#0F5ADB")
                 val ll = LimitLine(goalY, "Goal").apply {
                     lineWidth = 1.5f
                     enableDashedLine(10f, 10f, 0f)
                     lineColor = goalBlue
                     textColor = goalBlue
                 }
-                weightChart.axisLeft.removeAllLimitLines()
                 weightChart.axisLeft.addLimitLine(ll)
             }
 
+// ✅ single, final refresh sequence
+            weightChart.clear()
+            weightChart.data = LineData(ds)
+            weightChart.data.notifyDataChanged()
+            weightChart.notifyDataSetChanged()
             weightChart.invalidate()
 
         }
