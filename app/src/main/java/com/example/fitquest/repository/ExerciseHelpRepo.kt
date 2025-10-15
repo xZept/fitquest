@@ -27,8 +27,8 @@ object ExerciseHelpRepo {
         synchronized(this) {
             if (loaded) return
             try {
-                val vids = loadVideos(context)
-                val infos = loadInfos(context)
+                val vids  = loadVideos(context) // id -> Pair(name?, url?)
+                val infos = loadInfos(context)  // id -> Triple(desc?, instr?, name?)
 
                 // Merge by exerciseId when possible
                 val allIds = vids.keys + infos.keys
@@ -36,12 +36,13 @@ object ExerciseHelpRepo {
                     val v = vids[id]
                     val i = infos[id]
                     val merged = ExerciseHelp(
-                        exerciseId = id,
-                        youtubeUrl = v?.second,
-                        description = i?.first,
-                        instructions = i?.second
+                        exerciseId   = id,
+                        youtubeUrl   = v?.second ?: null,
+                        description  = i?.first ?: null,
+                        instructions = i?.second ?: null
                     )
                     byId[id] = merged
+
                     // Also index by *name* when available (from either file)
                     val nameFromV = v?.first
                     val nameFromI = i?.third
@@ -60,13 +61,10 @@ object ExerciseHelpRepo {
     /**
      * Find help by id (preferred) or by name (fallback).
      */
-    fun find(context: Context, exerciseId: String?, exerciseName: String?): ExerciseHelp? {
+    fun find(context: Context, id: String?, name: String?): ExerciseHelp? {
         ensureLoaded(context)
-        val idKey = exerciseId?.trim().orEmpty()
-        if (idKey.isNotEmpty()) {
-            byId[idKey]?.let { return it }
-        }
-        val nameKey = normalizeName(exerciseName ?: "")
+        id?.let { byId[it] }?.let { return it }
+        val nameKey = name?.let { normalizeName(it) }.orEmpty()
         return if (nameKey.isNotEmpty()) byName[nameKey] else null
     }
 
@@ -74,7 +72,7 @@ object ExerciseHelpRepo {
 
     /**
      * Returns map: exerciseId -> Pair(name, youtubeUrl)
-     * Tries to auto-detect columns: exercise_id, name, youtube_url/video
+     * Tries to auto-detect columns robustly.
      */
     private fun loadVideos(context: Context): Map<String, Pair<String?, String?>> {
         val out = mutableMapOf<String, Pair<String?, String?>>()
@@ -82,19 +80,24 @@ object ExerciseHelpRepo {
             CSVReader(InputStreamReader(input)).use { r ->
                 val header = r.readNext() ?: return emptyMap()
                 val cols = indexColumns(header)
-                val idIdx  = firstOf(cols, "exercise_id","id","exerciseId","exercise id")
-                val nameIdx= firstOf(cols, "name","exercise_name","exercise")
-                val urlIdx = firstOf(cols, "youtube_url","youtube","video","video_url","url")
+
+                val idIdx   = firstOf(cols, "exercise_id", "id", "exerciseId", "exercise id")
+                val nameIdx = firstOf(cols, "name", "exercise_name", "exercise")
+                val urlIdx  = firstOf(
+                    cols,
+                    // include both "_url" and "_link" variants and generic fallbacks
+                    "youtube_url", "youtube_link", "youtube",
+                    "video_url", "video_link", "video",
+                    "url", "link"
+                )
+
                 var row = r.readNext()
                 while (row != null) {
-                    val id   = row.getOrNull(idIdx)?.trim().orEmpty()
+                    val id  = row.getOrNull(idIdx)?.trim().orEmpty()
                     if (id.isNotEmpty()) {
                         val nm  = row.getOrNull(nameIdx)?.trim()
                         val url = row.getOrNull(urlIdx)?.trim()
                         out[id] = nm to url
-                        if (!nm.isNullOrBlank()) {
-                            // also index by name later when merging
-                        }
                     }
                     row = r.readNext()
                 }
@@ -105,7 +108,7 @@ object ExerciseHelpRepo {
 
     /**
      * Returns map: exerciseId -> Triple(description, instructions, name?)
-     * Tries to auto-detect columns: exercise_id, description, instructions, name
+     * Tries to auto-detect columns robustly (tolerates things like "exercise_id (FK)").
      */
     private fun loadInfos(context: Context): Map<String, Triple<String?, String?, String?>> {
         val out = mutableMapOf<String, Triple<String?, String?, String?>>()
@@ -113,10 +116,12 @@ object ExerciseHelpRepo {
             CSVReader(InputStreamReader(input)).use { r ->
                 val header = r.readNext() ?: return emptyMap()
                 val cols = indexColumns(header)
-                val idIdx   = firstOf(cols, "exercise_id","id","exerciseId","exercise id")
-                val descIdx = firstOf(cols, "description","desc")
-                val instIdx = firstOf(cols, "instructions","instruction","how_to","how to")
-                val nameIdx = firstOf(cols, "name","exercise_name","exercise")
+
+                val idIdx   = firstOf(cols, "exercise_id", "id", "exerciseId", "exercise id")
+                val descIdx = firstOf(cols, "description", "desc")
+                val instIdx = firstOf(cols, "instructions", "instruction", "how_to", "how to")
+                val nameIdx = firstOf(cols, "name", "exercise_name", "exercise")
+
                 var row = r.readNext()
                 while (row != null) {
                     val id = row.getOrNull(idIdx)?.trim().orEmpty()
@@ -133,18 +138,31 @@ object ExerciseHelpRepo {
         return out
     }
 
-    private fun indexColumns(header: Array<String>): Map<String, Int> =
-        header.mapIndexed { i, h -> h.lowercase(Locale.US).trim() to i }.toMap()
-
-    private fun firstOf(map: Map<String, Int>, vararg keys: String): Int {
-        for (k in keys) {
-            map[k.lowercase(Locale.US)]?.let { return it }
-        }
-        // if nothing matches, return -1 so getOrNull() is safe
-        return -1
-    }
+    // --- helpers ---
 
     private fun normalizeName(s: String): String =
         s.lowercase(Locale.US).trim()
             .replace("\\s+".toRegex(), " ")
+
+    // Normalize headers by stripping non-alphanumerics
+    private fun normHeader(h: String): String =
+        h.lowercase(Locale.US).trim().replace("[^a-z0-9]".toRegex(), "")
+
+    private fun indexColumns(header: Array<String>): Map<String, Int> =
+        header.mapIndexed { i, h -> normHeader(h) to i }.toMap()
+
+    /**
+     * Finds the first matching column. We match on either exact normalized key
+     * OR when the column name *contains* the normalized key (so "exercise_id (FK)" matches "exercise_id").
+     */
+    private fun firstOf(map: Map<String, Int>, vararg keys: String): Int {
+        for (k in keys) {
+            val keyNorm = normHeader(k)
+            // exact normalized
+            map[keyNorm]?.let { return it }
+            // contains normalized (for suffixed/prefixed headers like "(FK)")
+            map.entries.firstOrNull { it.key.contains(keyNorm) }?.let { return it.value }
+        }
+        return -1 // safe with getOrNull()
+    }
 }

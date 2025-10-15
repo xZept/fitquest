@@ -437,19 +437,30 @@ class WorkoutSessionActivity : AppCompatActivity() {
         if (url.isNullOrBlank()) return null
         return try {
             val uri = android.net.Uri.parse(url)
-            val host = uri.host ?: return null
-            when {
-                host.contains("youtu.be", true) -> uri.lastPathSegment
-                host.contains("youtube.com", true) -> {
-                    uri.getQueryParameter("v")
-                        ?: uri.pathSegments.windowed(2, 1, true)
-                            .firstOrNull { it.size == 2 && it[0].equals("embed", true) }
-                            ?.get(1)
+            val host = (uri.host ?: "").lowercase()
+
+            val direct = when {
+                host.contains("youtu.be") -> uri.lastPathSegment
+                host.contains("youtube.com") || host.endsWith("youtube") -> {
+                    uri.getQueryParameter("v") ?:
+                    uri.pathSegments.windowed(2, 1, true)
+                        .firstOrNull { it.size == 2 && it[0].equals("embed", true) }?.get(1) ?:
+                    uri.pathSegments.windowed(2, 1, true)
+                        .firstOrNull { it.size == 2 && it[0].equals("shorts", true) }?.get(1)
                 }
                 else -> null
             }
+
+            val id = direct?.takeIf { it.isNotBlank() } ?: run {
+                val m = Regex("""(?:(?:v=)|(?:/shorts/)|(?:/embed/)|(?:youtu\.be/))([A-Za-z0-9_-]{6,})""").find(url)
+                m?.groupValues?.getOrNull(1)
+            }
+
+            id?.takeIf { it.length >= 6 }
         } catch (_: Exception) { null }
     }
+
+
 
     /** Try to infer a useful focus string for the tips dialog if caller didn't pass SESSION_FOCUS. */
     private fun inferSessionFocus(): String {
