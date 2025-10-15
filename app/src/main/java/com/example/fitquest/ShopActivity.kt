@@ -97,20 +97,21 @@ class ShopActivity : AppCompatActivity() {
             window.navigationBarColor = Color.TRANSPARENT
         }
 
-        // Load user, seed catalogs, open tab, refresh balance
+        // Load user, seed catalogs, open tab, refresh balance + BG
         lifecycleScope.launch {
             userId = DataStoreManager.getUserId(this@ShopActivity).first()
             if (userId != -1) {
                 withContext(Dispatchers.IO) { db.userWalletDao().ensure(userId) }
                 seedMonstersOnce()
-                seedItemsOnce()
+                seedItemsOnce() // includes tickets + backgrounds
                 val initialTab = intent?.getStringExtra(EXTRA_SHOP_TAB) ?: TAB_MONSTERS
                 switchTab(initialTab)
                 refreshCoins()
+                updateShopBackground() // apply owned tier (if any)
             }
         }
 
-        applyAnimatedBackground()
+        applyAnimatedBackground(tier = 0) // default until we know user
         applyCoinBadgeAnimation()
         setupNavigationBar()
     }
@@ -132,6 +133,8 @@ class ShopActivity : AppCompatActivity() {
         // keep balances/buttons fresh when returning from Profile or elsewhere
         refreshCoins(alsoRefreshButtons = true)
         if (activeTab == TAB_ITEMS) refreshItems() else refreshMonsters()
+        // Background might have changed if user bought a shop tier
+        updateShopBackground()
     }
 
     /* ---------------- Seeding ---------------- */
@@ -154,18 +157,48 @@ class ShopActivity : AppCompatActivity() {
         dao.deleteAllExcept(catalog.map { it.code })
     }
 
+    /**
+     * Seeds: edit ticket + all background tiers for profile/shop/quest.
+     * Uses a simple pricing curve (tier * 60).
+     */
     private suspend fun seedItemsOnce() = withContext(Dispatchers.IO) {
-        repo.seedItems(
-            Item(
-                code = EDIT_TICKET_CODE,
-                name = "Edit Profile Ticket",
-                spriteRes = "ticket_change",
-                price = 10,
-                consumable = true,
-                category = "ticket",
-                description = "Unlock editing your profile once. Consumed when you save."
-            )
+        val all = mutableListOf<Item>()
+
+        // 1) Edit ticket (consumable)
+        all += Item(
+            code = EDIT_TICKET_CODE,
+            name = "Edit Profile Ticket",
+            spriteRes = "ticket_change",
+            price = 10,
+            consumable = true,
+            category = "ticket",
+            description = "Unlock editing your profile once. Consumed when you save."
         )
+
+        fun bgItem(page: String, tier: Int, spriteRes: String, nice: String) = Item(
+            code = "bg_${page}_tier_${tier}",
+            name = "$nice BG — Tier $tier",
+            spriteRes = spriteRes,
+            price = tier * 1, // tweak to taste
+            consumable = false,
+            category = "bg_$page",
+            description = "Upgrade the $nice page background to tier $tier."
+        )
+
+        // 2) Backgrounds: Profile (uses bg_page_profile_spritesheetN)
+        for (t in 1..6) {
+            all += bgItem("profile", t, "bg_page_profile_spritesheet$t", "Profile")
+        }
+        // 3) Backgrounds: Shop (uses bg_page_shop_spritesheetN)
+        for (t in 1..6) {
+            all += bgItem("shop", t, "bg_page_shop_spritesheet$t", "Shop")
+        }
+        // 4) Backgrounds: Quest/Preview (uses dashboard sheet names per your note)
+        for (t in 1..6) {
+            all += bgItem("quest", t, "bg_page_dashboard_spritesheet$t", "Quest")
+        }
+
+        repo.seedItems(*all.toTypedArray())
     }
 
     /* ---------------- Refreshers ---------------- */
@@ -227,7 +260,7 @@ class ShopActivity : AppCompatActivity() {
         tabItems.select(activeTab == TAB_ITEMS)
     }
 
-    /* ---------------- Animated BG/coins (matches your API/resources) ---------------- */
+    /* ---------------- Animated BG/coins ---------------- */
 
     private fun applyCoinBadgeAnimation() {
         val opts = BitmapFactory.Options().apply { inScaled = false }
@@ -244,9 +277,12 @@ class ShopActivity : AppCompatActivity() {
         coinDrawable = coin
     }
 
-    private fun applyAnimatedBackground() {
+    private fun applyAnimatedBackground(tier: Int) {
+        // Tier 0 is default
+        val resName = if (tier <= 0) "bg_page_shop_spritesheet0" else "bg_page_shop_spritesheet$tier"
+        val resId = resources.getIdentifier(resName, "drawable", packageName)
         val opts = BitmapFactory.Options().apply { inScaled = false }
-        val sheet = BitmapFactory.decodeResource(resources, R.drawable.bg_page_shop_spritesheet0, opts)
+        val sheet = BitmapFactory.decodeResource(resources, if (resId != 0) resId else R.drawable.bg_page_shop_spritesheet0, opts)
         val drawable = SpriteSheetDrawable(
             sheet = sheet,
             rows = 1,
@@ -257,6 +293,15 @@ class ShopActivity : AppCompatActivity() {
         )
         findViewById<RelativeLayout>(R.id.shop_layout).background = drawable
         bgDrawable = drawable
+        bgDrawable?.start()
+    }
+
+    private fun updateShopBackground() {
+        if (userId == -1) return
+        lifecycleScope.launch(Dispatchers.IO) {
+            val tier = repo.getHighestBackgroundTier(userId, "shop")
+            withContext(Dispatchers.Main) { applyAnimatedBackground(tier) }
+        }
     }
 
     /* ---------------- Nav ---------------- */
@@ -280,7 +325,7 @@ class ShopActivity : AppCompatActivity() {
         }
     }
 
-    /* ---------------- Monster adapter (uses your item_shop_monster.xml ids) ---------------- */
+    /* ---------------- Monster adapter ---------------- */
 
     private inner class MonsterAdapter : RecyclerView.Adapter<MonsterAdapter.VH>() {
 
@@ -367,7 +412,7 @@ class ShopActivity : AppCompatActivity() {
         }
     }
 
-    /* ---------------- Items adapter (new) ---------------- */
+    /* ---------------- Items adapter (tickets + backgrounds) ---------------- */
 
     private inner class ItemAdapter : RecyclerView.Adapter<ItemAdapter.VH>() {
 
@@ -396,42 +441,85 @@ class ShopActivity : AppCompatActivity() {
             holder.name.text = row.name
             holder.price.text = "${row.price} coins"
 
-            // qty badge
-            if (row.quantity > 0) {
+            val isBackground = row.code.startsWith("bg_")
+            val ownedQty = row.quantity
+
+            // qty badge (hide for backgrounds; they are 1x)
+            if (!isBackground && ownedQty > 0) {
                 holder.qty.visibility = View.VISIBLE
-                holder.qty.text = "x${row.quantity}"
+                holder.qty.text = "x${ownedQty}"
             } else {
                 holder.qty.visibility = View.GONE
             }
 
-            val notEnough = row.price > balance
-            holder.overlay.visibility = if (notEnough) View.VISIBLE else View.GONE
+            // Set a safe default; we’ll refine once we know lock/owned states
+            holder.overlay.visibility = View.GONE
+            holder.btn.isEnabled = false
+            holder.btn.isClickable = false
+            holder.btn.setImageResource(R.drawable.indicator_not_enough)
 
-            holder.btn.setImageResource(if (notEnough) R.drawable.indicator_not_enough else R.drawable.button_buy)
-            holder.btn.isEnabled = !notEnough
-            holder.btn.isClickable = !notEnough
-            holder.btn.contentDescription = if (notEnough) "Not enough coins" else "Buy ${row.name}"
+            // Resolve lock/owned/enough
+            lifecycleScope.launch(Dispatchers.IO) {
+                val locked = if (isBackground) repo.isBackgroundLocked(userId, row.code) else false
+                val owned = isBackground && ownedQty > 0
+                val notEnough = row.price > balance
+                val canBuy = !owned && !locked && !notEnough
 
-            holder.btn.setOnClickListener {
-                if (notEnough) return@setOnClickListener
-                it.startAnimation(pressAnim)
-                holder.btn.isEnabled = false
-
-                lifecycleScope.launch {
-                    val result = withContext(Dispatchers.IO) { repo.purchaseItem(userId, row.code) }
-                    when (result) {
-                        is PurchaseResult.Success -> {
-                            refreshCoins()
-                            refreshItems()
-                            Toast.makeText(this@ShopActivity, "Purchased ${row.name}!", Toast.LENGTH_SHORT).show()
+                withContext(Dispatchers.Main) {
+                    val imgRes = when {
+                        owned -> R.drawable.indicator_owned
+                        locked -> {
+                            val id = resources.getIdentifier("indicator_locked", "drawable", packageName)
+                            if (id != 0) id else R.drawable.indicator_not_enough
                         }
-                        is PurchaseResult.Insufficient -> {
-                            Toast.makeText(this@ShopActivity, "Not enough coins.", Toast.LENGTH_SHORT).show()
-                            notifyItemChanged(position)
-                        }
-                        else -> {
-                            refreshItems()
-                            Toast.makeText(this@ShopActivity, "Error purchasing item.", Toast.LENGTH_SHORT).show()
+                        notEnough -> R.drawable.indicator_not_enough
+                        else -> R.drawable.button_buy
+                    }
+                    holder.btn.setImageResource(imgRes)
+                    holder.overlay.visibility = if (locked || notEnough) View.VISIBLE else View.GONE
+                    holder.btn.isEnabled = canBuy
+                    holder.btn.isClickable = canBuy
+
+                    holder.btn.contentDescription = when {
+                        owned -> "${row.name} already owned"
+                        locked -> "Locked. Buy the previous tier first."
+                        notEnough -> "Not enough coins"
+                        else -> "Buy ${row.name}"
+                    }
+
+                    holder.btn.setOnClickListener {
+                        if (!canBuy) return@setOnClickListener
+                        it.startAnimation(pressAnim)
+                        holder.btn.isEnabled = false
+
+                        lifecycleScope.launch {
+                            val result = withContext(Dispatchers.IO) { repo.purchaseItem(userId, row.code) }
+                            when (result) {
+                                is PurchaseResult.Success -> {
+                                    refreshCoins()
+                                    refreshItems()
+                                    Toast.makeText(this@ShopActivity, "Purchased ${row.name}!", Toast.LENGTH_SHORT).show()
+
+                                    // If they bought a shop BG, apply immediately
+                                    if (row.code.startsWith("bg_shop_")) updateShopBackground()
+                                }
+                                is PurchaseResult.Insufficient -> {
+                                    Toast.makeText(this@ShopActivity, "Not enough coins.", Toast.LENGTH_SHORT).show()
+                                    notifyItemChanged(position)
+                                }
+                                is PurchaseResult.LockedByProgress -> {
+                                    Toast.makeText(this@ShopActivity, "Locked. Buy the previous tier first.", Toast.LENGTH_LONG).show()
+                                    notifyItemChanged(position)
+                                }
+                                is PurchaseResult.AlreadyOwned -> {
+                                    refreshItems()
+                                    Toast.makeText(this@ShopActivity, "Already owned.", Toast.LENGTH_SHORT).show()
+                                }
+                                else -> {
+                                    refreshItems()
+                                    Toast.makeText(this@ShopActivity, "Error purchasing item.", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         }
                     }
                 }

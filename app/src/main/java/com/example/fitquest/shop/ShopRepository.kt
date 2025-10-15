@@ -51,10 +51,15 @@ class ShopRepository(private val db: AppDatabase) {
 
     suspend fun getBalance(userId: Int): Int = db.userWalletDao().getCoins(userId) ?: 0
 
-    /* ---------------- ITEMS (new) ---------------- */
+    /* ---------------- ITEMS (tickets + non-consumable backgrounds) ---------------- */
 
+    /**
+     * Seeds the entire item catalog (tickets, backgrounds, etc.) in **one shot**.
+     * This replaces the previous "delete all except provided" behavior safely.
+     */
     suspend fun seedItems(vararg items: Item) {
         val idao = db.itemDao()
+        // Upsert each, then drop those not present.
         items.forEach { it ->
             val inserted = idao.insertIgnore(it)
             if (inserted == -1L) {
@@ -74,25 +79,58 @@ class ShopRepository(private val db: AppDatabase) {
 
     suspend fun listItemsForUser(userId: Int) = db.itemDao().listForUser(userId)
 
+    /**
+     * Purchase logic:
+     *  - If consumable → old behavior (stackable quantity)
+     *  - If background (code starts with bg_) → non-consumable + tier prereq gate
+     */
     suspend fun purchaseItem(userId: Int, code: String): PurchaseResult = db.withTransaction {
         val wdao = db.userWalletDao()
         val idao = db.itemDao()
 
         val item = idao.getByCode(code) ?: return@withTransaction PurchaseResult.NotFound
 
-        wdao.ensure(userId)
-        val balance = wdao.getCoins(userId) ?: 0
-        if (balance < item.price) return@withTransaction PurchaseResult.Insufficient(balance, item.price)
+        val isBackground = item.code.startsWith("bg_")
+        val alreadyQty = idao.getQuantity(userId, code) ?: 0
 
-        // unlimited purchases allowed
-        idao.insertUserItem(UserItem(userId = userId, itemCode = code, quantity = 0))
-        wdao.add(userId, -item.price)
-        idao.addQuantity(userId, code, +1)
+        if (isBackground) {
+            // Non-consumable: if owned, bail early.
+            if (alreadyQty > 0) return@withTransaction PurchaseResult.AlreadyOwned
 
-        PurchaseResult.Success(wdao.getCoins(userId) ?: 0)
+            // Enforce tier prerequisite (tier N requires tier N-1)
+            val tier = parseTier(item.code)
+            val prevCode = if (tier > 1) previousTierCode(item.code, tier) else null
+            if (prevCode != null) {
+                val havePrev = (idao.getQuantity(userId, prevCode) ?: 0) > 0
+                if (!havePrev) return@withTransaction PurchaseResult.LockedByProgress
+            }
+
+            // Coins check
+            wdao.ensure(userId)
+            val balance = wdao.getCoins(userId) ?: 0
+            if (balance < item.price) return@withTransaction PurchaseResult.Insufficient(balance, item.price)
+
+            // Own once (quantity = 1)
+            idao.insertUserItem(UserItem(userId = userId, itemCode = item.code, quantity = 0))
+            wdao.add(userId, -item.price)
+            idao.addQuantity(userId, item.code, +1)
+
+            return@withTransaction PurchaseResult.Success(wdao.getCoins(userId) ?: 0)
+        } else {
+            // Consumables / misc: unlimited purchases allowed
+            wdao.ensure(userId)
+            val balance = wdao.getCoins(userId) ?: 0
+            if (balance < item.price) return@withTransaction PurchaseResult.Insufficient(balance, item.price)
+
+            idao.insertUserItem(UserItem(userId = userId, itemCode = item.code, quantity = 0))
+            wdao.add(userId, -item.price)
+            idao.addQuantity(userId, item.code, +1)
+
+            return@withTransaction PurchaseResult.Success(wdao.getCoins(userId) ?: 0)
+        }
     }
 
-    /* ---------------- Item usage helpers (for Profile) ---------------- */
+    /* ---------------- Item usage helpers (for Profile, Shop UI) ---------------- */
 
     suspend fun getItemQuantity(userId: Int, code: String): Int {
         return db.itemDao().getQuantity(userId, code) ?: 0
@@ -103,5 +141,52 @@ class ShopRepository(private val db: AppDatabase) {
         if (have < qty) return@withTransaction false
         db.itemDao().addQuantity(userId, code, -qty)
         true
+    }
+
+    /* ---------------- Background helpers ---------------- */
+
+    /**
+     * Highest owned tier for a page ("profile" | "shop" | "quest"). 0 if none.
+     */
+    suspend fun getHighestBackgroundTier(userId: Int, page: String): Int {
+        val pageKey = pageKey(page)
+        // scan from highest tier downward (6..1)
+        for (tier in 6 downTo 1) {
+            val code = "bg_${pageKey}_tier_${tier}"
+            if ((db.itemDao().getQuantity(userId, code) ?: 0) > 0) return tier
+        }
+        return 0
+    }
+
+    /**
+     * True if background item is locked for this user (missing previous tier).
+     */
+    suspend fun isBackgroundLocked(userId: Int, code: String): Boolean {
+        if (!code.startsWith("bg_")) return false
+        val tier = parseTier(code)
+        val prev = if (tier > 1) previousTierCode(code, tier) else null
+        return prev != null && (db.itemDao().getQuantity(userId, prev) ?: 0) == 0
+    }
+
+    /* ----- utils ----- */
+
+    private fun parseTier(code: String): Int {
+        // bg_{page}_tier_{N}
+        val idx = code.lastIndexOf("_tier_")
+        return if (idx >= 0) code.substring(idx + 6).toIntOrNull() ?: 1 else 1
+    }
+
+    private fun previousTierCode(code: String, tier: Int): String {
+        return code.replace("_tier_${tier}", "_tier_${tier - 1}")
+    }
+
+    private fun pageKey(page: String): String {
+        val x = page.trim().lowercase()
+        return when {
+            x.contains("profile") -> "profile"
+            x.contains("quest") || x.contains("dashboard") -> "quest"
+            x.contains("shop") -> "shop"
+            else -> x
+        }
     }
 }

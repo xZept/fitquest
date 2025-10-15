@@ -27,6 +27,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.view.MotionEvent
+import com.example.fitquest.cosmetics.BgCosmetics         // <-- NEW
+import com.example.fitquest.shop.ShopRepository          // <-- NEW
 
 class QuestGeneratorActivity : AppCompatActivity() {
 
@@ -35,7 +37,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
     private lateinit var spSplit: Spinner
     private lateinit var spFocus: Spinner
 
-    // Cached so Back from preview can re-open immediately if needed in future
     private var lastSplit = ""
     private var lastFocus = ""
     private var lastInitialNames: List<String> = emptyList()
@@ -52,7 +53,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
     private val previewLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { res ->
-        // Saving from preview
         if (res.resultCode != RESULT_OK || res.data == null) return@registerForActivityResult
         val names = res.data!!.getStringArrayListExtra("RESULT_NAMES") ?: arrayListOf()
         val split = res.data!!.getStringExtra("SPLIT") ?: "Push"
@@ -81,22 +81,13 @@ class QuestGeneratorActivity : AppCompatActivity() {
                 }
 
             db.activeQuestDao().upsert(
-                ActiveQuest(
-                    userId = uid,
-                    split = split,
-                    modifier = focus,
-                    exercises = finalList,
-                    startedAt = null
-                )
+                ActiveQuest(userId = uid, split = split, modifier = focus, exercises = finalList, startedAt = null)
             )
 
             withContext(Dispatchers.Main) {
                 Toast.makeText(this@QuestGeneratorActivity, "Quest saved!", Toast.LENGTH_SHORT).show()
-
-                // --> pass split/focus to WorkoutActivity so tips can filter correctly
                 startActivity(Intent(this@QuestGeneratorActivity, WorkoutActivity::class.java).apply {
-                    putExtra("SPLIT", split)   // e.g., "Push" | "Pull" | "Legs" | "Upper"
-                    putExtra("FOCUS", focus)   // "General" | "Hypertrophy" | "Strength"
+                    putExtra("SPLIT", split); putExtra("FOCUS", focus)
                 })
                 finish()
             }
@@ -109,40 +100,37 @@ class QuestGeneratorActivity : AppCompatActivity() {
 
         val root = findViewById<View>(R.id.root)
 
-        val opts = BitmapFactory.Options().apply { inPreferredConfig = Bitmap.Config.ARGB_8888 }
-        bgBitmap = BitmapFactory.decodeResource(resources, R.drawable.bg_page_dashboard_spritesheet0, opts)
-
-        val rows = 1
-        val cols = 12
-        val fps  = 12
-
-        bgSprite = SpriteSheetDrawable(
-            sheet = requireNotNull(bgBitmap),
-            rows = rows,
-            cols = cols,
-            fps = fps,
-            loop = true,
-            scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP // fills screen nicely
-        )
-
+        // --- BACKGROUND COSMETIC: default tier 0, then upgrade once we know user
+        bgSprite = BgCosmetics.buildDrawable(this, BgCosmetics.Page.QUEST, 0)
         root.background = bgSprite
+        bgSprite?.start()
+
+        // after userId is known, upgrade if possible
+        lifecycleScope.launch {
+            val uid = DataStoreManager.getUserId(this@QuestGeneratorActivity).first()
+            val tier = withContext(Dispatchers.IO) {
+                val repo = ShopRepository(AppDatabase.getInstance(applicationContext))
+                BgCosmetics.highestOwnedTier(uid, repo, BgCosmetics.Page.QUEST)
+            }
+            if (tier > 0) {
+                val up = BgCosmetics.buildDrawable(this@QuestGeneratorActivity, BgCosmetics.Page.QUEST, tier)
+                root.background = up
+                bgSprite?.stop()
+                bgSprite = up
+                up.start()
+            }
+        }
 
         showBubble(welcomeMsg)
 
         val welcome = findViewById<View>(R.id.welcome_bubble)
-        // Show with a quick fade-in
         welcome.alpha = 0f
         welcome.visibility = View.VISIBLE
         welcome.animate().alpha(1f).setDuration(250).start()
 
-        // Auto-hide after 6 seconds with a fade-out
         lifecycleScope.launch {
             delay(6000)
-            welcome.animate()
-                .alpha(0f)
-                .setDuration(250)
-                .withEndAction { welcome.visibility = View.GONE }
-                .start()
+            welcome.animate().alpha(0f).setDuration(250).withEndAction { welcome.visibility = View.GONE }.start()
         }
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
@@ -153,23 +141,15 @@ class QuestGeneratorActivity : AppCompatActivity() {
         spSplit = findViewById(R.id.sp_split)
         spFocus = findViewById(R.id.sp_focus)
 
-        // --- Split: show help on user tap, and after a user-driven selection ---
         var splitTouched = false
         spSplit.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) {
-                splitTouched = true
-                showBubble(splitHelp)
-            }
-            false // don't consume; let the spinner open
+            if (event.action == MotionEvent.ACTION_DOWN) { splitTouched = true; showBubble(splitHelp) }
+            false
         }
 
-        // --- Focus: show help on tap; detail after selection ---
         var focusTouched = false
         spFocus.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) {
-                focusTouched = true
-                showBubble(focusHelp)
-            }
+            if (event.action == MotionEvent.ACTION_DOWN) { focusTouched = true; showBubble(focusHelp) }
             false
         }
 
@@ -185,55 +165,26 @@ class QuestGeneratorActivity : AppCompatActivity() {
             .apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
 
         findViewById<ImageButton>(R.id.btn_generate).setOnClickListener {
-            it.startAnimation(pressAnim)
-            generateAndOpenPreview()
+            it.startAnimation(pressAnim); generateAndOpenPreview()
         }
         findViewById<ImageButton?>(R.id.btn_cancel)?.setOnClickListener {
-            it.startAnimation(pressAnim)
-            finish()
-            overridePendingTransition(0, 0)
+            it.startAnimation(pressAnim); finish(); overridePendingTransition(0, 0)
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        bgSprite?.start()
-    }
-
-    override fun onStop() {
-        bgSprite?.stop()
-        super.onStop()
-    }
-
-    override fun onDestroy() {
-        bgSprite?.stop()
-        // Optional: if you’re certain this bitmap isn’t reused elsewhere:
-        // bgBitmap?.recycle()
-        bgBitmap = null
-        bgSprite = null
-        super.onDestroy()
-    }
+    override fun onStart() { super.onStart(); bgSprite?.start() }
+    override fun onStop() { bgSprite?.stop(); super.onStop() }
+    override fun onDestroy() { bgSprite?.stop(); bgBitmap = null; bgSprite = null; super.onDestroy() }
 
     private fun showBubble(text: String, autoHideMs: Long = 6000L) {
         val bubble = findViewById<View>(R.id.welcome_bubble)
         val tv = findViewById<TextView>(R.id.tv_welcome)
-
-        bubbleJob?.cancel()
-        bubble.animate().cancel()
-
-        tv.text = text
-        bubble.alpha = 0f
-        bubble.visibility = View.VISIBLE
-
+        bubbleJob?.cancel(); bubble.animate().cancel()
+        tv.text = text; bubble.alpha = 0f; bubble.visibility = View.VISIBLE
         bubble.animate().alpha(1f).setDuration(200).start()
-
         bubbleJob = lifecycleScope.launch {
             delay(autoHideMs)
-            bubble.animate()
-                .alpha(0f)
-                .setDuration(200)
-                .withEndAction { bubble.visibility = View.GONE }
-                .start()
+            bubble.animate().alpha(0f).setDuration(200).withEndAction { bubble.visibility = View.GONE }.start()
         }
     }
 
@@ -246,24 +197,18 @@ class QuestGeneratorActivity : AppCompatActivity() {
                 return@launch
             }
 
-            // Pull selections with safe fallbacks
             val split = spSplit.selectedItem?.toString()
                 ?: (spSplit.adapter?.getItem(0)?.toString() ?: "Push")
             val focus = spFocus.selectedItem?.toString()
                 ?: (spFocus.adapter?.getItem(0)?.toString() ?: "General")
 
-            // User equipment (normalize to simple lowercase tokens; your DB already stores canonical keys)
             val settings = db.userSettingsDao().getByUserId(uid)
             val ownedEquip: Set<String> = settings?.equipmentCsv
-                ?.split('|')
-                ?.mapNotNull { it.trim().lowercase().ifEmpty { null } }
-                ?.toSet()
+                ?.split('|')?.mapNotNull { it.trim().lowercase().ifEmpty { null } }?.toSet()
                 ?: emptySet()
 
-            // Split-aware target size for “one-per-pattern (+ finisher)”
             val targetItems = computeTargetItems(split)
 
-            // Build structured plan
             val planResult = gitWorkoutEngine.buildStructuredPlan(
                 context = this@QuestGeneratorActivity,
                 split = split,
@@ -290,22 +235,16 @@ class QuestGeneratorActivity : AppCompatActivity() {
             lastInitialNames = initialList.map { it.name }.distinctBy { norm(it) }
             lastAddableNames = addablePool.distinctBy { norm(it) }
 
-            // Jump straight to preview
             val intent = Intent(this@QuestGeneratorActivity, QuestPreviewActivity::class.java).apply {
-                putExtra("MODE", "advanced") // naming kept for compatibility
+                putExtra("MODE", "advanced")
                 putExtra("SPLIT", split)
                 putExtra("FOCUS", focus)
                 putStringArrayListExtra("START_NAMES", ArrayList(lastInitialNames))
                 putStringArrayListExtra("ADDABLE_NAMES", ArrayList(lastAddableNames))
             }
-            withContext(Dispatchers.Main) {
-                previewLauncher.launch(intent)
-                overridePendingTransition(0, 0)
-            }
+            withContext(Dispatchers.Main) { previewLauncher.launch(intent); overridePendingTransition(0, 0) }
         }
     }
-
-    // --- utils ---
 
     private fun hideSystemBars() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -330,11 +269,11 @@ class QuestGeneratorActivity : AppCompatActivity() {
     private fun computeTargetItems(split: String): Int {
         val s = split.trim().lowercase()
         return when {
-            s.contains("push") -> 5     // horiz push + vert push + triceps + shoulder iso + finisher
-            s.contains("pull") -> 5     // horiz pull + vert pull + biceps + rear/scap + finisher
-            s.contains("leg") || s.contains("lower") -> 4 // squat + hinge + accessory + finisher
-            s.contains("upper") -> 5    // horiz push + horiz pull + (vert push/pull) + arms/rear
-            s.contains("full") && s.contains("body") -> 5 // knee + hinge + push + pull + accessory
+            s.contains("push") -> 5
+            s.contains("pull") -> 5
+            s.contains("leg") || s.contains("lower") -> 4
+            s.contains("upper") -> 5
+            s.contains("full") && s.contains("body") -> 5
             else -> 5
         }
     }

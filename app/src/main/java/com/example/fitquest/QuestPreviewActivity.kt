@@ -26,6 +26,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.fitquest.cosmetics.BgCosmetics          // <-- NEW
+import com.example.fitquest.shop.ShopRepository           // <-- NEW
 
 class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
 
@@ -44,12 +46,9 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
 
     private val items = mutableListOf<String>()
 
-    // Addable lists
     private val addableSuggestions = mutableListOf<String>() // dynamic (after deletions)
     private val addableBaseline = mutableListOf<String>()    // from intent
-
-    // Track recent deletions (MRU, most recent first)
-    private val recentlyRemoved = ArrayDeque<String>() // keep small
+    private val recentlyRemoved = ArrayDeque<String>()       // MRU
 
     private var bgDrawable: SpriteSheetDrawable? = null
     private lateinit var itemTouchHelper: ItemTouchHelper
@@ -68,7 +67,7 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
         tvBanner.setOnClickListener { hideBannerRunnable.run() }
 
         db = AppDatabase.getInstance(applicationContext)
-        initAnimatedBg(rows = 1, cols = 12, fps = 12)
+        initAnimatedBg()
 
         rv = findViewById(R.id.rv_exercises)
         btnAdd   = findViewById(R.id.btn_add)
@@ -156,20 +155,9 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
         }
     }
 
-    override fun onPause() {
-        bgDrawable?.stop()
-        super.onPause()
-    }
-
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) hideNavBar()
-    }
-
-    override fun finish() {
-        super.finish()
-        overridePendingTransition(0, 0)
-    }
+    override fun onPause() { bgDrawable?.stop(); super.onPause() }
+    override fun onWindowFocusChanged(hasFocus: Boolean) { super.onWindowFocusChanged(hasFocus); if (hasFocus) hideNavBar() }
+    override fun finish() { super.finish(); overridePendingTransition(0, 0) }
 
     private fun showBanner(message: String, durationMs: Long) {
         tvBanner.text = message
@@ -181,24 +169,32 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
     }
 
     private val hideBannerRunnable = Runnable {
-        tvBanner.animate()
-            .alpha(0f)
-            .setDuration(400)
-            .withEndAction {
-                tvBanner.visibility = View.INVISIBLE
-                tvBanner.alpha = 1f
-            }
-            .start()
+        tvBanner.animate().alpha(0f).setDuration(400).withEndAction {
+            tvBanner.visibility = View.INVISIBLE; tvBanner.alpha = 1f
+        }.start()
     }
 
-    private fun initAnimatedBg(rows: Int, cols: Int, fps: Int) {
-        val bmp = BitmapFactory.decodeResource(resources, R.drawable.bg_page_dashboard_spritesheet0)
-        bgDrawable = SpriteSheetDrawable(
-            sheet = bmp, rows = rows, cols = cols, fps = fps, loop = true,
-            scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
-        )
-        findViewById<View>(R.id.quest_root).background = bgDrawable
+    // --- COSMETIC BG ---
+    private fun initAnimatedBg() {
+        val root = findViewById<View>(R.id.quest_root)
+        bgDrawable = BgCosmetics.buildDrawable(this, BgCosmetics.Page.QUEST, 0)
+        root.background = bgDrawable
         bgDrawable?.start()
+
+        lifecycleScope.launch {
+            val uid = DataStoreManager.getUserId(this@QuestPreviewActivity).first()
+            val tier = withContext(Dispatchers.IO) {
+                val repo = ShopRepository(AppDatabase.getInstance(applicationContext))
+                BgCosmetics.highestOwnedTier(uid, repo, BgCosmetics.Page.QUEST)
+            }
+            if (tier > 0) {
+                val up = BgCosmetics.buildDrawable(this@QuestPreviewActivity, BgCosmetics.Page.QUEST, tier)
+                root.background = up
+                bgDrawable?.stop()
+                bgDrawable = up
+                up.start()
+            }
+        }
     }
 
     private fun resolveFirstDrawable(vararg names: String): Int {
@@ -223,8 +219,7 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         controller.hide(WindowInsetsCompat.Type.navigationBars())
-        controller.systemBarsBehavior =
-            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
 
     override fun onStartDrag(viewHolder: RecyclerView.ViewHolder) {
@@ -236,7 +231,6 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
 
     private fun showAddDialog(useSuggestions: Boolean, adapter: ExerciseAdapter) {
         val currentPool = if (useSuggestions) addableSuggestions else addableBaseline
-
         val choices = currentPool
             .filter { candidate -> items.none { it.equals(candidate, ignoreCase = true) } }
             .distinctBy { it.trim().lowercase() }
@@ -259,22 +253,18 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
         val builder = AlertDialog.Builder(this)
             .setTitle(title)
             .setItems(choices) { _, which ->
-                items.add(choices[which])
-                adapter.notifyDataSetChanged()
+                items.add(choices[which]); adapter.notifyDataSetChanged()
             }
             .setNegativeButton("Cancel", null)
 
         if (useSuggestions) {
             builder.setNeutralButton("Show all that fit my filter") { dlg, _ ->
-                dlg.dismiss()
-                showAddDialog(useSuggestions = false, adapter = adapter)
+                dlg.dismiss(); showAddDialog(useSuggestions = false, adapter = adapter)
             }
         }
 
         builder.show()
     }
-
-    // --- utils ---
 
     private suspend fun userOwnedEquip(): Set<String> {
         val uid = DataStoreManager.getUserId(this@QuestPreviewActivity).first()
@@ -303,8 +293,7 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-            val v = LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_editable_exercise, parent, false)
+            val v = LayoutInflater.from(parent.context).inflate(R.layout.item_editable_exercise, parent, false)
             return VH(v)
         }
 
@@ -324,7 +313,6 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
                     onDataChanged()
 
                     lifecycleScope.launch {
-                        // MRU list of deletions
                         recentlyRemoved.remove(removedName)
                         recentlyRemoved.addFirst(removedName)
                         while (recentlyRemoved.size > 5) recentlyRemoved.removeLast()
@@ -332,11 +320,11 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
                         val owned = userOwnedEquip()
                         val suggestions = gitWorkoutEngine.buildAddablePoolForReplacementsBatch(
                             context = this@QuestPreviewActivity,
-                            removedExerciseNames = recentlyRemoved.toList(), // include ALL removed, most-recent first
+                            removedExerciseNames = recentlyRemoved.toList(),
                             split = split,
                             focus = focus,
                             ownedEquipCanonical = owned,
-                            currentPlanNames = data, // exclude what remains
+                            currentPlanNames = data,
                             limit = 60
                         )
 
@@ -385,7 +373,7 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
 // ItemTouchHelper glue (top-level)
 interface ItemTouchHelperAdapter {
     fun onItemMove(fromPosition: Int, toPosition: Int): Boolean
-    fun onItemDismiss(position: Int) {} // not used
+    fun onItemDismiss(position: Int) {}
 }
 
 class SimpleItemTouchHelperCallback(
@@ -419,8 +407,7 @@ class SimpleItemTouchHelperCallback(
         }
     }
     override fun clearView(recyclerView: androidx.recyclerview.widget.RecyclerView, viewHolder: androidx.recyclerview.widget.RecyclerView.ViewHolder) {
-        super.clearView(recyclerView, viewHolder)
-        viewHolder.itemView.alpha = 1f
+        super.clearView(recyclerView, viewHolder); viewHolder.itemView.alpha = 1f
     }
 }
 

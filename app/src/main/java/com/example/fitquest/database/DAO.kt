@@ -552,3 +552,4 @@ interface ItemDao {
     @Query("DELETE FROM userItem WHERE userId = :userId AND itemCode = :code")
     suspend fun deleteUserItem(userId: Int, code: String)
 }
+
