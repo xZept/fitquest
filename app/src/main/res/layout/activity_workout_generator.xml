@@ -7,7 +7,6 @@
     android:background="@drawable/workout_subpage_bg"
     tools:context=".WorkoutGeneratorActivity">
 
-    <!-- Scrollable Inputs -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="375dp"

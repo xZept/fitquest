@@ -63,7 +63,7 @@ class SessionDetailActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.btn_back).setOnClickListener {
             it.startAnimation(pressAnim)
-            onBackPressedDispatcher.onBackPressed() // or: finish()
+            onBackPressedDispatcher.onBackPressed()
         }
     }
 
@@ -81,6 +81,4 @@ class SessionDetailActivity : AppCompatActivity() {
                         android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
         }
     }
-
-
 }

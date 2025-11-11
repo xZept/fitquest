@@ -66,15 +66,9 @@ class MacroActivity : AppCompatActivity() {
     private val foodRepo by lazy { (application as FitQuestApp).foodRepository }
     private val TAG = "MacroActivity"
 
-
-    // Cache sprites so we don’t re-decode on every update
     private var spriteSkinny: SpriteSheetDrawable? = null
     private var spriteNormal: SpriteSheetDrawable? = null
     private var spriteFat: SpriteSheetDrawable? = null
-
-    // tune to your sheet’s grid & speed
-
-
 
     data class MealItem(
         val mealId: Int,
@@ -90,14 +84,10 @@ class MacroActivity : AppCompatActivity() {
 
     companion object {
         private const val TOUR_PREFS = "onboarding"
-        private const val MACRO_TOUR_DONE_KEY_PREFIX = "macro_tour_done_v2_u_" // per-user key
-        private const val FORCE_TOUR = false                                   // set true TEMPORARILY to test
-        private val macroTourShownUsersThisProcess = mutableSetOf<Int>()        // per-process guard (per user)
+        private const val MACRO_TOUR_DONE_KEY_PREFIX = "macro_tour_done_v2_u_"
+        private const val FORCE_TOUR = false
+        private val macroTourShownUsersThisProcess = mutableSetOf<Int>()
     }
-
-
-
-
 
     private lateinit var pressAnim: android.view.animation.Animation
 
@@ -113,20 +103,15 @@ class MacroActivity : AppCompatActivity() {
         macroPlan = null
 
         lifecycleScope.launch {
-            // Always re-fetch the active user (in case of account switch)
             currentUserId = DataStoreManager.getUserId(this@MacroActivity).first()
 
             if (currentUserId > 0) {
-                // Show the tour for THIS user only
                 showMacroTourIfNeeded(currentUserId)
 
-                // Keep UI fresh
                 refreshTodayMeals()
                 refreshTodayTotals()
             }
         }
-
-        // Catch up remaining days if the device was off for days
         lifecycleScope.launch(Dispatchers.IO) {
             val zone = java.time.ZoneId.of("Asia/Manila")
             val userId = currentUserId
@@ -159,24 +144,18 @@ class MacroActivity : AppCompatActivity() {
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Initialize repo
         repository = FitquestRepository(this)
 
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_macro)
 
-        // decode once
         spriteSkinny = buildSprite(R.drawable.capybara_skinny)
         spriteNormal = buildSprite(R.drawable.capybara_normal)
         spriteFat    = buildSprite(R.drawable.capybara_fat)
 
-// show an initial animation
         capybaraView.setImageDrawable(spriteSkinny)
         spriteSkinny?.start()
 
-
-
-        // INIT FIRST so any early clicks won’t crash
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
 
         breakfastContainer = findViewById(R.id.breakfastContainer)
@@ -214,7 +193,6 @@ class MacroActivity : AppCompatActivity() {
             overridePendingTransition(0, 0)
         }
 
-        // (Removed duplicate listener) — single settings listener
         findViewById<ImageButton>(R.id.btn_settings).setOnClickListener {
             it.startAnimation(pressAnim)
             showMacroSettingsDialog()
@@ -390,13 +368,13 @@ class MacroActivity : AppCompatActivity() {
             val plan = macroPlan ?: db.macroPlanDao().getLatestForUser(currentUserId)
 
             withContext(Dispatchers.Main) {
-                // Goals (limits)
+                // Goals
                 val goalCalories = (plan?.calories ?: 3010).toInt()
                 val goalProtein = (plan?.protein ?: 151).toInt()
                 val goalCarbs = (plan?.carbs ?: 376).toInt()
                 val goalFat = (plan?.fat ?: 100).toInt()
 
-                // Done values (Int)
+                // Done values
                 val doneCalories = totals.calories.roundToInt()
                 val doneProtein = totals.protein.roundToInt()
                 val doneCarbs = totals.carbohydrate.roundToInt()
@@ -411,13 +389,13 @@ class MacroActivity : AppCompatActivity() {
                 val ok = ContextCompat.getColor(this@MacroActivity, R.color.progress_ok)
                 val over = ContextCompat.getColor(this@MacroActivity, R.color.progress_over)
 
-                // Calories (Material progress)
+                // Calories
                 val caloriesPI = findViewById<CircularProgressIndicator>(R.id.calories_progress)
                 caloriesPI.max = goalCalories.coerceAtLeast(1)
                 caloriesPI.setProgressCompat(doneCalories.coerceIn(0, caloriesPI.max), true)
                 caloriesPI.setIndicatorColor(if (doneCalories > goalCalories) over else ok)
 
-                // Protein/Carbs/Fat (classic ProgressBar)
+                // Protein/Carbs/Fat
                 fun setLimited(pbId: Int, done: Int, goal: Int) {
                     val pb = findViewById<ProgressBar>(pbId)
                     val limit = goal.coerceAtLeast(1)
@@ -540,7 +518,6 @@ class MacroActivity : AppCompatActivity() {
 
             val name = TextView(this).apply {
                 text = (row.foodName ?: "Food #${row.log.foodId}") + " • " + qtyText
-//                text = (row.foodName ?: "Food #${row.log.foodId}") + " • ${row.log.grams.toInt()}g"
                 textSize = 15f
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
@@ -587,9 +564,6 @@ class MacroActivity : AppCompatActivity() {
 
         view.findViewById<TextView>(R.id.tv_message).text =
             "${row.log.mealType} • $previewQty • ${row.log.calories.roundToInt()} kcal"
-//            "${row.log.mealType} • ${row.log.grams.roundToInt()} g • ${row.log.calories.roundToInt()} kcal"
-
-        // Optional skinning
         val editRes = resources.getIdentifier("button_edit", "drawable", packageName)
         if (editRes != 0) {
             view.findViewById<ImageButton>(R.id.btn_edit_img).setBackgroundResource(editRes)
@@ -617,7 +591,7 @@ class MacroActivity : AppCompatActivity() {
                     showEditServingDialog(
                         repo = foodRepo,
                         userId = currentUserId,
-                        logId = row.log.logId,                                // ← NEW
+                        logId = row.log.logId,
                         foodId = fdcId,
                         defaultAmount = (row.log.inputQuantity ?: row.log.grams).toDouble(),
                         defaultUnit = (row.log.inputUnit ?: MeasurementType.GRAM),
@@ -680,7 +654,6 @@ class MacroActivity : AppCompatActivity() {
         defaultApiLabel: String? = null,
         onLogged: (logId: Long) -> Unit = {}
     ) {
-        // Use a Material base theme to avoid InflateException for M3 widgets
         val materialCtx = ContextThemeWrapper(
             this,
             com.google.android.material.R.style.Theme_Material3_DayNight
@@ -690,31 +663,23 @@ class MacroActivity : AppCompatActivity() {
         val binding = DialogEditServingBinding.inflate(inflater)
         val view = binding.root
 
-        // Pre-fill amount/unit if you have fields for them in the layout
         binding.etAmount?.setText(
             if (defaultAmount % 1.0 == 0.0) defaultAmount.toInt().toString() else defaultAmount.toString()
         )
 
         var apiPortions: List<ApiPortion> = emptyList()
 
-        // Units: load only what the API actually provides for this food
+        // Units
         binding.actvUnit.isEnabled = false
         binding.actvUnit.setText("Loading units…", false)
 
-        // Load available units for the chosen FDC food (or fallback to grams)
         lifecycleScope.launch {
             try {
                 apiPortions = if (foodId != null) {
-                    repo.availableApiPortions(foodId)          // requires non-null FDC id
+                    repo.availableApiPortions(foodId)
                 } else {
-                    listOf(ApiPortion("grams (g)", 1.0))       // no FDC mapping → grams only
+                    listOf(ApiPortion("grams (g)", 1.0))
                 }
-//                val labels = apiPortions.map { it.label }
-//                val adapter = ArrayAdapter(materialCtx, android.R.layout.simple_list_item_1, labels)
-//                binding.actvUnit.setAdapter(adapter)
-
-//                val defaultLabel = labels.firstOrNull().orEmpty()
-//                if (defaultLabel.isNotEmpty()) binding.actvUnit.setText(defaultLabel, false)
 
                 val labels = apiPortions.map { it.label }
                 binding.actvUnit.setAdapter(ArrayAdapter(materialCtx, android.R.layout.simple_list_item_1, labels))
@@ -725,25 +690,13 @@ class MacroActivity : AppCompatActivity() {
 
                 if (!preferred.isNullOrEmpty()) binding.actvUnit.setText(preferred, false)
 
-
-                // Make sure dropdown shows ALL items (not just those matching current text)
                 fun showAll() {
-                    (binding.actvUnit.adapter as? ArrayAdapter<*>)?.filter?.filter(null) // clear constraint
+                    (binding.actvUnit.adapter as? ArrayAdapter<*>)?.filter?.filter(null)
                     binding.actvUnit.showDropDown()
                 }
 
                 binding.actvUnit.setOnClickListener { showAll() }
                 binding.actvUnit.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) showAll() }
-
-//                binding.actvUnit.inputType = android.text.InputType.TYPE_NULL
-//                binding.actvUnit.keyListener = null
-//                binding.actvUnit.isCursorVisible = false
-//                binding.actvUnit.setOnClickListener { binding.actvUnit.showDropDown() }
-//                binding.actvUnit.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) binding.actvUnit.showDropDown() }
-
-//                val defaultLabel = labels.firstOrNull().orEmpty()
-//                if (defaultLabel.isNotEmpty()) binding.actvUnit.setText(defaultLabel, false)
-
                 binding.tilUnit.error = if (labels.isEmpty()) "No available units for this food." else null
                 binding.actvUnit.isEnabled = labels.isNotEmpty()
             } catch (t: Throwable) {
@@ -770,8 +723,6 @@ class MacroActivity : AppCompatActivity() {
                 val selectedLabel = binding.actvUnit.text?.toString()?.trim().orEmpty()
                 val portion = apiPortions.firstOrNull { it.label.equals(selectedLabel, true) }
                 val grams = (portion?.gramsPerUnit?.let { amount * it } ?: amount)
-
-                // Still try to map to enum if you like keeping it populated
                 val enumUnit = MeasurementType.tryParse(selectedLabel)
                 val inputLabel = portion?.label.takeUnless { it.isNullOrBlank() } ?: selectedLabel
 
@@ -779,9 +730,9 @@ class MacroActivity : AppCompatActivity() {
                     repo.updateLogServing(
                         logId         = logId,
                         newGrams      = grams,
-                        inputUnit     = enumUnit,       // can be null for API-only labels
+                        inputUnit     = enumUnit,
                         inputQuantity = amount,
-                        inputLabel    = inputLabel      // ← persist API label
+                        inputLabel    = inputLabel
                     )
                     withContext(Dispatchers.Main) {
                         refreshTodayMeals()
@@ -789,49 +740,12 @@ class MacroActivity : AppCompatActivity() {
                         dlg.dismiss()
                     }
                 }
-
-//                val amountText   = binding.etAmount?.text?.toString()?.trim().orEmpty()
-//                val amount       = amountText.toDoubleOrNull() ?: defaultAmount
-//                val selectedText = binding.actvUnit.text?.toString()?.trim().orEmpty()
-//
-//                // 1) Resolve grams for macros using the API portion list you already loaded
-//                val pickedPortion = apiPortions.firstOrNull { it.label.equals(selectedText, true) }
-//                val grams = when {
-//                    pickedPortion != null -> amount * pickedPortion.gramsPerUnit
-//                    else -> amount // fallback; your list usually includes "grams (g)" → gramsPerUnit=1.0
-//                }
-//
-//                // 2) Try to map the selected text to your enum so we can store the *chosen* unit
-//                val enumUnit = MeasurementType.tryParse(selectedText)
-//
-//                lifecycleScope.launch(Dispatchers.IO) {
-//                    try {
-//                        repo.updateLogServing(
-//                            logId         = logId,
-//                            newGrams      = grams,          // keep macros consistent
-//                            inputUnit     = enumUnit,       // ← store what the user picked (if parseable)
-//                            inputQuantity = amount          // ← and the amount they typed
-//                        )
-//                        withContext(Dispatchers.Main) {
-//                            refreshTodayMeals()
-//                            refreshTodayTotals()
-//                            dlg.dismiss()
-//                        }
-//                    } catch (t: Throwable) {
-//                        Log.e("DialogEditServing", "Failed to update log", t)
-//                        withContext(Dispatchers.Main) {
-//                            binding.tilUnit.error = "Failed to save. Try again."
-//                        }
-//                    }
-//                }
             }
 
         }
 
         dlg.show()
     }
-
-
 
     private fun showMacroSettingsDialog() {
         if (currentUserId <= 0) {
@@ -840,7 +754,6 @@ class MacroActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
-            // Snapshot today's totals into diary
             upsertTodayDiarySnapshot()
 
             val plan = withContext(Dispatchers.IO) {
@@ -862,10 +775,10 @@ class MacroActivity : AppCompatActivity() {
             range.stepSize = 1f
 
 
-            // Make calories mutable so buttons can adjust it
+            // Make calories mutable
             var goalCalories = (plan?.calories ?: 2000.0).toInt().coerceAtLeast(1)
 
-            // Current grams → initial percentages
+            // Current grams
             val curP = (plan?.protein ?: 150.0).toInt()
             val curF = (plan?.fat ?: 60.0).toInt()
             val curC = (plan?.carbs ?: 250.0).toInt()
@@ -909,10 +822,9 @@ class MacroActivity : AppCompatActivity() {
             range.addOnChangeListener { _, _, _ -> updateSummary() }
             updateSummary()
 
-            // NEW: helper to change calories by ±50 and refresh UI
             fun adjustCalories(delta: Int) {
-                val minCal = 1000 // tweak if needed
-                val maxCal = 5000 // tweak if needed
+                val minCal = 1000
+                val maxCal = 5000
                 val newVal = (goalCalories + delta).coerceIn(minCal, maxCal)
                 if (newVal != goalCalories) {
                     goalCalories = newVal
@@ -921,16 +833,15 @@ class MacroActivity : AppCompatActivity() {
                 }
             }
 
-            // NEW: wire buttons
             btnAddDeficit.setOnClickListener {
                 it.startAnimation(pressAnim)
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                adjustCalories(-50) // subtract 50 = higher deficit
+                adjustCalories(-50)
             }
             btnReduceDeficit.setOnClickListener {
                 it.startAnimation(pressAnim)
                 it.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
-                adjustCalories(+50) // add 50 = lower deficit
+                adjustCalories(+50)
             }
 
             val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(
@@ -958,10 +869,10 @@ class MacroActivity : AppCompatActivity() {
                     protein = proteinG,
                     fat = fatG,
                     carbs = carbsG,
-                    calories = goalCalories              // <- save adjusted calories
+                    calories = goalCalories
                 ) ?: com.example.fitquest.database.MacroPlan(
                     userId = currentUserId,
-                    calories = goalCalories,             // <- save adjusted calories
+                    calories = goalCalories,
                     protein = proteinG,
                     carbs = carbsG,
                     fat = fatG
@@ -986,8 +897,6 @@ class MacroActivity : AppCompatActivity() {
             dialog.show()
         }
     }
-
-
 
     private fun calculateRemaining(goal: Int, done: Int): String {
         val remaining = goal - done
@@ -1021,16 +930,13 @@ class MacroActivity : AppCompatActivity() {
     }
 
     private fun TapTarget.applyMacroTourStyle(): TapTarget = apply {
-        // Scrim/background color — pass a *resource*, not an ARGB int here
-        dimColor(R.color.tour_white_80)      // 80% white in colors.xml (#CCFFFFFF)
+        dimColor(R.color.tour_white_80)
 
-        // Make BOTH texts the same bright color
-        titleTextColor(R.color.tour_orange)   // or android.R.color.black
+        titleTextColor(R.color.tour_orange)
         descriptionTextColor(R.color.tour_orange)
 
-        // Ring/target styling
-        outerCircleColor(R.color.white) // subtle ring, then use alpha below
-        outerCircleAlpha(0.12f)              // keep ring faint over light scrim
+        outerCircleColor(R.color.white)
+        outerCircleAlpha(0.12f)
         targetCircleColor(R.color.white)
 
         tintTarget(true)
@@ -1045,13 +951,10 @@ class MacroActivity : AppCompatActivity() {
         val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
         val userDoneKey = "$MACRO_TOUR_DONE_KEY_PREFIX$userId"
 
-        // DEV ONLY: force-show while testing one account
         if (FORCE_TOUR && BuildConfig.DEBUG) {
             prefs.edit().remove(userDoneKey).apply()
             macroTourShownUsersThisProcess.remove(userId)
         }
-
-        // Guard: once per process (per user) AND once per install (per user)
         if (macroTourShownUsersThisProcess.contains(userId) || prefs.getBoolean(userDoneKey, false)) return
         macroTourShownUsersThisProcess.add(userId)
 
@@ -1110,7 +1013,6 @@ class MacroActivity : AppCompatActivity() {
             .start()
     }
 
-
     private fun showMealsSectionTour(
         scroll: androidx.core.widget.NestedScrollView?,
         sections: List<Pair<View?, Pair<String, String>>>,
@@ -1125,7 +1027,6 @@ class MacroActivity : AppCompatActivity() {
 
             if (v == null) { next(i + 1); return }
 
-            // Scroll into view, then show the target
             scroll?.post {
                 scrollVToView(scroll, v, 24)
                 v.postDelayed({
@@ -1144,7 +1045,6 @@ class MacroActivity : AppCompatActivity() {
         next(0)
     }
 
-    /** Smooth-scroll a child inside a NestedScrollView so it’s nicely visible */
     private fun scrollVToView(ns: androidx.core.widget.NestedScrollView, child: View, topPadDp: Int = 24) {
         val r = android.graphics.Rect()
         child.getDrawingRect(r)
@@ -1152,7 +1052,4 @@ class MacroActivity : AppCompatActivity() {
         val targetY = kotlin.math.max(0, r.top - (topPadDp * resources.displayMetrics.density).toInt())
         ns.smoothScrollTo(0, targetY)
     }
-
-
-
 }

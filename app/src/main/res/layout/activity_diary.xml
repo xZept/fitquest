@@ -5,15 +5,12 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_diary">
 
-    <!-- Main vertical content -->
-
-    <!-- Floating Back button (bottom-right) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- Title image (flush left) -->
+        <!-- Title image -->
         <ImageView
             android:id="@+id/titleImage"
             android:layout_width="wrap_content"
@@ -25,7 +22,6 @@
             android:scaleType="centerInside"
             android:src="@drawable/title_page_diary" />
 
-        <!-- Padded content -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"

@@ -11,17 +11,16 @@
         lowercase().replace(Regex("[^a-z0-9]+"), " ").trim()
 
     private fun FdcModels.FdcFoodDetail.n(vararg numbers: String): Double {
-        // 1) flat
+
         foodNutrients.firstOrNull { it.number != null && it.number in numbers }
             ?.amount
             ?.let { return it ?: 0.0 }
 
-        // 2) nested
+
         foodNutrients.firstOrNull { it.nutrient?.number != null && it.nutrient.number in numbers }
             ?.amount
             ?.let { return it ?: 0.0 }
 
-        // 3) branded label nutrients → normalize to per-100 g/ml if unit permits
         val perServing = when {
             "1008" in numbers || "208" in numbers -> labelNutrients?.calories?.value
             "1003" in numbers || "203" in numbers -> labelNutrients?.protein?.value
@@ -51,7 +50,6 @@
     fun FdcModels.FdcFoodDetail.toPortions(foodId: Long): List<Portion> {
         val portions = mutableListOf<Portion>()
 
-        // Always include GRAM(100)
         portions += Portion(
             portionId = 0L,
             foodId = foodId,
@@ -61,7 +59,6 @@
             isApproximate = false
         )
 
-        // Your DTO doesn't have measureUnit -> use modifier/description only
         foodPortions.forEach { p ->
             val g = p.gramWeight ?: return@forEach
             val mod = (p.modifier?.lowercase() ?: p.portionDescription?.lowercase() ?: "")
@@ -74,7 +71,6 @@
                 "fl oz" in mod                     -> PortionSpec(MeasurementType.FL_OUNCE,   1.0, g, false)
                 mod == "oz" || "ounce" in mod      -> PortionSpec(MeasurementType.OUNCE,      1.0, g, false)
 
-                // Countable items (bananas, buns, eggs) often come as "1 small/medium/large", "1 whole", or "1 each"
                 "piece" in mod || "slice" in mod
                         || "each" in mod
                         || "whole" in mod
@@ -83,7 +79,6 @@
 
                 mod == "ml" || "ml" in mod         -> PortionSpec(MeasurementType.MILLILITER, 1.0, g, false)
 
-                // Keep a safe fallback to GRAM so ambiguous things like "serving" DO NOT become PIECE
                 else                               -> PortionSpec(MeasurementType.GRAM, 100.0, 100.0, false)
             }
 
@@ -103,7 +98,6 @@
     }
 
     fun FdcModels.FdcFoodDetail.toFoodEntity(): Food {
-        // Try *both* the new (100x) and old (20x) nutrient numbers
         val kcal100    = n("1008", "208")
         val protein100 = n("1003", "203")
         val fat100     = n("1004", "204")

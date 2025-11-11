@@ -30,11 +30,9 @@ class FitQuestApp : Application() {
         ReminderScheduler.scheduleNext2359PHT(this) // NEW
         MidnightSnapshotScheduler.schedule(this)
 
-        // For debugging
         val key = BuildConfig.FDC_API_KEY
         android.util.Log.d("FDC", "API key length = ${key.length}")
 
-        // BuildConfig is available here (app module)
         fdcService = FdcApi.create { BuildConfig.FDC_API_KEY }
 
         db = AppDatabase.getInstance(this)
@@ -68,7 +66,6 @@ class FitQuestApp : Application() {
             .addTag("macroSnapshotDaily")
             .build()
 
-        // Don’t reschedule every app start; keep the existing timing.
         androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "macroSnapshotDaily",
             androidx.work.ExistingPeriodicWorkPolicy.KEEP,

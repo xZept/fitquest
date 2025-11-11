@@ -43,14 +43,12 @@ class WorkoutHistoryFragment : Fragment(R.layout.fragment_workout_history) {
                 val v = convertView ?: layoutInflater.inflate(R.layout.item_session, parent, false)
                 val s = items[position]
 
-                // Bind text
                 v.findViewById<TextView>(R.id.tv_title).text = s.title
                 v.findViewById<TextView>(R.id.tv_time).text =
                     "${sdf.format(Date(s.startedAt))} – " + if (s.endedAt == 0L) "ongoing" else sdf.format(Date(s.endedAt))
                 v.findViewById<TextView>(R.id.tv_meta).text =
                     "Sets: ${s.completedSets}/${s.totalSets} • Coins: ${s.coinsEarned}"
 
-                // Open details by tapping the row (not the buttons)
                 v.setOnClickListener {
                     startActivity(
                         Intent(requireContext(), SessionDetailActivity::class.java)
@@ -62,7 +60,6 @@ class WorkoutHistoryFragment : Fragment(R.layout.fragment_workout_history) {
                 val btnTake = v.findViewById<ImageButton>(R.id.btn_take_again)
                 val btnPin  = v.findViewById<ImageButton>(R.id.btn_pin)
 
-                // PIN: toggle WorkoutSession.pinned and refresh list (pinned first)
                 btnPin.isSelected = s.pinned
                 btnPin.setOnClickListener {
                     val nowPinned = !btnPin.isSelected
@@ -79,7 +76,6 @@ class WorkoutHistoryFragment : Fragment(R.layout.fragment_workout_history) {
                     }
                 }
 
-                // TAKE AGAIN: seed ActiveQuest from last QuestHistory template of same title
                 btnTake.setOnClickListener {
                     viewLifecycleOwner.lifecycleScope.launch {
                         val ctx = requireContext()
@@ -121,7 +117,6 @@ class WorkoutHistoryFragment : Fragment(R.layout.fragment_workout_history) {
         listView.adapter = adapter
         viewLifecycleOwner.lifecycleScope.launch { refresh() }
 
-        // Keep item click to open Session Detail (works when tapping outside the buttons)
         listView.setOnItemClickListener { _, _, pos, _ ->
             val sel = items[pos]
             startActivity(
@@ -130,11 +125,9 @@ class WorkoutHistoryFragment : Fragment(R.layout.fragment_workout_history) {
             )
         }
 
-        // Initial load
         viewLifecycleOwner.lifecycleScope.launch {
             val uid = DataStoreManager.getUserId(requireContext()).first()
             val sessions = withContext(Dispatchers.IO) {
-                // your existing DAO method:
                 db.workoutSessionDao().getCompletedByUser(uid)
             }
             items.clear()

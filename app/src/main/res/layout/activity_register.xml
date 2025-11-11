@@ -6,7 +6,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Horizontal guideline at 66.67% (top 2/3 for form, bottom 1/3 for actions) -->
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/topGuideline"
         android:layout_width="wrap_content"
@@ -14,7 +13,6 @@
         android:orientation="horizontal"
         app:layout_constraintGuide_begin="513dp" />
 
-    <!-- FORM (scrolls). Constrained between title and 2/3 guideline -->
     <ScrollView
         android:id="@+id/formScroll"
         android:layout_width="0dp"
@@ -165,7 +163,7 @@
                 android:layout_marginBottom="12dp" />
 
 
-            <!-- Fitness Goal (auto, read-only) -->
+            <!-- Fitness Goal -->
             <TextView
                 android:id="@+id/tv_fitness_goal"
                 android:layout_width="match_parent"
@@ -262,8 +260,6 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
 
-
-    <!-- BOTTOM ACTIONS (1/3) -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/bottomArea"
         android:layout_width="0dp"
@@ -274,7 +270,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/topGuideline">
 
-        <!-- Login link at the very bottom -->
         <TextView
             android:id="@+id/tv_login_link"
             android:layout_width="wrap_content"
@@ -288,7 +283,6 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />
 
-        <!-- Register button above the link -->
         <ImageButton
             android:id="@+id/btn_register"
             android:layout_width="0dp"

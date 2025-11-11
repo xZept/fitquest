@@ -13,7 +13,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 
-private val INPUT_YMD = DateTimeFormatter.BASIC_ISO_DATE           // yyyyMMdd
+private val INPUT_YMD = DateTimeFormatter.BASIC_ISO_DATE
 private val DISPLAY = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
 
 class MacroDiaryAdapter(

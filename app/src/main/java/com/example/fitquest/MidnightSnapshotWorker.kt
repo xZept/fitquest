@@ -20,15 +20,11 @@ class MidnightSnapshotWorker(appContext: Context, params: WorkerParameters)
         val uid = DataStoreManager.getUserId(ctx).first()
         if (uid == -1) return Result.success()
 
-        // We snapshot YESTERDAY after midnight
         val today = LocalDate.now(zone)
         val yday  = today.minusDays(1)
         val yKey  = yday.year * 10_000 + yday.monthValue * 100 + yday.dayOfMonth
-
-        // Skip if already snapshotted
         if (db.macroDiaryDao().get(uid, yKey) != null) return Result.success()
 
-        // Compute totals for yesterday
         val totals = db.foodLogDao().totalsForDay(uid, yKey)
         val hasIntake = (totals.calories > 0.0 || totals.protein > 0.0 ||
                 totals.carbohydrate > 0.0 || totals.fat > 0.0)
@@ -37,7 +33,6 @@ class MidnightSnapshotWorker(appContext: Context, params: WorkerParameters)
         val endMs   = startMs + 86_399_000L
         val workouts = db.workoutSessionDao().countCompletedBetween(uid, startMs, endMs)
 
-        // Only write a diary row if there was *something* (intake or workouts)
         if (!hasIntake && workouts == 0) return Result.success()
 
         val plan = db.macroPlanDao().getLatestForUser(uid)

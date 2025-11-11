@@ -71,7 +71,6 @@
         </LinearLayout>
     </HorizontalScrollView>
 
-    <!-- Middle area between Tips and action bar, no special background here -->
     <RelativeLayout
         android:id="@+id/middle_area"
         android:layout_width="match_parent"
@@ -92,7 +91,6 @@
             android:gravity="center"/>
     </RelativeLayout>
 
-    <!-- NEW: Action bar with Cancel / Start -->
     <LinearLayout
         android:id="@+id/quest_actions"
         android:layout_width="match_parent"
@@ -128,8 +126,6 @@
             android:adjustViewBounds="true" />
     </LinearLayout>
 
-
-    <!-- Navigation -->
     <LinearLayout
         android:id="@+id/bottom_nav"
         android:layout_width="match_parent"
@@ -212,7 +208,6 @@
         </FrameLayout>
     </LinearLayout>
 
-    <!-- Overlay sits on top of content but stops above the bottom nav -->
     <include
         android:id="@+id/overlay_host"
         layout="@layout/view_no_quest_overlay"

@@ -4,7 +4,7 @@
     android:layout_height="375dp"
     android:layout_marginHorizontal="8dp">
 
-    <!-- Meal background -->
+    <!-- background -->
     <ImageView
         android:id="@+id/meal_background"
         android:layout_width="wrap_content"
@@ -12,7 +12,7 @@
         android:scaleType="fitXY"
         android:src="@drawable/empty_plate_container" />
 
-    <!-- Meal image (food, icon, etc.) -->
+    <!-- Meal image -->
     <ImageView
         android:id="@+id/meal_image"
         android:layout_width="200dp"

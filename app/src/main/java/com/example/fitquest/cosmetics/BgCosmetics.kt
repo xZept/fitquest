@@ -5,10 +5,7 @@ import android.graphics.BitmapFactory
 import com.example.fitquest.shop.ShopRepository
 import com.example.fitquest.ui.widgets.SpriteSheetDrawable
 
-/**
- * Small helper to resolve and build background sprites by page & tier.
- * We always display tier 0 by default, and upgrade to the highest owned tier.
- */
+
 object BgCosmetics {
 
     enum class Page { PROFILE, SHOP, QUEST } // QUEST covers QuestGenerator + QuestPreview
@@ -27,7 +24,6 @@ object BgCosmetics {
     private fun spriteName(page: Page, tier: Int): String = when (page) {
         Page.PROFILE -> "bg_page_profile_spritesheet$tier"
         Page.SHOP    -> "bg_page_shop_spritesheet$tier"
-        // your quest pages use the "dashboard" spritesheets
         Page.QUEST   -> "bg_page_dashboard_spritesheet$tier"
     }
 

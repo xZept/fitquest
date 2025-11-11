@@ -27,8 +27,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.view.MotionEvent
-import com.example.fitquest.cosmetics.BgCosmetics         // <-- NEW
-import com.example.fitquest.shop.ShopRepository          // <-- NEW
+import com.example.fitquest.cosmetics.BgCosmetics
+import com.example.fitquest.shop.ShopRepository
 import com.getkeepsafe.taptargetview.TapTarget
 import com.getkeepsafe.taptargetview.TapTargetSequence
 import com.getkeepsafe.taptargetview.TapTargetView
@@ -104,12 +104,10 @@ class QuestGeneratorActivity : AppCompatActivity() {
 
         val root = findViewById<View>(R.id.root)
 
-        // --- BACKGROUND COSMETIC: default tier 0, then upgrade once we know user
         bgSprite = BgCosmetics.buildDrawable(this, BgCosmetics.Page.QUEST, 0)
         root.background = bgSprite
         bgSprite?.start()
 
-        // after userId is known, upgrade if possible
         lifecycleScope.launch {
             val uid = DataStoreManager.getUserId(this@QuestGeneratorActivity).first()
             val tier = withContext(Dispatchers.IO) {
@@ -193,7 +191,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
         }
     }
 
-    /** Build one structured plan and go straight to preview (no Basic/Advanced dialog). */
     private fun generateAndOpenPreview() {
         lifecycleScope.launch {
             val uid = DataStoreManager.getUserId(this@QuestGeneratorActivity).first()
@@ -281,7 +278,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
     private fun norm(name: String) =
         name.trim().lowercase().replace(Regex("[^a-z0-9]"), "")
 
-    /** Split-aware target list length to align with 1-per-pattern (+ finisher). */
     private fun computeTargetItems(split: String): Int {
         val s = split.trim().lowercase()
         return when {
@@ -295,23 +291,20 @@ class QuestGeneratorActivity : AppCompatActivity() {
     }
     companion object {
         private const val TOUR_PREFS = "onboarding"
-        private const val QUEST_TOUR_DONE_KEY_PREFIX = "quest_tour_done_v1_u_" // per-user key
-        private const val FORCE_TOUR = false                                   // set true to test a user
-        private val questTourShownUsersThisProcess = mutableSetOf<Int>()        // per-process guard (per user)
+        private const val QUEST_TOUR_DONE_KEY_PREFIX = "quest_tour_done_v1_u_"
+        private const val FORCE_TOUR = false
+        private val questTourShownUsersThisProcess = mutableSetOf<Int>()
     }
 
 
     private fun TapTarget.applyQuestTourStyle(): TapTarget = apply {
-        // Scrim/background color — pass a *resource*, not an ARGB int here
-        dimColor(R.color.tour_white_80)      // 80% white in colors.xml (#CCFFFFFF)
+        dimColor(R.color.tour_white_80)
 
-        // Make BOTH texts the same bright color
-        titleTextColor(R.color.tour_orange)   // or android.R.color.black
+        titleTextColor(R.color.tour_orange)
         descriptionTextColor(R.color.tour_orange)
 
-        // Ring/target styling
-        outerCircleColor(R.color.white) // subtle ring, then use alpha below
-        outerCircleAlpha(0.12f)              // keep ring faint over light scrim
+        outerCircleColor(R.color.white)
+        outerCircleAlpha(0.12f)
         targetCircleColor(R.color.white)
 
         tintTarget(true)
@@ -326,13 +319,11 @@ class QuestGeneratorActivity : AppCompatActivity() {
         val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
         val userDoneKey = "$QUEST_TOUR_DONE_KEY_PREFIX$userId"
 
-        // DEV ONLY: force-show while testing a specific user
         if (FORCE_TOUR && BuildConfig.DEBUG) {
             prefs.edit().remove(userDoneKey).apply()
             questTourShownUsersThisProcess.remove(userId)
         }
 
-        // Guard: once per process (per user) + once per install (per user)
         if (questTourShownUsersThisProcess.contains(userId) || prefs.getBoolean(userDoneKey, false)) return
         questTourShownUsersThisProcess.add(userId)
 
@@ -342,7 +333,6 @@ class QuestGeneratorActivity : AppCompatActivity() {
         val cancel = findViewById<View>(R.id.btn_cancel)
         val root   = findViewById<View>(R.id.root)
 
-        // Start after layout to avoid zero-size targets
         root.post {
             val targets = buildList {
                 split?.let  { add(TapTarget.forView(it, "Choose a Split: Group days by movement (Push/Pull/Legs), region (Upper/Lower), or Full Body.", "").applyQuestTourStyle()) }
@@ -370,5 +360,4 @@ class QuestGeneratorActivity : AppCompatActivity() {
                 .start()
         }
     }
-
 }

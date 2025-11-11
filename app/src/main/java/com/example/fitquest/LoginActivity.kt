@@ -35,7 +35,6 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var repository: FitquestRepository
     private lateinit var pressAnim: android.view.animation.Animation
 
-    // Sprite background refs so we can start/stop with lifecycle
     private var bgDrawable: SpriteSheetDrawable? = null
     private var bgBitmap: Bitmap? = null
 
@@ -44,7 +43,7 @@ class LoginActivity : AppCompatActivity() {
         setContentView(R.layout.activity_login)
 
 
-        // Hide system navigation (match other screens)
+        // Hide system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
             window.insetsController?.apply {
@@ -73,19 +72,15 @@ class LoginActivity : AppCompatActivity() {
         val sign = findViewById<android.widget.TextView>(R.id.tvSignUpLink)
         val loginBtn = findViewById<android.widget.ImageButton>(R.id.btnLogin)
 
-        // remember original form bottom padding so we don't accumulate
         val baseFormBottom = form.paddingBottom
 
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
             val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
 
-            // 1) Keep the sign-up link visually at screen bottom by offsetting it back down
-            //    by the keyboard height (if shown). This prevents it from "riding up".
             sign.translationY = ime.bottom.toFloat()
             loginBtn.translationY = ime.bottom.toFloat()
 
-            // 2) Let the form breathe above nav/IME by adding bottom padding.
             val extraBottom = maxOf(ime.bottom, sys.bottom)
             form.setPadding(
                 form.paddingLeft,
@@ -94,10 +89,9 @@ class LoginActivity : AppCompatActivity() {
                 baseFormBottom + extraBottom
             )
 
-            insets // don't consume; keep normal resize behavior for the rest
+            insets
         }
 
-        // Decode once and reuse (drawable-nodpi recommended)
         bgBitmap = BitmapFactory.decodeResource(resources, R.drawable.bg_page_login_spritesheet)
 
         bgDrawable = bgBitmap?.let { bmp ->
@@ -107,18 +101,14 @@ class LoginActivity : AppCompatActivity() {
                 cols = cols,
                 fps = fps,
                 loop = true,
-                scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP // background-friendly
+                scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
             )
         }
-
-        // Set as background and start when the view has bounds
         bgDrawable?.let { drawable ->
             root.background = drawable
             root.post { drawable.start() }
         }
 
-        // Auto-skip login if a user is already stored
-        // Auto-skip login only if userId exists AND user still exists in DB
         lifecycleScope.launch {
             val existing = DataStoreManager.getUserId(this@LoginActivity).first()
             if (existing != -1) {
@@ -134,7 +124,6 @@ class LoginActivity : AppCompatActivity() {
                     finish()
                     return@launch
                 } else {
-                    // Stale userId (e.g., DB wiped after migration) → clear it and show Login
                     DataStoreManager.clearUserId(this@LoginActivity)
                 }
             }
@@ -148,14 +137,11 @@ class LoginActivity : AppCompatActivity() {
 
 
 
-        // Initialize disabled until valid
         updateLoginEnabled(btnLogin, edtUsername, edtPassword)
 
-        // Recompute on every text change (KTX extension)
         edtUsername.addTextChangedListener { updateLoginEnabled(btnLogin, edtUsername, edtPassword) }
         edtPassword.addTextChangedListener { updateLoginEnabled(btnLogin, edtUsername, edtPassword) }
 
-        // Only trigger IME "Done" if valid
         edtPassword.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE &&
                 loginFormIsValid(edtUsername.text, edtPassword.text)
@@ -215,7 +201,6 @@ class LoginActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        // Free bitmap if not rotating
         bgDrawable?.stop()
         if (!isChangingConfigurations) {
             bgBitmap?.recycle()
@@ -223,8 +208,6 @@ class LoginActivity : AppCompatActivity() {
         }
         super.onDestroy()
     }
-
-    // --- Add these helpers in LoginActivity ---
     private fun loginFormIsValid(
         u: CharSequence?,
         p: CharSequence?
@@ -232,15 +215,12 @@ class LoginActivity : AppCompatActivity() {
         val username = u?.toString()?.trim().orEmpty()
         val password = p?.toString().orEmpty()
 
-        // Minimum check: not blank. (Best practice: enforce min lengths if you want)
-        // e.g., username.length >= 3 && password.length >= 6
         return username.isNotEmpty() && password.isNotEmpty()
     }
 
     private fun updateLoginEnabled(btn: ImageButton, user: EditText, pass: EditText) {
         val enabled = loginFormIsValid(user.text, pass.text)
         btn.isEnabled = enabled
-        // ImageButton uses a background drawable; View.alpha is the easiest visual cue
         btn.alpha = if (enabled) 1f else 0.6f
     }
 

@@ -25,7 +25,7 @@ object Converters {
         return gson.fromJson(value, type)
     }
 
-    // Optional helpers if you ever need List<String> conversions
+    //  List<String> conversions
     @TypeConverter
     @JvmStatic
     fun fromStringList(value: List<String>?): String {

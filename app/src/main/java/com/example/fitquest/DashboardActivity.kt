@@ -54,8 +54,6 @@ import com.github.mikephil.charting.components.LimitLine
 import com.github.mikephil.charting.formatter.ValueFormatter
 import java.time.LocalDate
 import androidx.core.view.isVisible
-
-// MPAndroidChart for the line chart
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
@@ -70,10 +68,9 @@ import kotlin.math.max
 
 
 private const val TOUR_PREFS = "onboarding"
-private const val TOUR_DONE_KEY_PREFIX = "dash_tour_done_v2_u_" // v2 kept, but now per user
+private const val TOUR_DONE_KEY_PREFIX = "dash_tour_done_v2_u_"
 private const val FORCE_TOUR = false
 
-// per-process guard: which userIds already showed a tour in this app process
 private val tourShownUsersThisProcess = mutableSetOf<Int>()
 
 class DashboardActivity : AppCompatActivity() {
@@ -109,11 +106,8 @@ class DashboardActivity : AppCompatActivity() {
 
     private val requestNotifPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            // Only schedule after user grants notifications on Android 13+
             if (granted) {
                 ReminderScheduler.scheduleNext6am(this)
-                // (Optional) debug:
-                // WeightReminderScheduler.scheduleInSeconds(this, 15)
             }
         }
 
@@ -121,10 +115,8 @@ class DashboardActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_dashboard)
 
-        // Ask for exact alarm special access (Android 12L+/13)
         requestExactAlarmIfNeeded()
 
-        // Ask for POST_NOTIFICATIONS (Android 13+) and schedule once granted
         ensureNotificationPermissionThenSchedule()
 
         if (BuildConfig.DEBUG) {
@@ -145,7 +137,7 @@ class DashboardActivity : AppCompatActivity() {
             setOnClickListener {
                 startActivity(Intent(this@DashboardActivity, DiaryHistoryActivity::class.java))
             }
-            // optional debug: shows a toast when long-pressed
+            // debug
             setOnLongClickListener {
                 Toast.makeText(this@DashboardActivity, "Diary tapped", Toast.LENGTH_SHORT).show()
                 true
@@ -170,19 +162,19 @@ class DashboardActivity : AppCompatActivity() {
 
 
         val header = findViewById<LinearLayout>(R.id.header_bar)
-        header.bringToFront()  // make sure it’s above everything
+        header.bringToFront()
 
 
         val basePadLeft   = header.paddingLeft
-        val basePadTop    = header.paddingTop    // <-- important
+        val basePadTop    = header.paddingTop
         val basePadRight  = header.paddingRight
         val basePadBottom = header.paddingBottom
 
-        // Apply status-bar inset *without* stacking
+        // Apply status-bar inset
         ViewCompat.setOnApplyWindowInsetsListener(header) { v, insets ->
             val topInset = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
             v.setPadding(basePadLeft, basePadTop + topInset, basePadRight, basePadBottom)
-            insets // don't consume; lets others (like root) take bottom inset
+            insets
         }
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
@@ -190,9 +182,6 @@ class DashboardActivity : AppCompatActivity() {
         tvKcal = findViewById(R.id.tv_kcal)
         tvWorkouts = findViewById(R.id.tv_workouts)
         cardDaily = findViewById(R.id.card_daily_summary)
-
-
-
 
         attachMiniSeeder()
 
@@ -202,7 +191,7 @@ class DashboardActivity : AppCompatActivity() {
 
 
 
-        // Hide system navigation (repo)
+        // Hide system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
             window.insetsController?.apply {
@@ -265,7 +254,7 @@ class DashboardActivity : AppCompatActivity() {
 
     private val weightLoggedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            loadWeightSeries() // pull latest rows and redraw
+            loadWeightSeries()
         }
     }
 
@@ -273,10 +262,10 @@ class DashboardActivity : AppCompatActivity() {
         super.onStart()
         val filter = IntentFilter(ACTION_WEIGHT_LOGGED)
         ContextCompat.registerReceiver(
-            /* context = */ this,
-            /* receiver = */ weightLoggedReceiver,
-            /* filter = */ filter,
-            /* flags = */ ContextCompat.RECEIVER_NOT_EXPORTED
+            this,
+            weightLoggedReceiver,
+            filter,
+           ContextCompat.RECEIVER_NOT_EXPORTED
         )
     }
 
@@ -293,8 +282,6 @@ class DashboardActivity : AppCompatActivity() {
             hasActiveQuest = db.activeQuestDao().getActiveForUser(uid) != null
             quickAction.isEnabled = !hasActiveQuest
             quickAction.alpha = if (hasActiveQuest) 0.5f else 1f
-
-            // 👇 show the tour AFTER we have the uid
             showDashboardTourIfNeeded(uid)
         }
     }
@@ -309,7 +296,7 @@ class DashboardActivity : AppCompatActivity() {
         chart.description.isEnabled = false
         chart.legend.isEnabled = false
         chart.axisRight.isEnabled = false
-        chart.setTouchEnabled(false)          // disables all touch: drag, scale, highlight
+        chart.setTouchEnabled(false)
         chart.setDragEnabled(false)
         chart.setScaleEnabled(false)
         chart.setScaleXEnabled(false)
@@ -317,16 +304,15 @@ class DashboardActivity : AppCompatActivity() {
         chart.setPinchZoom(false)
         chart.setDoubleTapToZoomEnabled(false)
         chart.setHighlightPerTapEnabled(false)
-        // For safety on BarLineChartBase charts:
         chart.setHighlightPerDragEnabled(false)
 
         chart.axisLeft.apply {
             axisMinimum = 0f
             granularity = 1f
 
-            textColor = Color.parseColor("#000000")        // ← axis labels: BLACK
+            textColor = Color.parseColor("#000000")
             textSize  = 12f
-            gridColor = Color.parseColor("#11000000")      // subtle grid (optional)
+            gridColor = Color.parseColor("#11000000")
             axisLineColor = Color.TRANSPARENT
         }
 
@@ -337,25 +323,20 @@ class DashboardActivity : AppCompatActivity() {
             valueFormatter = IndexAxisValueFormatter(splits)
             labelRotationAngle = 0f
 
-            textColor = Color.parseColor("#000000")        // ← x labels: BLACK
+            textColor = Color.parseColor("#000000")
             textSize  = 12f
         }
 
         chart.data?.let { data ->
-            data.setValueTextColor(Color.BLACK)  //  bar value color
-            data.setValueTextSize(12f)           //  bar value size
+            data.setValueTextColor(Color.BLACK)
+            data.setValueTextSize(12f)
             chart.invalidate()
         }
         chart.setNoDataText("No completed sets yet.")
-        chart.setNoDataTextColor(Color.parseColor("#000000")) // ← no-data text: BLACK
-
+        chart.setNoDataTextColor(Color.parseColor("#000000"))
         chart.setFitBars(true)
-
-        // Space between the chart content and its edges (left, top, right, bottom) in px
         chart.setExtraOffsets(12f, 12f, 12f, 12f)
 
-//// Or, if you want to fully override auto-calculated offsets:
-//        chart.setViewPortOffsets(32f, 24f, 32f, 32f)
 
     }
 
@@ -370,11 +351,11 @@ class DashboardActivity : AppCompatActivity() {
 
     private fun loadWeightSeries() {
         lifecycleScope.launch {
-            val userId = DataStoreManager.getUserId(this@DashboardActivity).first()  // was: uid
+            val userId = DataStoreManager.getUserId(this@DashboardActivity).first()
             val rows = withContext(Dispatchers.IO) {
                 AppDatabase.getInstance(this@DashboardActivity)
                     .weightLogDao()
-                    .getAll(userId)                       // uses userId
+                    .getAll(userId)
                     .sortedBy { it.loggedAt }
             }
 
@@ -385,8 +366,8 @@ class DashboardActivity : AppCompatActivity() {
                 weightChart.isVisible = true
             }
 
-            val weightRed = Color.parseColor("#C73212")     // red
-            val weightFill = Color.parseColor("#33EF4444")  // 20% alpha red (#AA RR GG BB)
+            val weightRed = Color.parseColor("#C73212")
+            val weightFill = Color.parseColor("#33EF4444")
 
             val entries = rows.map { r ->
                 val x = Instant.ofEpochMilli(r.loggedAt)
@@ -399,7 +380,7 @@ class DashboardActivity : AppCompatActivity() {
 
             if (entries.size == 1) {
                 val e = entries.first()
-                entries.add(0, Entry(e.x - 1f, e.y)) // add a flat point the day before
+                entries.add(0, Entry(e.x - 1f, e.y))
             }
 
 
@@ -446,7 +427,6 @@ class DashboardActivity : AppCompatActivity() {
                 setDrawZeroLine(true)
             }
 
-// Always clear old limit lines first
             weightChart.axisLeft.removeAllLimitLines()
             if (goalY > 0f) {
                 val goalBlue = Color.parseColor("#0F5ADB")
@@ -459,7 +439,6 @@ class DashboardActivity : AppCompatActivity() {
                 weightChart.axisLeft.addLimitLine(ll)
             }
 
-// ✅ single, final refresh sequence
             weightChart.clear()
             weightChart.data = LineData(ds)
             weightChart.data.notifyDataChanged()
@@ -479,7 +458,6 @@ class DashboardActivity : AppCompatActivity() {
                 db.workoutSessionDao().getCompletedSessionsForUser(userId)
             }
 
-            // ✅ Count sessions per split (NOT sets)
             val counts = mutableMapOf("Push" to 0, "Pull" to 0, "Legs" to 0, "Upper" to 0)
             sessions.forEach { s ->
                 extractSplitFromTitle(s.title)?.let { split ->
@@ -495,9 +473,9 @@ class DashboardActivity : AppCompatActivity() {
 
 
             val dataSet = BarDataSet(entries, "Splits").apply {
-                setDrawValues(true)                 // make sure values are shown
-                color = Color.parseColor("#593A07") // bar color
-                valueTextColor = black              // ← data labels on bars: BLACK
+                setDrawValues(true)
+                color = Color.parseColor("#593A07")
+                valueTextColor = black
                 valueTextSize = 12f
             }
 
@@ -505,7 +483,6 @@ class DashboardActivity : AppCompatActivity() {
                 barWidth = 0.6f
                 setValueTextSize(12f)
                 setValueTextColor(black)
-                // show integers on bar labels
                 setValueFormatter(object : com.github.mikephil.charting.formatter.ValueFormatter() {
                     override fun getBarLabel(e: com.github.mikephil.charting.data.BarEntry?): String {
                         return e?.y?.toInt()?.toString() ?: "0"
@@ -542,7 +519,6 @@ class DashboardActivity : AppCompatActivity() {
                 if (uid == -1) return@launch
                 val dk = todayDayKey()
 
-                // ⚠️ Adjust MacroDiary fields to match your entity exactly
                 db.macroDiaryDao().upsert(
                     com.example.fitquest.database.MacroDiary(
                         id = 0, userId = uid, dayKey = dk,
@@ -553,24 +529,21 @@ class DashboardActivity : AppCompatActivity() {
                     )
                 )
 
-                // Optional: seed one finished workout today (adjust to your entity/DAO)
-                // Optional: seed one finished workout today (adjust to your entity/DAO)
                 try {
                     val now = System.currentTimeMillis()
                     db.workoutSessionDao().insert(
                         com.example.fitquest.database.WorkoutSession(
-                            id = 0,                       // <-- use the actual PK name (likely 'id')
+                            id = 0,
                             userId = uid,
                             title = "Push • General",
                             startedAt = now - 55*60_000L,
                             endedAt = now,
-                            totalSets = 12,               // <-- required by your entity
-                            completedSets = 12,           // <-- required by your entity
+                            totalSets = 12,
+                            completedSets = 12,
                             coinsEarned = 10
-                            // add any other required non-null fields your entity has (e.g., notes = null)
                         )
                     )
-                } catch (_: Throwable) { /* if your DAO uses upsert/other signature, adjust the call */ }
+                } catch (_: Throwable) {}
 
             }
             lifecycleScope.launch {
@@ -620,19 +593,14 @@ class DashboardActivity : AppCompatActivity() {
                 val avgPlan = (totalPlan / daysCount).coerceAtLeast(0)
                 val dev = if (avgPlan > 0) (avgCals - avgPlan) else 0
 
-                // Label line (matches daily style text)
                 // timeframe labels
                 tvWeeklyRange.text = formatDateRange(startDate, endDate)
                 tvWeeklyNextRange.text = "Next: ${formatDateRange(nextStart, nextEnd)}"
 
-// fetch & aggregate...
-
-// label like "Avg: 1800 / 2000 kcal (+100)" OR "Avg: 1800 kcal"
                 tvWeeklyKcalLabel.text =
                     if (avgPlan > 0) "Avg: $avgCals / $avgPlan kcal (${fmtDev(dev)})"
                     else "Avg: $avgCals kcal"
 
-// ring (percent of avg vs plan)
                 if (avgPlan > 0) {
                     pbWeeklyKcalCircle.setIndicatorColor(if (avgCals > avgPlan) over else ok)
                     pbWeeklyKcalCircle.max = avgPlan.coerceAtLeast(1)
@@ -646,7 +614,6 @@ class DashboardActivity : AppCompatActivity() {
                     tvWeeklyKcalCenter.text = ""
                 }
 
-// Ring like daily, but using weekly averages
                 if (avgPlan > 0) {
                     pbWeeklyKcalCircle.setIndicatorColor(if (avgCals > avgPlan) over else ok)
                     pbWeeklyKcalCircle.max = avgPlan.coerceAtLeast(1)
@@ -660,10 +627,8 @@ class DashboardActivity : AppCompatActivity() {
                     tvWeeklyKcalCenter.text = ""
                 }
 
-// Big number on the right
                 tvWeeklyWorkouts.text = workouts.toString()
 
-// Set timeframe labels (you already compute startDate/endDate & nextStart/nextEnd)
                 tvWeeklyRange.text = formatDateRange(startDate, endDate)
                 tvWeeklyNextRange.text = "Next: ${formatDateRange(nextStart, nextEnd)}"
 
@@ -694,10 +659,7 @@ class DashboardActivity : AppCompatActivity() {
                 return
             }
         }
-        // Permission not needed or already granted
         ReminderScheduler.scheduleNext6am(this)
-        // (Optional) debug:
-        // WeightReminderScheduler.scheduleInSeconds(this, 15)
     }
 
 
@@ -718,17 +680,13 @@ class DashboardActivity : AppCompatActivity() {
                 val ok   = androidx.core.content.ContextCompat.getColor(this@DashboardActivity, R.color.progress_ok)
                 val over = androidx.core.content.ContextCompat.getColor(this@DashboardActivity, R.color.progress_over)
 
-                // Calories bar only
                 if (daily.planCalories > 0) {
-                    // ring color (turn red when over)
                     pbKcalCircle.setIndicatorColor(if (daily.calories > daily.planCalories) over else ok)
 
-                    // use real kcal numbers for max/progress
                     pbKcalCircle.max = daily.planCalories.coerceAtLeast(1)
                     val clamped = daily.calories.coerceIn(0, pbKcalCircle.max)
                     pbKcalCircle.setProgressCompat(clamped, /*animate=*/true)
 
-                    // center text shows percent
                     val pct = ((daily.calories * 100.0) / daily.planCalories).toInt()
                     tvKcalCenter.text = "${pct.coerceAtLeast(0)}%"
 
@@ -739,7 +697,6 @@ class DashboardActivity : AppCompatActivity() {
                 }
 
             } catch (_: Throwable) {
-                // Fail quietly so dashboard never crashes
                 tvKcal.text = "—"
                 tvWorkouts.text = "—"
                 pbKcalCircle.visibility = View.GONE
@@ -747,9 +704,6 @@ class DashboardActivity : AppCompatActivity() {
         }
     }
 
-
-
-    /** Extracts the split ("Push","Pull","Legs","Upper") from a title like "Push • General". */
     private fun extractSplitFromTitle(title: String?): String? {
         if (title.isNullOrBlank()) return null
         val head = title.split("•").first().trim().lowercase()
@@ -758,8 +712,6 @@ class DashboardActivity : AppCompatActivity() {
             head.startsWith("pull")  -> "Pull"
             head.startsWith("legs")  -> "Legs"
             head.startsWith("upper") -> "Upper"
-            // if you sometimes use "lower", map it if needed:
-            // head.startsWith("lower") -> "Legs"
             else -> null
         }
     }
@@ -803,7 +755,7 @@ class DashboardActivity : AppCompatActivity() {
     private fun currentMonthBucket(today: java.time.LocalDate): Pair<java.time.LocalDate, java.time.LocalDate> {
         val dom = today.dayOfMonth
         val monthLen = today.lengthOfMonth()
-        val startDay = ((dom - 1) / 7) * 7 + 1        // 1, 8, 15, 22, 29
+        val startDay = ((dom - 1) / 7) * 7 + 1
         val endDay   = kotlin.math.min(startDay + 6, monthLen)
         return today.withDayOfMonth(startDay) to today.withDayOfMonth(endDay)
     }
@@ -836,18 +788,16 @@ class DashboardActivity : AppCompatActivity() {
     }
 
     private fun showDashboardTourIfNeeded(userId: Int) {
-        if (userId <= 0) return // no user → skip
+        if (userId <= 0) return
 
         val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
         val userDoneKey = "$TOUR_DONE_KEY_PREFIX$userId"
 
-        // Optional test hook (only if you need to re-test on a specific user)
         if (FORCE_TOUR && BuildConfig.DEBUG) {
             prefs.edit().remove(userDoneKey).apply()
             tourShownUsersThisProcess.remove(userId)
         }
 
-        // Per-process + per-user guard
         if (tourShownUsersThisProcess.contains(userId) || prefs.getBoolean(userDoneKey, false)) return
 
         val root    = findViewById<View>(R.id.dashboard_root)
@@ -895,7 +845,7 @@ class DashboardActivity : AppCompatActivity() {
             tourShownUsersThisProcess.add(userId)
 
             val finishTour: () -> Unit = {
-                prefs.edit().putBoolean(userDoneKey, true).apply() // persist per-user
+                prefs.edit().putBoolean(userDoneKey, true).apply()
             }
 
             val showRest: () -> Unit = {
@@ -960,8 +910,6 @@ class DashboardActivity : AppCompatActivity() {
         root.postDelayed({ startWhenReady() }, 200L)
     }
 
-
-    /** Center a child horizontally inside a HorizontalScrollView before showing the target. */
     private fun scrollHToCenter(hs: android.widget.HorizontalScrollView, child: View) {
         val r = android.graphics.Rect()
         child.getDrawingRect(r)
@@ -970,7 +918,6 @@ class DashboardActivity : AppCompatActivity() {
         hs.smoothScrollTo(targetX, 0)
     }
 
-    /** Center a child vertically inside a NestedScrollView before showing the target. */
     private fun scrollVToCenter(ns: androidx.core.widget.NestedScrollView, child: View) {
         val r = android.graphics.Rect()
         child.getDrawingRect(r)
@@ -987,7 +934,6 @@ class DashboardActivity : AppCompatActivity() {
         splitsChart: View?,
         onEnd: () -> Unit
     ) {
-        // 1) Scroll to WEEKLY, then highlight it
         if (weeklyCard != null && hScroll != null) {
             hScroll.post {
                 scrollHToView(hScroll, weeklyCard, 12)
@@ -999,7 +945,6 @@ class DashboardActivity : AppCompatActivity() {
                         ).cancelable(true).tintTarget(true).drawShadow(true).applyTourStyle(),
                         object : TapTargetView.Listener() {
                             override fun onTargetDismissed(view: TapTargetView?, userInitiated: Boolean) {
-                                // 2) Now scroll vertically to SPLITS and highlight
                                 if (splitsChart != null && vScroll != null) {
                                     vScroll.post {
                                         scrollVToView(vScroll, splitsChart, 24)
@@ -1026,7 +971,6 @@ class DashboardActivity : AppCompatActivity() {
                 }, 320L)
             }
         } else if (splitsChart != null && vScroll != null) {
-            // Weekly not available; go straight to splits
             vScroll.post {
                 scrollVToView(vScroll, splitsChart, 24)
                 splitsChart.postDelayed({
@@ -1066,16 +1010,13 @@ class DashboardActivity : AppCompatActivity() {
     private fun Int.dp(): Int = (this * resources.displayMetrics.density).toInt()
 
     private fun TapTarget.applyTourStyle(): TapTarget = apply {
-        // Scrim/background color — pass a *resource*, not an ARGB int here
-        dimColor(R.color.tour_white_80)      // 80% white in colors.xml (#CCFFFFFF)
+        dimColor(R.color.tour_white_80)
 
-        // Make BOTH texts the same bright color
-        titleTextColor(R.color.tour_orange)   // or android.R.color.black
+        titleTextColor(R.color.tour_orange)
         descriptionTextColor(R.color.tour_orange)
 
-        // Ring/target styling
-        outerCircleColor(R.color.white) // subtle ring, then use alpha below
-        outerCircleAlpha(0.12f)              // keep ring faint over light scrim
+        outerCircleColor(R.color.white)
+        outerCircleAlpha(0.12f)
         targetCircleColor(R.color.white)
 
         tintTarget(true)
@@ -1083,12 +1024,6 @@ class DashboardActivity : AppCompatActivity() {
         cancelable(true)
         drawShadow(false)
     }
-
-
-
-
-
-
 
     private fun setupNavigationBar() {
         findViewById<ImageView>(R.id.nav_icon_workout).setOnClickListener {

@@ -28,18 +28,18 @@ data class User(
 @Entity(tableName = "userProfile",
     foreignKeys = [
         ForeignKey(
-            entity = User::class,                // parent table
-            parentColumns = ["userId"],          // PK in parent
-            childColumns = ["userId"],           // FK in child
+            entity = User::class,
+            parentColumns = ["userId"],
+            childColumns = ["userId"],
             onDelete = ForeignKey.CASCADE
         )], indices = [androidx.room.Index("userId")]
 )
 data class UserProfile(
     @PrimaryKey(autoGenerate = true) val profileId: Int = 0,
     @ColumnInfo(name = "userId") val userId: Int,
-    @ColumnInfo(name = "height") val height: Int, // cm
-    @ColumnInfo(name = "weight") val weight: Int, // kg
-    @ColumnInfo(name = "goal_weight") val goalWeight: Int? = null, // NEW: kg
+    @ColumnInfo(name = "height") val height: Int,
+    @ColumnInfo(name = "weight") val weight: Int,
+    @ColumnInfo(name = "goal_weight") val goalWeight: Int? = null,
     @ColumnInfo(name = "activity_level") val activityLevel: String? = null,
     @ColumnInfo(name = "goal") val goal: String? = null,
     @ColumnInfo(name = "equipment") val equipment: String? = null
@@ -50,7 +50,7 @@ data class UserProfile(
 data class UserSettings(
     @PrimaryKey val userId: Int,
     val restTimerSec: Int = 180,
-    val equipmentCsv: String = "", // pipe-joined names e.g. "dumbbell|bench"
+    val equipmentCsv: String = "",
 
     val mandatoryRest: Boolean = false
 )
@@ -74,7 +74,6 @@ data class ActiveQuest(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val userId: Int,
     val split: String,
-    // DB column name remains 'modifier' (UI shows this as Focus)
     val modifier: String,
     val exercises: List<QuestExercise>,
     val startedAt: Long? = null
@@ -85,12 +84,12 @@ data class ActiveQuest(
     tableName = "questHistory",
     indices = [Index(value = ["userId", "key"], unique = true)]
 )
-@TypeConverters(Converters::class) // you already use this for List<QuestExercise>
+@TypeConverters(Converters::class)
 data class QuestHistory(
     @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val userId: Int,
-    val key: String,                  // split|modifier|hash(exercises)
-    val title: String,                // e.g., "Push • Strength"
+    val key: String,
+    val title: String,
     val split: String,
     val modifier: String,
     val exercises: List<QuestExercise>,
@@ -106,10 +105,10 @@ data class WorkoutSession(
     val userId: Int,
     val title: String,
     val startedAt: Long,
-    val endedAt: Long,         // 0 until finished/abandoned
+    val endedAt: Long,
     val totalSets: Int,
     val completedSets: Int,
-    val coinsEarned: Int,       // 0 if abandoned
+    val coinsEarned: Int,
     val pinned: Boolean = false
 )
 
@@ -133,8 +132,8 @@ data class WorkoutSetLog(
     val setNumber: Int,
     val repsMin: Int,
     val repsMax: Int,
-    val loadType: String,       // "Bodyweight" | "External load (kg)" | "Assisted (-kg)" | "Band level" | "Skipped log"
-    val loadValueText: String,  // e.g. "25 kg", "-20 kg", "Green (~15 kg)"
+    val loadType: String,
+    val loadValueText: String,
     val loggedAt: Long
 )
 
@@ -189,10 +188,10 @@ data class Portion(
 )
 data class Monster(
     @PrimaryKey(autoGenerate = true) val id: Long = 0L,
-    val code: String,           // stable id like "slime_blue"
-    val name: String,           // shown in UI
-    val spriteRes: String,      // drawable name, e.g. "monster_slime_blue"
-    val price: Int              // cost in coins
+    val code: String,
+    val name: String,
+    val spriteRes: String,
+    val price: Int
 )
 
 // ----- User-Owned Monsters -----
@@ -260,7 +259,7 @@ data class MacroPlan(
 data class MacroDiary(
     @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val userId: Int,
-    val dayKey: Int,              // YYYYMMDD in Asia/Manila
+    val dayKey: Int,
     val calories: Int,
     val protein: Int,
     val carbs: Int,
@@ -281,7 +280,7 @@ data class MacroDiary(
 data class WeightLog(
     @PrimaryKey(autoGenerate = true) val id: Long = 0L,
     val userId: Int,
-    val loggedAt: Long,  // epoch millis
+    val loggedAt: Long,
     val weightKg: Float
 )
 
@@ -293,10 +292,10 @@ data class WeightLog(
 )
 data class Item(
     @PrimaryKey(autoGenerate = true) val id: Long = 0L,
-    val code: String,           // e.g. "edit_profile_ticket"
-    val name: String,           // shown in UI
-    val spriteRes: String,      // drawable name, e.g. "ic_settings"
-    val price: Int,             // cost in coins
+    val code: String,
+    val name: String,
+    val spriteRes: String,
+    val price: Int,
     val consumable: Boolean = true,
     val category: String = "ticket",
     val description: String? = null

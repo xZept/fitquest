@@ -7,7 +7,6 @@
     android:background="@drawable/wooden_flanks_bg">
 
     <!-- Header -->
-    <!-- Sticky header (sibling of the NestedScrollView and bottom_nav) -->
     <com.google.android.flexbox.FlexboxLayout
         android:id="@+id/header_bar"
         android:layout_width="0dp"
@@ -22,7 +21,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Left area -->
         <com.google.android.flexbox.FlexboxLayout
             android:id="@+id/header_left"
             android:layout_width="0dp"
@@ -38,9 +36,6 @@
                 android:contentDescription="Macro"
                 android:src="@drawable/title_page_macro" />
         </com.google.android.flexbox.FlexboxLayout>
-
-
-        <!-- Right area -->
         <com.google.android.flexbox.FlexboxLayout
             android:id="@+id/header_right"
             android:layout_width="0dp"
@@ -49,7 +44,6 @@
             app:flexDirection="row"
             app:justifyContent="flex_end">
 
-            <!-- Use dp for sizes, not sp -->
             <ImageButton
                 android:id="@+id/btn_diary"
                 android:layout_width="40dp"
@@ -84,7 +78,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Scrollable content area -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/content_scroll"
         android:layout_width="0dp"
@@ -97,7 +90,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- 🔴 SINGLE DIRECT CHILD ONLY -->
         <com.google.android.flexbox.FlexboxLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -117,7 +109,6 @@
                 app:alignItems="center"
                 app:justifyContent="space_between">
 
-                <!-- Left column -->
                 <com.google.android.flexbox.FlexboxLayout
                     android:id="@+id/progress_left"
                     android:layout_width="0dp"
@@ -170,7 +161,6 @@
 
                 </com.google.android.flexbox.FlexboxLayout>
 
-                <!-- Right column -->
                 <com.google.android.flexbox.FlexboxLayout
                     android:id="@+id/progress_right"
                     android:layout_width="0dp"
@@ -256,7 +246,6 @@
                         android:textSize="18sp" />
                 </com.google.android.flexbox.FlexboxLayout>
             </com.google.android.flexbox.FlexboxLayout>
-            <!-- Capybara between progress and meals -->
             <ImageView
                 android:id="@+id/iv_capybara"
                 android:layout_width="380dp"
@@ -299,7 +288,6 @@
                     android:paddingVertical="15dp"
                     android:paddingHorizontal="20dp">
 
-                    <!-- 👇 Inner scroll just for breakfast items -->
                     <androidx.core.widget.NestedScrollView
                         android:id="@+id/breakfastScroll"
                         android:layout_width="match_parent"
@@ -429,10 +417,6 @@
         </com.google.android.flexbox.FlexboxLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Add Meal Button -->
-    <!-- Fixed floating action just above the navbar -->
-
-    <!-- Buy Food button: bottom is above the capybara (not the nav) -->
     <ImageButton
         android:id="@+id/btn_buy_food"
         android:layout_width="wrap_content"
@@ -443,8 +427,6 @@
         app:layout_constraintBottom_toTopOf="@id/bottom_nav"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
-
-
 
     <!-- Bottom Navigation -->
     <com.google.android.flexbox.FlexboxLayout

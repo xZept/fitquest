@@ -43,18 +43,13 @@ class WorkoutActivity : AppCompatActivity() {
     private lateinit var db: AppDatabase
 
     private var currentMonsterCode: String = "slime"
-
-    // overlay host
     private val overlayHost: View by lazy { findViewById(R.id.overlay_host) }
-    // top of class
     private var hasActiveQuest: Boolean = false
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_workout)
-
-        // make sure overlay (if visible) sits above
         findViewById<View>(R.id.overlay_host)?.bringToFront()
 
         pressAnim = AnimationUtils.loadAnimation(this, R.anim.press)
@@ -63,9 +58,6 @@ class WorkoutActivity : AppCompatActivity() {
 
         db = AppDatabase.getInstance(applicationContext)
 
-
-
-        // Render saved quest if one exists; otherwise show overlay
         lifecycleScope.launch { renderFromState() }
 
         displayTips()
@@ -105,27 +97,19 @@ class WorkoutActivity : AppCompatActivity() {
                         start.width > 0 && start.height > 0 &&
                         cancel.width > 0 && cancel.height > 0
             },
-            onReady = { showWorkoutTourIfNeeded(currentUserId) } // <-- pass user id
+            onReady = { showWorkoutTourIfNeeded(currentUserId) }
         )
     }
-
-
-
-
-
 
     private suspend fun renderFromState() {
         val container = findViewById<LinearLayout>(R.id.workout_container)
         val uid = DataStoreManager.getUserId(this@WorkoutActivity).first()
         currentUserId = uid
         val active = db.activeQuestDao().getActiveForUser(uid)
-
-        // 🔑 get the most recent monster code on IO thread
         val latestCode = withContext(Dispatchers.IO) {
             db.monsterDao().getLatestOwnedForUser(uid)?.code
         } ?: "slime"
-        currentMonsterCode = latestCode // 🔑 update the field we use below
-
+        currentMonsterCode = latestCode
         withContext(Dispatchers.Main) {
             container.removeAllViews()
             if (active != null) {
@@ -142,8 +126,7 @@ class WorkoutActivity : AppCompatActivity() {
                 updateActionButtons(visible = false, dayTitle = null, items = emptyList())
             }
 
-            // >>> Start the tour AFTER UI is ready
-            maybeStartWorkoutTour()  // ✅
+            maybeStartWorkoutTour()
 
 
         }
@@ -161,12 +144,10 @@ class WorkoutActivity : AppCompatActivity() {
     private fun displayTips() {
         val tips = TipsLoader.loadTips(this)
 
-        // Read from Intent (set these when you navigate from your split/focus selector)
-        val splitRaw = intent.getStringExtra("SPLIT")  // "push" | "pull" | "legs" | "upper"
-        val focusRaw = intent.getStringExtra("FOCUS")  // "general" | "hypertrophy" | "strength"
+        val splitRaw = intent.getStringExtra("SPLIT")
+        val focusRaw = intent.getStringExtra("FOCUS")
 
-        // If you allow combos, you can send "SPLITS" as comma-separated then:
-        val splitsCsv = intent.getStringExtra("SPLITS") // e.g., "push,pull,legs"
+        val splitsCsv = intent.getStringExtra("SPLITS")
         val workoutTips = if (!splitsCsv.isNullOrBlank()) {
             TipsHelper.getWorkoutTips(tips, splitsCsv.split(',').map { it.trim() }, focusRaw)
         } else {
@@ -212,7 +193,6 @@ class WorkoutActivity : AppCompatActivity() {
                 val uid = DataStoreManager.getUserId(this@WorkoutActivity).first()
                 db.activeQuestDao().clearForUser(uid)
 
-                // use uid here (not userId)
                 val code = withContext(Dispatchers.IO) {
                     db.monsterDao().getLatestOwnedForUser(uid)?.code
                 } ?: "slime"
@@ -229,9 +209,7 @@ class WorkoutActivity : AppCompatActivity() {
 
         btnStart.setOnClickListener {
             it.startAnimation(pressAnim)
-            // >>> START SESSION HERE <<<
             startActivity(Intent(this, WorkoutSessionActivity::class.java))
-            // If you ever want to pass extras (e.g., resume flags), add putExtra here.
         }
     }
 
@@ -255,10 +233,6 @@ class WorkoutActivity : AppCompatActivity() {
     }
 
     // -------------------- Card builders --------------------
-
-    /** Repo-styled card for *saved* quests using your QuestExercise model (no poster bg). */
-
-
     private fun buildDayCardFromQuest(dayName: String, items: List<QuestExercise>): View {
         return buildDayCardFromQuest(dayName, items, currentMonsterCode)
     }
@@ -282,7 +256,7 @@ class WorkoutActivity : AppCompatActivity() {
             "container_split_plan_${code}",
             "container_split_plan",
             "container_split_plan_slime"
-        ).let { if (it != 0) it else R.drawable.container_split_plan_slime } // hard fallback
+        ).let { if (it != 0) it else R.drawable.container_split_plan_slime }
 
         val bg = ImageView(this).apply {
             setImageResource(bgRes)
@@ -296,15 +270,13 @@ class WorkoutActivity : AppCompatActivity() {
             )
         }
         shell.addView(bg)
-
-        // Content layer overlays the image and matches its measured size
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT
             )
-            setPadding(dp(16), dp(12), dp(16), dp(12)) // keep text off the art edges
+            setPadding(dp(16), dp(12), dp(16), dp(12))
         }
 
         val title = TextView(this).apply {
@@ -348,7 +320,6 @@ class WorkoutActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_HORIZONTAL
         }
 
-        // Row background: use container_exercise.png at ORIGINAL size
         val rowBgDrawable = ContextCompat.getDrawable(this, R.drawable.container_exercise)!!
         val rowW = rowBgDrawable.intrinsicWidth
         val rowH = rowBgDrawable.intrinsicHeight
@@ -429,8 +400,6 @@ class WorkoutActivity : AppCompatActivity() {
     }
 
 
-
-    /** Repo’s original card for intent-generated preview (kept; no poster bg). */
     private fun buildDayCard(dayName: String, exercises: List<Exercise>): View {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -519,7 +488,6 @@ class WorkoutActivity : AppCompatActivity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).roundToInt()
 
-    // Repo video dialog kept for parity (optional)
     private fun showVideoDialog(youtubeUrl: String) {
         val dialog = Dialog(this)
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -554,22 +522,18 @@ class WorkoutActivity : AppCompatActivity() {
     } catch (_: Exception) { null }
 
     companion object {
-        // Per-process guards keyed by user
         private val workoutTourActiveShownUsersThisProcess = mutableSetOf<Int>()
 
-        // If you really need a one-time dev reset, toggle this manually
         private var workoutTourDebugResetDone = false
 
-        // Per-user done-key prefixes
         private const val WORKOUT_TOUR_ACTIVE_DONE_KEY_PREFIX = "workout_tour_active_done_v1_u_"
-        // (you can add a NO-QUEST prefix later if you build that tour)
         private const val TOUR_PREFS = "onboarding"
     }
 
 
 
     private fun TapTarget.applyWorkoutTourStyle(): TapTarget = apply {
-        dimColor(R.color.tour_white_80)         // #CCFFFFFF
+        dimColor(R.color.tour_white_80)
         titleTextColor(R.color.tour_orange)
         descriptionTextColor(R.color.tour_orange)
         outerCircleColor(R.color.white)
@@ -584,19 +548,11 @@ class WorkoutActivity : AppCompatActivity() {
     private fun showWorkoutTourIfNeeded(userId: Int) {
         val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
 
-        // Only run for active quest
         if (!hasActiveQuest) { workoutTourActiveSchedulePending = false; return }
         if (userId <= 0) { workoutTourActiveSchedulePending = false; return }
 
         val userDoneKey = "$WORKOUT_TOUR_ACTIVE_DONE_KEY_PREFIX$userId"
 
-        // Optional dev reset (do this only when testing a specific user):
-//    if (BuildConfig.DEBUG) {
-//        prefs.edit().remove(userDoneKey).apply()
-//        workoutTourActiveShownUsersThisProcess.remove(userId)
-//    }
-
-        // Per-process + persisted guards
         if (workoutTourActiveShownUsersThisProcess.contains(userId) ||
             prefs.getBoolean(userDoneKey, false)) {
             workoutTourActiveSchedulePending = false
@@ -630,9 +586,6 @@ class WorkoutActivity : AppCompatActivity() {
             onFinish = { prefs.edit().putBoolean(userDoneKey, true).apply() }
         )
     }
-
-
-
 
     private fun showTargetsSequentially(
         targets: List<TapTarget>,

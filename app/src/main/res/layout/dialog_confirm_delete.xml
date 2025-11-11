@@ -23,7 +23,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginBottom="6dp" />
 
-    <!-- Scrollable message area that expands, but never pushes footer off the bottom -->
     <ScrollView
         android:id="@+id/contentScroll"
         android:layout_width="0dp"
@@ -45,7 +44,6 @@
             android:textSize="20sp" />
     </ScrollView>
 
-    <!-- FOOTER: STUCK to the bottom of the panel -->
     <LinearLayout
         android:id="@+id/footer"
         android:layout_width="0dp"

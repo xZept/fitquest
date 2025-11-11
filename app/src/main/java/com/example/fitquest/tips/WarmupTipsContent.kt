@@ -2,9 +2,6 @@ package com.example.fitquest.tips
 
 object WarmupTipsContent {
 
-    /**
-     * @param focus "upper" | "legs" | "full" (default full if null/unknown)
-     */
     fun forFocus(focus: String?): List<TipPage> = when (focus?.lowercase()) {
         "upper", "push", "pull" -> upper()
         "legs", "lower" -> legs()

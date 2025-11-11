@@ -17,12 +17,10 @@ class MidnightMacroSnapshotWorker(
         val context = applicationContext
         val db = AppDatabase.getInstance(context)
         val userId = runCatching { DataStoreManager.getUserId(context).first() }.getOrNull()
-            ?: return Result.success() // no user yet
+            ?: return Result.success()
 
         val zone = ZoneId.of("Asia/Manila")
 
-        // Determine the diary day. If we fired shortly after midnight due to inexact alarms,
-        // log for "yesterday" to preserve the 23:59 intention.
         val now = ZonedDateTime.now(zone)
         val targetDate = if (now.toLocalTime().isBefore(java.time.LocalTime.of(1, 0)))
             now.minusDays(1).toLocalDate()

@@ -3,7 +3,6 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <!-- Full-bleed background image -->
     <ImageView
         android:id="@+id/bg_image"
         android:layout_width="match_parent"
@@ -12,7 +11,6 @@
         android:scaleType="fitXY"
         android:src="@drawable/container_handler" />
 
-    <!-- Content over the image -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -40,7 +38,6 @@
             android:textSize="15sp"
             android:textColor="@android:color/black"/>
 
-        <!-- Button row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

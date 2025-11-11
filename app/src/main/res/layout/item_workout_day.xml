@@ -7,7 +7,6 @@
     android:background="@color/brown"
     android:layout_marginRight="16dp">
 
-    <!-- Day Title -->
     <TextView
         android:id="@+id/tv_day_title"
         android:layout_width="wrap_content"
@@ -17,7 +16,6 @@
         android:textStyle="bold"
         android:paddingBottom="8dp"/>
 
-    <!-- Container for exercises -->
     <LinearLayout
         android:id="@+id/exercise_list"
         android:layout_width="match_parent"

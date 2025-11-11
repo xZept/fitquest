@@ -39,7 +39,7 @@ import com.pierfrancescosoffritti.androidyoutubeplayer.core.player.views.YouTube
 class ExerciseActivity : AppCompatActivity() {
 
     private lateinit var exerciseContainer: FrameLayout
-    private lateinit var containers: List<Pair<String, String>> // Pair<exerciseName, reps>
+    private lateinit var containers: List<Pair<String, String>>
     private var currentIndex = 0
     private lateinit var currentExerciseName: String
 
@@ -53,16 +53,13 @@ class ExerciseActivity : AppCompatActivity() {
         val toolbar = findViewById<Toolbar>(R.id.exercise_toolbar)
         setSupportActionBar(toolbar)
 
-        // Enable back arrow
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.setDisplayShowTitleEnabled(false) // hide default title
+        supportActionBar?.setDisplayShowTitleEnabled(false)
 
-
-        // 🎬 Load your single GIF into the top ImageView
         val gifView = findViewById<ImageView>(R.id.exercise_gif)
         Glide.with(this)
             .asGif()
-            .load(R.raw.test) // your single GIF in res/raw/workout.gif
+            .load(R.raw.test)
             .into(gifView)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -83,12 +80,10 @@ class ExerciseActivity : AppCompatActivity() {
 
         exerciseContainer = findViewById(R.id.exercise_container)
 
-        // Get the exercises passed from WorkoutActivity (must be String ArrayList)
         val originalExercises = intent.getStringArrayListExtra("EXERCISES") ?: arrayListOf()
 
-        // Multiply each exercise by 3 → each container shows "x8"
         containers = originalExercises.flatMap { ex ->
-            List(3) { Pair(ex, "x8") } // produces [ (ex,x8), (ex,x8), (ex,x8) ]
+            List(3) { Pair(ex, "x8") }
         }
 
         supportActionBar?.title = intent.getStringExtra("DAY_NAME") ?: "Workout"
@@ -100,14 +95,13 @@ class ExerciseActivity : AppCompatActivity() {
         }
     }
 
-    // ✅ Handle Back Button
     override fun onSupportNavigateUp(): Boolean {
-        finish() // goes back to WorkoutActivity
+        finish()
         return true
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.exercise_menu, menu) // 👈 your menu XML filename
+        menuInflater.inflate(R.menu.exercise_menu, menu)
         return true
     }
 
@@ -140,12 +134,10 @@ class ExerciseActivity : AppCompatActivity() {
         val tvDescription = dialogView.findViewById<TextView>(R.id.tvDescription)
         val videoContainer = dialogView.findViewById<LinearLayout>(R.id.videoContainer)
 
-        // 🔹 Load from repository
         val exercise = ExerciseRepository.getExerciseByName(this, exerciseName)
         val videos = ExerciseRepository.getVideosByExercise(this, exerciseName)
 
         if (exercise != null) {
-            // Fill UI with real data
             tvMuscle.text = "Target Muscle: ${exercise.targetMuscles}"
             tvEquipment.text = "Equipment: ${exercise.equipment}"
             tvMechanics.text = "Mechanics: ${exercise.mechanics}"
@@ -155,7 +147,6 @@ class ExerciseActivity : AppCompatActivity() {
             tvMuscle.text = "No details found for $exerciseName"
         }
 
-        // 🔹 Show multiple YouTube thumbnails instead of WebViews
         videoContainer.removeAllViews()
         for (video in videos) {
             val videoId = extractVideoId(video.youtubeLink)
@@ -169,12 +160,10 @@ class ExerciseActivity : AppCompatActivity() {
                 setBackgroundColor(Color.WHITE)
             }
 
-            // ✅ Use extractVideoId instead of getVideoId
             Glide.with(this)
                 .load("https://img.youtube.com/vi/${extractVideoId(video.youtubeLink)}/0.jpg")
                 .into(thumbnail)
 
-            // ✅ Call correct method name
             thumbnail.setOnClickListener {
                 showYouTubeDialog(videoId)
             }
@@ -208,7 +197,7 @@ class ExerciseActivity : AppCompatActivity() {
             .setView(dialogView)
             .create()
 
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT)) // floating effect
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
 
         lifecycle.addObserver(youtubePlayerView)
         youtubePlayerView.addYouTubePlayerListener(object : AbstractYouTubePlayerListener() {
@@ -239,7 +228,6 @@ class ExerciseActivity : AppCompatActivity() {
         tvName.text = "$name (Set $setNumber/3)"
         tvReps.text = reps
 
-        // 🔹 Update currentExerciseName whenever we change exercise
         currentExerciseName = name
 
         btnPrev.setOnClickListener {
@@ -254,7 +242,6 @@ class ExerciseActivity : AppCompatActivity() {
         }
 
         btnDone.setOnClickListener {
-            // Instead of jumping immediately → open timer popup
             showTimerDialog(name)
         }
 
@@ -282,7 +269,6 @@ class ExerciseActivity : AppCompatActivity() {
         val tvTimer = dialog.findViewById<TextView>(R.id.timer_text)
         val btnSkip = dialog.findViewById<Button>(R.id.btn_skip_timer)
 
-        // Always show "Rest" instead of the exercise name
         tvName.text = "Rest"
         tvTimer.text = "04:00"
 

@@ -1,4 +1,3 @@
-// WeightReminderReceiver.kt
 package com.example.fitquest
 
 import android.Manifest
@@ -64,7 +63,7 @@ class WeightReminderReceiver : BroadcastReceiver() {
         )
 
         val n = NotificationCompat.Builder(ctx, channelId)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // replace with your own small white icon later
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("Morning check-in")
             .setContentText("What’s your weight today?")
             .setPriority(NotificationCompat.PRIORITY_HIGH)

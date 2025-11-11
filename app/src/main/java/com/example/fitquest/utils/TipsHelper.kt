@@ -5,7 +5,7 @@ import java.util.Locale
 
 object TipsHelper {
 
-    // ---------- Normalizers (UI → CSV) ----------
+    // ---------- Normalizers ----------
     fun mapGoalToCsv(raw: String?): String = when (raw?.trim()?.lowercase(Locale.ROOT)) {
         "lose fat", "fat loss", "weight loss", "cut" -> "lose fat"
         "build muscle", "muscle gain", "bulk", "gain" -> "build muscle"
@@ -36,7 +36,6 @@ object TipsHelper {
         else -> "any"
     }
 
-    // Handy predicate with wildcard support
     private fun match(field: String, want: String) =
         field == "any" || want == "any" || field == want
 
@@ -65,7 +64,6 @@ object TipsHelper {
             .filter { match(it.split, split) && match(it.focus, focus) }
     }
 
-    // Overload for multiple splits (if the user picked a combo)
     fun getWorkoutTips(all: List<Tips>, splits: List<String>, focusRaw: String?): List<Tips> {
         val splitSet = splits.map { mapSplitToCsv(it) }.toSet()
         val focus = mapFocusToCsv(focusRaw)

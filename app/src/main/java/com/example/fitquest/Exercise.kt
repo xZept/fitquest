@@ -15,5 +15,3 @@ data class Exercise(
     val description: String
 )
 
-//    val videoUrl: String? = null
-

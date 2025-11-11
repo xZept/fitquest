@@ -11,7 +11,6 @@
         android:scaleType="fitXY"
         android:src="@drawable/container_handler" />
 
-    <!-- Foreground content -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -39,7 +38,6 @@
             android:textSize="15sp"
             android:textColor="@android:color/black" />
 
-        <!-- Button row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -57,12 +55,10 @@
                 android:adjustViewBounds="true"
                 android:padding="0dp" />
 
-
             <Space
                 android:layout_width="12dp"
                 android:layout_height="1dp" />
 
-            <!-- Use Ticket (temp: uses button_open_shop.png art) -->
             <ImageButton
                 android:id="@+id/btn_use_ticket"
                 android:layout_width="120dp"
@@ -71,8 +67,6 @@
                 android:contentDescription="Use Ticket"
                 android:adjustViewBounds="true"
                 android:padding="0dp" />
-
-
         </LinearLayout>
     </LinearLayout>
 </FrameLayout>

@@ -13,7 +13,7 @@ sealed class PurchaseResult {
 
 class ShopRepository(private val db: AppDatabase) {
 
-    /* ---------------- MONSTERS (existing) ---------------- */
+    /* ---------------- MONSTERS ---------------- */
 
     suspend fun seedMonsters(vararg monsters: Monster) {
         val mdao = db.monsterDao()
@@ -51,15 +51,10 @@ class ShopRepository(private val db: AppDatabase) {
 
     suspend fun getBalance(userId: Int): Int = db.userWalletDao().getCoins(userId) ?: 0
 
-    /* ---------------- ITEMS (tickets + non-consumable backgrounds) ---------------- */
+    /* ---------------- ITEMS  ---------------- */
 
-    /**
-     * Seeds the entire item catalog (tickets, backgrounds, etc.) in **one shot**.
-     * This replaces the previous "delete all except provided" behavior safely.
-     */
     suspend fun seedItems(vararg items: Item) {
         val idao = db.itemDao()
-        // Upsert each, then drop those not present.
         items.forEach { it ->
             val inserted = idao.insertIgnore(it)
             if (inserted == -1L) {
@@ -94,10 +89,9 @@ class ShopRepository(private val db: AppDatabase) {
         val alreadyQty = idao.getQuantity(userId, code) ?: 0
 
         if (isBackground) {
-            // Non-consumable: if owned, bail early.
             if (alreadyQty > 0) return@withTransaction PurchaseResult.AlreadyOwned
 
-            // Enforce tier prerequisite (tier N requires tier N-1)
+            // Enforce tier prerequisite
             val tier = parseTier(item.code)
             val prevCode = if (tier > 1) previousTierCode(item.code, tier) else null
             if (prevCode != null) {
@@ -110,14 +104,14 @@ class ShopRepository(private val db: AppDatabase) {
             val balance = wdao.getCoins(userId) ?: 0
             if (balance < item.price) return@withTransaction PurchaseResult.Insufficient(balance, item.price)
 
-            // Own once (quantity = 1)
+
             idao.insertUserItem(UserItem(userId = userId, itemCode = item.code, quantity = 0))
             wdao.add(userId, -item.price)
             idao.addQuantity(userId, item.code, +1)
 
             return@withTransaction PurchaseResult.Success(wdao.getCoins(userId) ?: 0)
         } else {
-            // Consumables / misc: unlimited purchases allowed
+            // Consumables
             wdao.ensure(userId)
             val balance = wdao.getCoins(userId) ?: 0
             if (balance < item.price) return@withTransaction PurchaseResult.Insufficient(balance, item.price)

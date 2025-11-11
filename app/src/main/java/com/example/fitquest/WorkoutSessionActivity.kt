@@ -49,13 +49,9 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private lateinit var db: AppDatabase
 
     private var userId: Int = -1
-
-    // UI (top)
     private lateinit var ivMonster: ImageView
     private lateinit var hpBar: ProgressBar
     private lateinit var tvHp: TextView
-
-    // UI (bottom)
     private lateinit var tvDay: TextView
     private lateinit var tvExercise: TextView
     private lateinit var tvSetInfo: TextView
@@ -66,7 +62,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private lateinit var ivHpBg: ImageView
     private lateinit var cardBg: ImageView
 
-    // Session state
     private var questTitle: String = "Your Quest"
     private lateinit var activeQuest: ActiveQuest
     private var items: List<QuestExercise> = emptyList()
@@ -77,8 +72,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private var mandatoryRest: Boolean = false
 
-
-    // Sprite sheet animations
     private data class SpriteAnim(
         val drawable: com.example.fitquest.ui.widgets.SpriteSheetDrawable,
         val frames: Int,
@@ -93,42 +86,31 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private var userWeightKg: Int? = null
 
-
-    // HP
     private var totalSets = 1
     private var setsDone = 0
     private var hpMax = 100
     private var hpLeft = 100
 
-    // Coins
     private var coinsEarned = 0
-    private var monsterMultiplier = 1   // x1 by default
+    private var monsterMultiplier = 1
 
-    // timers
     private var restTimer: CountDownTimer? = null
 
-    // animation timing
     private val ATTACK_ANIM_MS = 700L
 
-    // DB session row id
     private var sessionRowId: Long = -1L
     private var startedAtMs: Long = 0L
 
-    // current monster identifiers
     private var currentMonsterSprite: String = "monster_slime"
     private var currentMonsterCode: String = "slime"
     private lateinit var btnExerciseHelp: ImageButton
 
     private lateinit var pressAnim: android.view.animation.Animation
 
-    // ---- Session tour flags/keys ----
     private var sessionTourScheduling = false
 
     companion object {
-        // Per-process guard keyed by user id
         private val sessionTourShownUsersThisProcess = mutableSetOf<Int>()
-
-        // Persisted per-user key prefix
         private const val SESSION_TOUR_DONE_KEY_PREFIX = "session_tour_done_v1_u_"
         private const val TOUR_PREFS = "onboarding"
     }
@@ -144,13 +126,11 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         ExerciseGuides.ensureLoaded(applicationContext)
 
-        // bind (top)
         ivMonster = findViewById(R.id.iv_monster)
         hpBar = findViewById(R.id.hp_bar)
         tvHp = findViewById(R.id.tv_hp)
         ivHpBg = findViewById(R.id.iv_hp_bg)
 
-        // bind (bottom)
         tvDay = findViewById(R.id.tv_day_title)
         tvExercise = findViewById(R.id.tv_exercise)
         tvSetInfo = findViewById(R.id.tv_set_info)
@@ -177,10 +157,8 @@ class WorkoutSessionActivity : AppCompatActivity() {
             }
             activeQuest = loaded
 
-            // ensure wallet row exists
             withContext(Dispatchers.IO) { db.userWalletDao().ensure(userId) }
 
-            // load user settings (rest timer) from Room
             val settings = withContext(Dispatchers.IO) {
                 db.userSettingsDao().getByUserId(userId)
             }
@@ -190,7 +168,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             val profile = withContext(Dispatchers.IO) { db.userProfileDAO().getProfileByUserId(userId) }
             userWeightKg = profile?.weight
 
-            // ----- Load the monster to display + set multiplier -----
+            // ----- Load the monster to display
             val latestMonster = withContext(Dispatchers.IO) {
                 db.monsterDao().getLatestOwnedForUser(userId)
             }
@@ -198,8 +176,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             currentMonsterCode = latestMonster?.code ?: "slime"
             updateCardBgForCode(currentMonsterCode)
             updateHpBackgroundForCode(currentMonsterCode)
-            // --------------------------------------------------------
-
             userSex = fetchUserSexSafely()
             refreshLatestMonsterAndAnimations(restartIdle = true)
             initAnimations()
@@ -216,7 +192,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             hpLeft = hpMax
             updateHpFromSets(animate = false)
 
-            // create session row
             startedAtMs = System.currentTimeMillis()
             sessionRowId = withContext(Dispatchers.IO) {
                 db.workoutSessionDao().insert(
@@ -237,31 +212,20 @@ class WorkoutSessionActivity : AppCompatActivity() {
             renderCurrent()
             wireButtons()
             setResting(false)
-
-            // DEV-only: reset tour on every run so you can see it again
-//            if (BuildConfig.DEBUG) {
-//                val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
-//                prefs.edit().remove(SESSION_TOUR_DONE_KEY).apply()
-//                sessionTourShownThisProcess = false
-//            }
-
-// schedule tour once UI is ready
             maybeStartSessionTour()
 
-
-            // 🔒 Only show once and only if preference allows
             if (savedInstanceState == null &&
                 supportFragmentManager.findFragmentByTag("warmup_tips") == null
             ) {
                 withContext(Dispatchers.IO) {
-                    maybeShowWarmupTips() // calls per-user DataStore & shows dialog
+                    maybeShowWarmupTips()
                 }
             }
         }
     }
 
     private fun TapTarget.applySessionTourStyle(): TapTarget = apply {
-        dimColor(R.color.tour_white_80)         // translucent white overlay
+        dimColor(R.color.tour_white_80)
         titleTextColor(R.color.tour_orange)
         descriptionTextColor(R.color.tour_orange)
         outerCircleColor(R.color.white)
@@ -279,7 +243,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         ready: () -> Boolean,
         onReady: () -> Unit
     ) {
-        // Try a known host; fall back to decorView so postDelayed never NPEs
         val host = findViewById<View?>(R.id.scene_host) ?: window.decorView
         fun loop(tries: Int) {
             if (ready()) onReady()
@@ -291,15 +254,14 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private fun maybeStartSessionTour() {
         if (isFinishing || isDestroyed) return
-        if (isResting) return                     // don’t interrupt the rest dialog
+        if (isResting) return
         if (sessionTourScheduling) return
 
-        if (userId <= 0) return                   // need a real user id
+        if (userId <= 0) return
 
         val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
         val userDoneKey = "$SESSION_TOUR_DONE_KEY_PREFIX$userId"
 
-        // Per-process + persisted guards
         if (sessionTourShownUsersThisProcess.contains(userId) ||
             prefs.getBoolean(userDoneKey, false)) {
             return
@@ -329,7 +291,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private fun showSessionTour(userDoneKey: String) {
         val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
 
-        // Double-check guards
         if (sessionTourShownUsersThisProcess.contains(userId) ||
             prefs.getBoolean(userDoneKey, false)) {
             sessionTourScheduling = false
@@ -411,7 +372,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         tvDesc.text = guide.description?.takeIf { it.isNotBlank() } ?: "No description available."
         tvInstr.text = guide.instructions?.takeIf { it.isNotBlank() } ?: "No instructions available."
 
-        // Extract video id safely
         val videoId = extractYoutubeId(guide.youtube)
         if (videoId == null) {
             Toast.makeText(this, "No video found for \"$exName\".", Toast.LENGTH_SHORT).show()
@@ -460,9 +420,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         } catch (_: Exception) { null }
     }
 
-
-
-    /** Try to infer a useful focus string for the tips dialog if caller didn't pass SESSION_FOCUS. */
     private fun inferSessionFocus(): String {
         val split = (activeQuest.split ?: "").lowercase(Locale.getDefault())
         return when {
@@ -472,9 +429,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         }
     }
 
-    /** Check DataStore and show WarmupTipsDialogFragment if enabled. */
     private suspend fun maybeShowWarmupTips() {
-        // 🔑 per-user read
         val shouldShow = DataStoreManager.shouldShowWarmupTips(
             this@WorkoutSessionActivity,
             userId
@@ -483,7 +438,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         val focus = intent.getStringExtra("SESSION_FOCUS") ?: inferSessionFocus()
         withContext(Dispatchers.Main) {
-            // 🔑 pass userId into the dialog so it saves per-user
             WarmupTipsDialogFragment
                 .newInstance(focus, userId)
                 .show(supportFragmentManager, "warmup_tips")
@@ -494,11 +448,9 @@ class WorkoutSessionActivity : AppCompatActivity() {
         if (exerciseIndex !in items.indices) return
         val ex = items[exerciseIndex]
 
-        // Load from CSVs on a background thread
         lifecycleScope.launch {
             val help = withContext(Dispatchers.IO) {
-                // If your QuestExercise has an ID, pass it; otherwise pass null
-                val exId: String? = null // replace if you have one, e.g., ex.id?.toString()
+                val exId: String? = null
                 ExerciseHelpRepo.find(this@WorkoutSessionActivity, exId, ex.name)
             }
 
@@ -515,7 +467,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             val tvInstructions = view.findViewById<TextView>(R.id.tv_instructions)
             val btnClose = view.findViewById<ImageButton>(R.id.btn_close_help)
 
-            // Description / instructions
             if (help.description.isNullOrBlank()) {
                 tvDescTitle.visibility = View.GONE
                 tvDescription.visibility = View.GONE
@@ -529,7 +480,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 tvInstructions.text = help.instructions
             }
 
-            // YouTube video
             lifecycle.addObserver(youTubePlayerView)
 
             help.youtubeUrl?.let { url ->
@@ -541,7 +491,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
                         }
                     })
                 } else {
-                    // no valid video id -> hide player if nothing to show
                     youTubePlayerView.visibility = View.GONE
                 }
             } ?: run {
@@ -633,7 +582,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         btnComplete.setOnClickListener {
             it.startAnimation(pressAnim)
             btnComplete.isEnabled = false
-            // Play attack, THEN open log dialog (cleanest UX)
             playAttackThen {
                 promptLogThenCompleteSet()
             }
@@ -647,7 +595,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private fun showAbandonDialog() {
         val panel = FrameLayout(this)
 
-        // Background image (keeps aspect; no distortion)
         val ivBg = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.container_handler))
             scaleType = ImageView.ScaleType.FIT_CENTER
@@ -663,7 +610,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         val d = resources.displayMetrics.density
 
-        // Overlay spans full image so we can center text and anchor buttons
         val overlay = FrameLayout(this)
         panel.addView(
             overlay,
@@ -673,7 +619,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             )
         )
 
-        // Centered title + message (BLACK text)
         val centerColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = android.view.Gravity.CENTER_HORIZONTAL
@@ -703,8 +648,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 android.view.Gravity.CENTER
             )
         )
-
-        // Bottom row with ImageButtons (inside the image)
         val btnRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding((16 * d).toInt(), 0, (16 * d).toInt(), (16 * d).toInt())
@@ -713,7 +656,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         val btnKeep = ImageButton(this).apply {
             contentDescription = "Keep Going"
             setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_keep_going))
-            background = null // transparent (no ripple)
+            background = null
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = true
             layoutParams = LinearLayout.LayoutParams(0, (56 * d).toInt(), 1f).apply {
@@ -724,7 +667,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         val btnAbandon = ImageButton(this).apply {
             contentDescription = "Abandon"
             setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_abandon))
-            background = null // transparent
+            background = null
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = true
             layoutParams = LinearLayout.LayoutParams(0, (56 * d).toInt(), 1f)
@@ -748,14 +691,11 @@ class WorkoutSessionActivity : AppCompatActivity() {
             .create()
 
         dlg.setOnShowListener {
-            // Transparent window so PNG edges show
             dlg.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            // Width ~92% of screen; height wraps to image (no distortion)
             val width = (resources.displayMetrics.widthPixels * 0.92f).toInt()
             dlg.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
 
-        // Actions
         btnKeep.setOnClickListener { dlg.dismiss() }
         btnAbandon.setOnClickListener {
             dlg.dismiss()
@@ -771,13 +711,10 @@ class WorkoutSessionActivity : AppCompatActivity() {
         btnComplete.alpha = if (resting) 0.5f else 1f
     }
 
-
-
     /* ------------ logging dialog ------------ */
     private fun promptLogThenCompleteSet() {
         val types = listOf("Bodyweight", "External load (kg)", "Assisted (-kg)", "Band level")
 
-        // ---------- BG image (keeps aspect) + centered form on top ----------
         val panel = FrameLayout(this)
 
         val ivBg = ImageView(this).apply {
@@ -796,7 +733,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         val d = resources.displayMetrics.density
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            // top padding requested
             setPadding((24 * d).toInt(), (32 * d).toInt(), (24 * d).toInt(), (16 * d).toInt())
         }
         panel.addView(
@@ -901,18 +837,16 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 (56 * d).toInt()
             )
         }
-        // --- Enable/disable Save cleanly ---
+
         fun setSaveEnabled(enabled: Boolean) {
             btnSave.isEnabled = enabled
             btnSave.isClickable = enabled
             btnSave.alpha = if (enabled) 1f else 0.4f
         }
 
-        // Validate required input per type
         fun updateSaveEnabled() {
             when (spType.selectedItem.toString()) {
                 "Bodyweight" -> {
-                    // uses profile weight; require it to exist and be > 0
                     setSaveEnabled(userWeightKg != null && userWeightKg!! > 0)
                 }
                 "External load (kg)" -> {
@@ -925,7 +859,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 }
                 "Band level" -> {
                     val label = etText.text.toString().trim()
-                    setSaveEnabled(label.isNotEmpty())   // kg estimate optional
+                    setSaveEnabled(label.isNotEmpty())
                 }
                 else -> setSaveEnabled(false)
             }
@@ -940,9 +874,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         etNumber.addTextChangedListener { updateSaveEnabled() }
         etText.addTextChangedListener   { updateSaveEnabled() }
-        etBandKg.addTextChangedListener { updateSaveEnabled() } // optional, but harmless
-
-
+        etBandKg.addTextChangedListener { updateSaveEnabled() }
 
         fun refreshUiForType() {
             when (spType.selectedItem.toString()) {
@@ -951,13 +883,13 @@ class WorkoutSessionActivity : AppCompatActivity() {
                     etText.visibility = View.GONE
                     etBandKg.visibility = View.GONE
 
-                    // message + bigger size
                     val msg = userWeightKg?.let {
                         "We'll log your current profile weight: $it kg."
                     } ?: "No profile weight set. We’ll log as ‘Bodyweight’ without a number."
                     tvHelp.text = msg
-                    tvHelp.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)   // <-- change size here
+                    tvHelp.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
                 }
+
                 "External load (kg)" -> {
                     etNumber.visibility = View.VISIBLE
                     etNumber.hint = "How much did you lift (kg)"
@@ -989,10 +921,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-        // ---------- Buttons INSIDE the container — as ImageButtons ----------
 
-
-        // Assemble content
         content.addView(lblHeader)
         content.addView(lblType)
         content.addView(spType)
@@ -1019,7 +948,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             dlg.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
 
-        // Handlers
         btnSave.setOnClickListener {
             it.startAnimation(pressAnim)
             val type = spType.selectedItem.toString()
@@ -1064,7 +992,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
                 else -> ""
             }
 
-            // Persist set log
             lifecycleScope.launch(Dispatchers.IO) {
                 val ex = items[exerciseIndex]
                 val setNum = setIndex + 1
@@ -1097,7 +1024,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         setsDone += 1
         updateHpFromSets(animate = true)
 
-        // apply monster-based multiplier
         coinsEarned += monsterMultiplier
 
         if (setsDone >= totalSets) {
@@ -1172,7 +1098,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
     ) {
         val panel = FrameLayout(this)
 
-        // Background image (no distortion)
         val ivBg = ImageView(this).apply {
             setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, imageRes))
             scaleType = ImageView.ScaleType.FIT_CENTER
@@ -1188,7 +1113,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         val d = resources.displayMetrics.density
 
-        // Overlay spans full image area so we can anchor children
         val overlay = FrameLayout(this)
         panel.addView(
             overlay,
@@ -1198,7 +1122,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             )
         )
 
-        // Centered column for title/message (extra bottom padding to avoid the button)
         val centerColumn = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = android.view.Gravity.CENTER_HORIZONTAL
@@ -1233,11 +1156,10 @@ class WorkoutSessionActivity : AppCompatActivity() {
             )
         )
 
-        // Bottom-right "Continue" image button
         val btnOk = ImageButton(this).apply {
             contentDescription = "Continue"
             setImageDrawable(ContextCompat.getDrawable(this@WorkoutSessionActivity, R.drawable.button_continue))
-            background = null // transparent
+            background = null
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = true
         }
@@ -1273,7 +1195,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
     }
 
     /* -------- Quest History helpers -------- */
-
     private fun questKeyOf(q: ActiveQuest): String {
         val json = q.exercises.joinToString("|") {
             "${it.name}:${it.sets}:${it.repsMin}-${it.repsMax}:${it.order}"
@@ -1300,7 +1221,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
     }
 
     /* -------- HP animation -------- */
-
     private fun updateHpFromSets(animate: Boolean) {
         val remainingSets = (totalSets - setsDone).coerceAtLeast(0)
         val target = if (remainingSets == 0) 0
@@ -1329,13 +1249,11 @@ class WorkoutSessionActivity : AppCompatActivity() {
     private fun updateHpBackgroundForCode(monsterCode: String?) {
         val code = (monsterCode ?: "slime").lowercase()
 
-        // Try old pattern, then new pattern
         val pickedId = resolveFirstDrawable(
-            "container_${code}_hp",   // old: container_slime_hp
-            "container_hp_${code}"    // new: container_hp_slime
+            "container_${code}_hp",
+            "container_hp_${code}"
         )
 
-        // Try both fallbacks too
         val fallbackId = resolveFirstDrawable(
             "container_slime_hp",
             "container_hp_slime"
@@ -1344,8 +1262,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         ivHpBg.setImageResource(if (pickedId != 0) pickedId else fallbackId)
     }
 
-    /* --------- Monster frame helpers (single ImageView) --------- */
-    /** Resolve first existing drawable id from a list of names; returns 0 if none found */
+    /* --------- Monster frame helpers --------- */
     private fun resolveFirstDrawable(vararg names: String): Int {
         for (n in names) {
             val id = resources.getIdentifier(n, "drawable", packageName)
@@ -1354,7 +1271,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         return 0
     }
 
-    /** Hook to load user sex from your own storage. Replace the body when you have a source. */
     private suspend fun fetchUserSexSafely(): String = withContext(Dispatchers.IO) {
         try {
             val sexRaw = db.userDAO().getUserById(userId)?.sex ?: "male"
@@ -1363,6 +1279,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
             "male"
         }
     }
+
 
     private fun initAnimationsForSex(
         sexRaw: String,
@@ -1376,7 +1293,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         }
         val code = currentMonsterCode.ifBlank { "slime" }
 
-        // Try your naming FIRST: session_<sex>_<monster>_<state>
+
         val idleRes = resolveFirstDrawable(
             "session_${idleSex}_${code}_idle",
             "idle_${code}_${idleSex}",
@@ -1393,14 +1310,11 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
         Log.d("AnimPick", "code=$code idleSex=$idleSex fightSex=$fightSex idleRes=$idleRes fightRes=$fightRes")
 
-        // Adjust these if some monsters have different frame counts
         val idleCols = 13
         val fightCols = 24
 
         idleAnim  = if (idleRes  != 0) buildAnim(idleRes,  rows = 1, cols = idleCols,  fps = 13, loop = true)  else null
         fightAnim = if (fightRes != 0) buildAnim(fightRes, rows = 1, cols = fightCols, fps = 12, loop = false) else null
-
-        // After rebuilding, make sure the currently shown anim is idle for the new monster
         showIdle()
     }
 
@@ -1427,12 +1341,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         return if (id != 0) id else 0
     }
 
-    /**
-     * stateSuffix can be "idle" or "attack". We try:
-     * 1) "<sprite>_<state>" (e.g., monster_goblin_attack)
-     * 2) "<sprite>" fallback
-     * 3) "monster_slime" ultimate fallback
-     */
     private fun setMonsterFrame(stateSuffix: String) {
         val candidate = "${currentMonsterSprite}_${stateSuffix}"
         val id1 = resolveDrawableId(candidate)
@@ -1443,7 +1351,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
 
     private fun showIdle() {
         val idle = idleAnim ?: return
-        // If we're already on the idle animation, ensure it's running; else start it.
         if (currentAnim?.drawable === idle.drawable) {
             if (!idle.drawable.isRunning()) idle.drawable.start()
         } else {
@@ -1451,16 +1358,12 @@ class WorkoutSessionActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Plays the non-loop 'fight' animation once, then returns to idle and calls onDone().
-     */
     private fun playAttackThen(onDone: () -> Unit) {
         val fight = fightAnim
         if (fight == null) {
             onDone(); return
         }
 
-        // ✅ ensure the one-shot anim starts from frame 0 every time
         fight.drawable.resetToStart()
         startAnim(fight)
 
@@ -1472,10 +1375,10 @@ class WorkoutSessionActivity : AppCompatActivity() {
         }, durationMs)
     }
 
-    private fun showSleep() { /* optional later */ }
+    private fun showSleep() {}
 
     private fun updateCardBgForCode(monsterCode: String?) {
-        if (!::cardBg.isInitialized) return  // safety guard
+        if (!::cardBg.isInitialized) return
 
         val code = (monsterCode ?: "slime").lowercase()
         val pickedId = resolveFirstDrawable(
@@ -1487,7 +1390,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
     }
 
     /* --------- Rest dialog --------- */
-
     private fun showRestDialog(totalSec: Int) {
         setResting(true)
 
@@ -1502,7 +1404,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
             btnSkip.visibility = View.VISIBLE
         }
 
-        // Build the looping spritesheet background (tweak rows/cols/fps to your sheet)
         val restBg = buildRestBgAnim(rows = 1, cols = 20, fps = 12)
         ivBg.setImageDrawable(restBg)
 
@@ -1516,8 +1417,6 @@ class WorkoutSessionActivity : AppCompatActivity() {
         dlg.setOnShowListener {
             restBg.resetToStart()
             restBg.start()
-
-            // Size and make window bg transparent so edges of your art show
             val dm = resources.displayMetrics
             val width = (dm.widthPixels * 0.92f).toInt()
             dlg.window?.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -1561,10 +1460,7 @@ class WorkoutSessionActivity : AppCompatActivity() {
         cols: Int = 24,
         fps: Int = 18
     ): SpriteSheetDrawable {
-        // Use current userSex; default to male if unknown
         val sex = if (userSex.equals("female", ignoreCase = true)) "female" else "male"
-
-        // Try sex-specific sheet first, then fallbacks
         val resId = resolveFirstDrawable(
             "bg_${sex}_rest_spritesheet",
             "bg_rest_spritesheet",
@@ -1609,10 +1505,10 @@ class WorkoutSessionActivity : AppCompatActivity() {
     }
 
     private fun monsterMultiplierFor(code: String): Int = when (code) {
-        "mushroom" -> 2   // starter
-        "goblin"   -> 3   // tier 2
-        "ogre"     -> 4   // tier 3
-        "eye"      -> 5   // tier 4 (Giant Eye)
-        else       -> 1   // default/slime
+        "mushroom" -> 2
+        "goblin"   -> 3
+        "ogre"     -> 4
+        "eye"      -> 5
+        else       -> 1
     }
 }

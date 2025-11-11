@@ -51,9 +51,9 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
 
     private val items = mutableListOf<String>()
 
-    private val addableSuggestions = mutableListOf<String>() // dynamic (after deletions)
-    private val addableBaseline = mutableListOf<String>()    // from intent
-    private val recentlyRemoved = ArrayDeque<String>()       // MRU
+    private val addableSuggestions = mutableListOf<String>()
+    private val addableBaseline = mutableListOf<String>()
+    private val recentlyRemoved = ArrayDeque<String>()
 
     private var bgDrawable: SpriteSheetDrawable? = null
     private lateinit var itemTouchHelper: ItemTouchHelper
@@ -112,7 +112,7 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
             sets = schemeSets,
             minReps = schemeMin,
             maxReps = schemeMax
-        ) { /* onDataChanged */ }
+        ) {}
         rv.adapter = adapter
 
         val callback = SimpleItemTouchHelperCallback(adapter)
@@ -157,7 +157,6 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
             if (uid > 0) showQuestPreviewTourIfNeeded(uid)
         }
 
-        // keep your existing code in onResume (e.g., monster skin background) — it’s fine to leave it
         lifecycleScope.launch {
             val uid = DataStoreManager.getUserId(this@QuestPreviewActivity).first()
             val latestCode = withContext(Dispatchers.IO) {
@@ -242,23 +241,20 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
 
     companion object {
         private const val TOUR_PREFS = "onboarding"
-        private const val QUEST_PREVIEW_TOUR_DONE_KEY_PREFIX = "quest_preview_tour_done_v1_u_" // per-user key
-        private const val FORCE_TOUR = false                                                   // set true to test a user
-        private val questPreviewTourShownUsersThisProcess = mutableSetOf<Int>()                // per-process guard (per user)
+        private const val QUEST_PREVIEW_TOUR_DONE_KEY_PREFIX = "quest_preview_tour_done_v1_u_"
+        private const val FORCE_TOUR = false
+        private val questPreviewTourShownUsersThisProcess = mutableSetOf<Int>()
     }
 
 
     private fun TapTarget.applyQuestPreviewTourStyle(): TapTarget = apply {
-        // Scrim/background color — pass a *resource*, not an ARGB int here
-        dimColor(R.color.tour_white_80)      // 80% white in colors.xml (#CCFFFFFF)
+        dimColor(R.color.tour_white_80)
 
-        // Make BOTH texts the same bright color
-        titleTextColor(R.color.tour_orange)   // or android.R.color.black
+        titleTextColor(R.color.tour_orange)
         descriptionTextColor(R.color.tour_orange)
 
-        // Ring/target styling
-        outerCircleColor(R.color.white) // subtle ring, then use alpha below
-        outerCircleAlpha(0.12f)              // keep ring faint over light scrim
+        outerCircleColor(R.color.white)
+        outerCircleAlpha(0.12f)
         targetCircleColor(R.color.white)
 
         tintTarget(true)
@@ -291,13 +287,11 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
         val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
         val userDoneKey = "$QUEST_PREVIEW_TOUR_DONE_KEY_PREFIX$userId"
 
-        // DEV ONLY: force-show while testing this specific user
         if (FORCE_TOUR && BuildConfig.DEBUG) {
             prefs.edit().remove(userDoneKey).apply()
             questPreviewTourShownUsersThisProcess.remove(userId)
         }
 
-        // Per-process (per user) + persisted (per user) guards
         if (questPreviewTourShownUsersThisProcess.contains(userId) || prefs.getBoolean(userDoneKey, false)) return
 
         val root = findViewById<View>(R.id.quest_root)
@@ -306,10 +300,8 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
         val back = findViewById<View>(R.id.btn_cancel)
 
         root.post {
-            // mark shown for this user in this process
             questPreviewTourShownUsersThisProcess.add(userId)
 
-            // First try to highlight a drag handle; then show buttons stage.
             waitForRecyclerPopulation {
                 val handle = findFirstDragHandle()
                 if (handle != null) {
@@ -378,13 +370,7 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
             .start()
     }
 
-
-
-
-
-
     // --- Add dialog helpers ---
-
     private fun showAddDialog(useSuggestions: Boolean, adapter: ExerciseAdapter) {
         val currentPool = if (useSuggestions) addableSuggestions else addableBaseline
         val choices = currentPool
@@ -521,7 +507,6 @@ class QuestPreviewActivity : AppCompatActivity(), StartDragListener {
             onDataChanged()
             return true
         }
-
         fun currentItems(): List<String> = data
     }
 }

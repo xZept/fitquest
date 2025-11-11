@@ -71,7 +71,6 @@ class WarmupTipsDialogFragment : DialogFragment() {
 
         val panel = FrameLayout(ctx)
 
-        // Background art (same container art as your other dialogs)
         val ivBg = ImageView(ctx).apply {
             setImageResource(R.drawable.container_handler)
             scaleType = ImageView.ScaleType.FIT_CENTER
@@ -94,7 +93,7 @@ class WarmupTipsDialogFragment : DialogFragment() {
             )
         )
 
-        // ---------- Content (header + pager) ----------
+        // ---------- Content ----------
         val contentScroll = ScrollView(ctx).apply { isFillViewport = false }
         val content = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -135,7 +134,7 @@ class WarmupTipsDialogFragment : DialogFragment() {
         }
         content.addView(pager)
 
-        // ---------- Dots (TabLayout; clickable + swipe sync) ----------
+        // ---------- TabLayout ----------
         val dots = TabLayout(ctx).apply {
             tabMode = TabLayout.MODE_FIXED
             tabGravity = TabLayout.GRAVITY_CENTER
@@ -155,7 +154,7 @@ class WarmupTipsDialogFragment : DialogFragment() {
             ).apply { bottomMargin = dp(74) } // ~60 bottom bar + gap
         )
 
-        // ---------- Bottom bar (checkbox + Continue) ----------
+        // ---------- Bottom bar  ----------
         val bottomBar = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -174,7 +173,6 @@ class WarmupTipsDialogFragment : DialogFragment() {
             }
         )
 
-        // Tight hit area for checkbox (no weight)
         val cbDontShow = CheckBox(ctx).apply {
             text = "Don’t show again"
             setTextColor(Color.BLACK)
@@ -190,7 +188,6 @@ class WarmupTipsDialogFragment : DialogFragment() {
             )
         )
 
-        // Spacer captures free space so the checkbox doesn’t
         val spacer = View(ctx)
         bottomBar.addView(
             spacer,
@@ -223,15 +220,13 @@ class WarmupTipsDialogFragment : DialogFragment() {
             }
         bottomBar.addView(btnContinue)
 
-        // ---------- Data + adapter ----------
+        // ---------- Data  ----------
         val focus = arguments?.getString(ARG_FOCUS)
-        val pages = WarmupTipsContent.forFocus(focus)  // your existing source
-        pager.adapter = TipPageAdapter(pages)          // your existing adapter
+        val pages = WarmupTipsContent.forFocus(focus)
+        pager.adapter = TipPageAdapter(pages)
 
-        // Connect dots with pager and use "•" as labels
         TabLayoutMediator(dots, pager) { tab, _ -> tab.text = "•" }.attach()
 
-        // Style the dots (active=black, inactive=gray)
         fun styleDotTabs() {
             for (i in 0 until dots.tabCount) {
                 val t = dots.getTabAt(i) ?: continue
@@ -274,7 +269,6 @@ class WarmupTipsDialogFragment : DialogFragment() {
             val last = pager.currentItem == ((pager.adapter?.itemCount ?: 1) - 1)
             if (last) {
                 CoroutineScope(Dispatchers.IO).launch {
-                    // “Don’t show again” => show=false
                     DataStoreManager.setShowWarmupTips(
                         requireContext(),
                         userId,

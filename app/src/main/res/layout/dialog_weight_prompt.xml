@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">  <!-- 1) centers the child in the screen -->
+    android:layout_height="match_parent">
 
     <LinearLayout
         android:layout_width="384dp"
@@ -9,7 +9,7 @@
         android:orientation="vertical"
         android:padding="28dp"
         android:background="@drawable/container_handler"
-        android:gravity="center_vertical">  <!-- 2) centers inner views horizontally -->
+        android:gravity="center_vertical">
 
         <TextView
             android:text="Morning check-in"

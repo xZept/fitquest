@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Keep styles.xml for small custom styles, NOT app themes -->
     <style name="CustomDialog" parent="Theme.AppCompat.Light.Dialog.Alert">
         <item name="android:backgroundDimEnabled">true</item>
         <item name="android:windowBackground">@drawable/dialog_background</item>

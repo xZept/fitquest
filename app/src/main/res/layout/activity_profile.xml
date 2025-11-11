@@ -8,7 +8,6 @@
     android:background="@drawable/bg_page_profile"
     tools:context=".ProfileActivity">
 
-    <!-- NEW: animated bg host (must be first so it’s at the back) -->
     <ImageView
         android:id="@+id/bg_anim"
         android:layout_width="match_parent"
@@ -35,14 +34,12 @@
             android:src="@drawable/title_page_profile"
             android:contentDescription="Profile" />
 
-        <!-- flexible spacer pushes the settings button to the far right -->
         <View
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_weight="1" />
 
 
-        <!-- NEW: Ticket button (left of Diary) -->
         <ImageButton
             android:id="@+id/btn_unlock_edit"
             android:layout_width="40dp"
@@ -54,7 +51,7 @@
             android:padding="4dp" />
 
 
-        <!-- Diary button (bottom-left, above nav). Kept simple to avoid disrupting UI -->
+        <!-- Diary button -->
         <ImageButton
             android:id="@+id/btn_diary"
             android:layout_width="40dp"
@@ -88,7 +85,6 @@
             android:gravity="center_horizontal"
             android:orientation="vertical">
 
-            <!-- Card: User Info -->
             <FrameLayout
                 android:id="@+id/user_info_container"
                 android:layout_width="match_parent"
@@ -96,7 +92,6 @@
                 android:layout_marginBottom="16dp"
                 android:background="@drawable/container_user_fitness">
 
-                <!-- LEFT: profile image / illustration -->
                 <ImageView
                     android:id="@+id/iv_profile_photo"
                     android:layout_width="wrap_content"
@@ -106,7 +101,6 @@
                     android:contentDescription="Profile image"
                     android:src="@drawable/user_icon_male_sprite" />
 
-                    <!-- Left image + Right content -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
@@ -115,7 +109,6 @@
                         android:padding="12dp"
                         android:layout_marginStart="120dp">
 
-                    <!-- RIGHT: all content -->
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -123,7 +116,6 @@
                         android:orientation="vertical"
                         android:layout_gravity="center_vertical">
 
-                        <!-- Name -->
                         <TextView
                             android:id="@+id/tv_name"
                             android:layout_width="wrap_content"
@@ -133,7 +125,6 @@
                             android:textColor="@color/white"
                             android:textSize="30sp" />
 
-                        <!-- Row 1: Age & Sex (inline) -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -167,7 +158,6 @@
                 </LinearLayout>
             </FrameLayout>
 
-            <!-- Fitness container (PNG shows correctly) -->
             <FrameLayout
                 android:id="@+id/user_fitness_container"
                 android:layout_width="match_parent"
@@ -175,7 +165,6 @@
                 android:layout_marginBottom="16dp"
                 android:background="@drawable/container_user_info">
 
-                <!-- Left image + Right content -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -184,7 +173,6 @@
                     android:gravity="center_vertical"
                     android:baselineAligned="false">
 
-                    <!-- Inline row: Activity Level & Fitness Goal -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -193,7 +181,6 @@
                         android:paddingHorizontal="12dp"
                         android:baselineAligned="true">
 
-                        <!-- Col 1: Activity Level -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -226,7 +213,6 @@
                                 android:focusable="false"/>
                         </LinearLayout>
 
-                        <!-- Col 2: Fitness Goal -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -260,7 +246,6 @@
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- Row 2: Height & Weight (inline like Age/Sex) -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -269,7 +254,6 @@
                         android:layout_marginTop="12dp"
                         android:paddingHorizontal="12dp">
 
-                        <!-- Column: Height -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -308,7 +292,6 @@
                                 android:importantForAutofill="no" />
                         </LinearLayout>
 
-                        <!-- Column: Weight -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -348,7 +331,6 @@
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- Row 3: BMI (calculated) & Goal Weight -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -357,7 +339,6 @@
                         android:layout_marginTop="12dp"
                         android:paddingHorizontal="12dp">
 
-                        <!-- Column: BMI (calculated, read-only) -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -374,7 +355,6 @@
                                 android:textColor="@color/white"
                                 android:textSize="20sp" />
 
-                            <!-- Read-only box style to match your inputs -->
                             <TextView
                                 android:id="@+id/tv_bmi_value"
                                 android:layout_width="match_parent"
@@ -387,7 +367,6 @@
                                 android:textSize="16sp" />
                         </LinearLayout>
 
-                        <!-- Column: Goal Weight (kg) -->
                         <LinearLayout
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
@@ -451,8 +430,6 @@
         android:layout_marginBottom="8dp"
         android:background="@drawable/button_save"
         android:contentDescription="Save Profile" />
-
-
 
     <!-- Bottom nav -->
     <LinearLayout

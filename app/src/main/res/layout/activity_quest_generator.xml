@@ -16,7 +16,6 @@
         android:layout_marginTop="20dp"
         android:orientation="vertical">
 
-        <!-- Split block with image background -->
         <FrameLayout
             android:id="@+id/split_container"
             android:layout_width="match_parent"
@@ -38,7 +37,6 @@
             </LinearLayout>
         </FrameLayout>
 
-        <!-- Focus block with image background -->
         <FrameLayout
             android:id="@+id/focus_container"
             android:layout_width="match_parent"
@@ -61,7 +59,6 @@
         </FrameLayout>
     </LinearLayout>
 
-    <!-- Welcome message bubble -->
     <FrameLayout
         android:id="@+id/welcome_bubble"
         android:layout_width="match_parent"
@@ -87,7 +84,6 @@
             android:textColor="@android:color/black" />
     </FrameLayout>
 
-    <!-- Actions row -->
     <LinearLayout
         android:id="@+id/actions_row"
         android:layout_width="match_parent"

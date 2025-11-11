@@ -58,9 +58,9 @@ class ProfileActivity : AppCompatActivity() {
         private const val TAB_ITEMS = "items"
 
         private const val TOUR_PREFS = "onboarding"
-        private const val PROFILE_TOUR_DONE_KEY_PREFIX = "profile_tour_done_v1_u_" // per-user key
-        private const val FORCE_TOUR = false                                       // set true temporarily to test
-        private val profileTourShownUsersThisProcess = mutableSetOf<Int>()          // per-process guard (per user)
+        private const val PROFILE_TOUR_DONE_KEY_PREFIX = "profile_tour_done_v1_u_"
+        private const val FORCE_TOUR = false
+        private val profileTourShownUsersThisProcess = mutableSetOf<Int>()
     }
 
     private lateinit var repository: FitquestRepository
@@ -115,12 +115,11 @@ class ProfileActivity : AppCompatActivity() {
         tvSettingsHint = findViewById(R.id.tv_settings_hint)
         showHint(HINT_DEFAULT)
 
-        // Initialize repos/db
         repository = FitquestRepository(this)
         db = AppDatabase.getInstance(applicationContext)
         repoShop = ShopRepository(db)
 
-        // --- BACKGROUND COSMETIC: default tier 0, then upgrade when userId known
+        // BACKGROUND COSMETIC
         bgSprite = BgCosmetics.buildDrawable(this, BgCosmetics.Page.PROFILE, 0).also { drawable ->
             bgView.setImageDrawable(drawable); drawable.start()
         }
@@ -128,7 +127,6 @@ class ProfileActivity : AppCompatActivity() {
         enterImmersive()
         pressAnim = android.view.animation.AnimationUtils.loadAnimation(this, R.anim.press)
 
-        // Views
         spriteView = findViewById(R.id.iv_profile_photo)
         tvName = findViewById(R.id.tv_name)
         tvAge = findViewById(R.id.tv_age)
@@ -252,7 +250,6 @@ class ProfileActivity : AppCompatActivity() {
                 showHint(HINT_DEFAULT)
             }
 
-            // --- upgrade background if the user owns a higher tier ---
             val tier = withContext(Dispatchers.IO) {
                 BgCosmetics.highestOwnedTier(userId, repoShop, BgCosmetics.Page.PROFILE)
             }
@@ -365,7 +362,6 @@ class ProfileActivity : AppCompatActivity() {
 
                     if (existing == null) db.userProfileDAO().insert(updated) else db.userProfileDAO().update(updated)
 
-                    // log weight change so diary + dashboard update
                     if (prevWeightInt == null || prevWeightInt != newWeightInt) {
                         val weightForLog = typedWeightDouble?.toFloat() ?: newWeightInt.toFloat()
                         db.weightLogDao().insert(
@@ -739,16 +735,13 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
     private fun TapTarget.applyProfileTourStyle(): TapTarget = apply {
-        // Scrim/background color — pass a *resource*, not an ARGB int here
-        dimColor(R.color.tour_white_80)      // 80% white in colors.xml (#CCFFFFFF)
+        dimColor(R.color.tour_white_80)
 
-        // Make BOTH texts the same bright color
-        titleTextColor(R.color.tour_orange)   // or android.R.color.black
+        titleTextColor(R.color.tour_orange)
         descriptionTextColor(R.color.tour_orange)
 
-        // Ring/target styling
-        outerCircleColor(R.color.white) // subtle ring, then use alpha below
-        outerCircleAlpha(0.12f)              // keep ring faint over light scrim
+        outerCircleColor(R.color.white)
+        outerCircleAlpha(0.12f)
         targetCircleColor(R.color.white)
 
         tintTarget(true)
@@ -778,13 +771,11 @@ class ProfileActivity : AppCompatActivity() {
         val prefs = getSharedPreferences(TOUR_PREFS, MODE_PRIVATE)
         val userDoneKey = "$PROFILE_TOUR_DONE_KEY_PREFIX$userId"
 
-        // DEV ONLY: uncomment during testing for a specific user
         if (FORCE_TOUR && BuildConfig.DEBUG) {
             prefs.edit().remove(userDoneKey).apply()
             profileTourShownUsersThisProcess.remove(userId)
         }
 
-        // Guard once per process (per user) + once per install (per user)
         if (profileTourShownUsersThisProcess.contains(userId) || prefs.getBoolean(userDoneKey, false)) return
         profileTourShownUsersThisProcess.add(userId)
 
@@ -861,8 +852,4 @@ class ProfileActivity : AppCompatActivity() {
         val desc: String,
         val needsScroll: Boolean = false
     )
-
-
-
-
 }

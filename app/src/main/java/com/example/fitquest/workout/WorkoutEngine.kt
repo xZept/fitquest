@@ -9,10 +9,7 @@ import kotlin.random.Random
 
 object gitWorkoutEngine {
 
-    // ------------------------------------------------------------
     // Public API
-    // ------------------------------------------------------------
-
     fun defaultScheme(focus: String): Triple<Int, Int, Int> = when (focus.trim().lowercase()) {
         "hypertrophy" -> Triple(8, 12, 3)
         "strength"    -> Triple(4, 6, 5)
@@ -20,13 +17,6 @@ object gitWorkoutEngine {
         else          -> Triple(8, 12, 3)
     }
 
-    /**
-     * Structured, slot-driven plan builder:
-     * - Uses split-specific templates (required + optional slots)
-     * - Scores candidates by pattern/mover match, focus, complexity, equipment
-     * - Enforces diversity (STRICT 1-per-movement-pattern)
-     * Returns (initial list to preview/edit, addable pool).
-     */
     fun buildStructuredPlan(
         context: Context,
         split: String,
@@ -39,7 +29,7 @@ object gitWorkoutEngine {
         val canonSplit = normSplit(split)
         val canonFocus = normFocus(focus)
 
-        // Pre-filter by split & equipment only; focus is a scoring factor later.
+        // Pre-filter by split & equipment only
         val filtered = all
             .asSequence()
             .filter { matchesSplit(it.split, canonSplit) }
@@ -76,11 +66,11 @@ object gitWorkoutEngine {
             }
         }
 
-        // Required first, then optional until target
+
         template.filter { it.required }.forEach { tryFillSlot(it, soft = false) }
         template.filter { !it.required }.forEach { tryFillSlot(it, soft = true) }
 
-        // Respect the number of slots / requested size (no padding to 6+)
+
         val minNeeded = minOf(targetItems, template.sumOf { it.count })
         if (chosen.size < minNeeded) {
             val remaining = filtered.filter { it !in chosen }
@@ -116,7 +106,6 @@ object gitWorkoutEngine {
             )
         }
 
-        // Addable pool = remaining unique base movements (still filtered)
         val usedBase = start.map { baseKey(it.name) }.toSet()
         val addPool = filtered
             .filter { baseKey(it.name) !in usedBase }
@@ -162,10 +151,6 @@ object gitWorkoutEngine {
         }.toList()
     }
 
-    // ------------------------------------------------------------
-    // Slot templates & scoring
-    // ------------------------------------------------------------
-
     private data class Slot(
         val key: String,
         val required: Boolean,
@@ -176,7 +161,6 @@ object gitWorkoutEngine {
 
     private data class Caps(val base: Int, val pattern: Int, val mover: Int)
 
-    /** Per-split templates using your new movement_pattern values (+ legacy synonyms). */
     private fun templateForSplit(split: String): List<Slot> = when (split) {
         "push" -> listOf(
             Slot("Horizontal Push", required = true,  count = 1,
@@ -242,7 +226,6 @@ object gitWorkoutEngine {
         else -> templateForSplit("full body")
     }
 
-    /** How many currently-chosen items satisfy this slot. */
     private fun countInSlot(chosen: List<CsvExercise>, slot: Slot): Int =
         chosen.count { ex ->
             val p = canonLabel(ex.movementPatternPretty)
@@ -252,7 +235,6 @@ object gitWorkoutEngine {
             (slot.patterns.isEmpty() || patternOk) && (slot.movers.isEmpty() || moverOk)
         }
 
-    /** Score candidate for a given slot. */
     private fun scoreForSlot(
         ex: CsvExercise,
         slot: Slot,
@@ -266,14 +248,14 @@ object gitWorkoutEngine {
         if (slot.patterns.isNotEmpty() && p != null && p in slot.patterns) score += 1.2
         if (slot.movers.isNotEmpty()   && m != null && m in slot.movers)  score += 1.0
 
-        // Focus: prefer requested but allow others
+        // Focus
         score += when (ex.focus) {
             focus -> 0.8
             "general", "any" -> 0.5
             else -> 0.3
         }
 
-        // Complexity bias by focus (General/Hypertrophy ≈ 2, Strength ≈ 3)
+        // Complexity by focus
         val targetCx = when (focus) {
             "strength" -> 3
             "hypertrophy" -> 2
@@ -282,19 +264,18 @@ object gitWorkoutEngine {
         val cxPenalty = abs(ex.complexity - targetCx) * 0.25
         score += 0.8 - cxPenalty
 
-        // Equipment: if user owns equipment, gently de-prioritize pure bodyweight
+        // Equipment
         val isBodyweightOnly = ex.equipment.size == 1 && ex.equipment.first() == "bodyweight"
         if (ownedEquip.any { it != "bodyweight" }) {
             if (isBodyweightOnly) score -= 0.2 else score += 0.1
         }
 
-        // Small random jitter
         score += Random.nextDouble(0.0, 0.05)
 
         return score
     }
 
-    // Diversity (STRICT 1-per-pattern)
+    // Diversity
     private fun passesDiversity(
         ex: CsvExercise,
         seenBase: Map<String, Int>,
@@ -324,10 +305,7 @@ object gitWorkoutEngine {
         canonLabel(ex.primaryMoverPretty)?.let { k -> seenMover[k] = (seenMover[k] ?: 0) + 1 }
     }
 
-    // ------------------------------------------------------------
     // CSV model & loader
-    // ------------------------------------------------------------
-
     private data class CsvExercise(
         val name: String,
         val equipment: List<String>,
@@ -397,9 +375,7 @@ object gitWorkoutEngine {
         return out
     }
 
-    // ------------------------------------------------------------
     // Matching & canonicalization helpers
-    // ------------------------------------------------------------
 
     private fun matchesSplit(csv: String, want: String): Boolean {
         if (want == "any") return true
@@ -413,7 +389,6 @@ object gitWorkoutEngine {
         }
     }
 
-    /** Only for Basic; structured builder mixes focuses explicitly. */
     private fun matchesFocusLoose(csv: String, want: String): Boolean {
         if (want == "any" || want == "general") return true
         if (csv == "any" || csv == "general") return true
@@ -468,8 +443,6 @@ object gitWorkoutEngine {
             else -> s
         }
     }
-
-    /** Collapse naming variants to a base movement key. */
     private fun baseKey(name: String): String {
         var s = name.lowercase().trim()
         s = s.replace(Regex("\\([^)]*\\)"), "")
@@ -498,7 +471,6 @@ object gitWorkoutEngine {
             .replace(Regex("\\s+"), " ")
             .trim()
 
-        // Map common synonyms so duplicates collapse
         if (s == "horizontal press") s = "horizontal push"
         if (s == "vertical press") s = "vertical push"
         if (s == "anti-rotate") s = "anti rotate"
@@ -506,11 +478,8 @@ object gitWorkoutEngine {
         return s.ifEmpty { null }
     }
 
-    // ------------------------------------------------------------
     // Smart replacement helpers
-    // ------------------------------------------------------------
 
-    /** Single removed item → ranked alternatives. */
     fun suggestAlternatives(
         context: Context,
         removedExerciseName: String,
@@ -596,10 +565,9 @@ object gitWorkoutEngine {
             .take(limit)
     }
 
-    /** NEW: Multiple removed items → one combined, recency-weighted suggestion list. */
     fun buildAddablePoolForReplacementsBatch(
         context: Context,
-        removedExerciseNames: List<String>,   // most-recent first is best
+        removedExerciseNames: List<String>,
         split: String,
         focus: String,
         ownedEquipCanonical: Set<String>,
@@ -617,7 +585,6 @@ object gitWorkoutEngine {
             .distinctBy { it.nameKey }
             .toList()
 
-        // Resolve removed refs
         val refs: List<CsvExercise> = removedExerciseNames.mapNotNull { name ->
             val nk = norm(name)
             val bk = baseKey(name)
@@ -665,10 +632,8 @@ object gitWorkoutEngine {
             return s
         }
 
-        // Recency weights: 1.0, 0.9, 0.8, ...
         val weights = refs.mapIndexed { idx, _ -> (1.0 - idx * 0.1).coerceAtLeast(0.6) }
 
-        // Aggregate score = weighted max(sim) across refs (strong bias to latest)
         val scored = candidates.map { c ->
             var best = 0.0
             for (i in refs.indices) {
@@ -685,7 +650,6 @@ object gitWorkoutEngine {
             .take(limit)
     }
 
-    /** Convenience: single removed fallback to generic pool if needed. */
     fun buildAddablePoolForReplacement(
         context: Context,
         removedExerciseName: String,

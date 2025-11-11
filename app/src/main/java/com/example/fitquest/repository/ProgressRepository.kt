@@ -12,7 +12,7 @@ import java.time.ZoneId
 
 class ProgressRepository(private val db: AppDatabase) {
 
-    private val zone = ZoneId.of("Asia/Manila") // matches your dayKey convention
+    private val zone = ZoneId.of("Asia/Manila")
 
     private fun dayKeyFor(tsMs: Long): Int {
         val zdt = Instant.ofEpochMilli(tsMs).atZone(zone)
@@ -27,7 +27,7 @@ class ProgressRepository(private val db: AppDatabase) {
     }
     private fun endOfDayMs(dayKey: Int): Long = startOfDayMs(dayKey) + 86_399_000L
 
-    // ---------- NEW helpers ----------
+
     private fun weekStartOf(dayKey: Int): Int {
         val y = dayKey / 10_000
         val m = (dayKey / 100) % 100
@@ -44,20 +44,15 @@ class ProgressRepository(private val db: AppDatabase) {
         return dt.year * 10_000 + dt.monthValue * 100 + dt.dayOfMonth
     }
 
-    /** Union of days that actually have data (food logs or diary rows). */
     suspend fun activeDayKeys(userId: Int, limit: Int = 90): List<Int> = withContext(Dispatchers.IO) {
         val foodDays  = db.foodLogDao().distinctDayKeys(userId, limit)
         val diaryDays = db.macroDiaryDao().distinctDayKeys(userId, limit)
-        // If you later want to include workout-only days, add a similar DAO and union it here.
         (foodDays + diaryDays).distinct().sortedDescending()
     }
-
-    /** Daily history built only from active days. */
     suspend fun dailyHistory(userId: Int, limit: Int = 30): List<DailySummary> = withContext(Dispatchers.IO) {
         activeDayKeys(userId, limit).take(limit).map { dk -> dailySummary(userId, dk) }
     }
 
-    /** Weekly history by grouping active days into weeks that actually have data. */
     suspend fun weeklyHistory(userId: Int, limitWeeks: Int = 12): List<WeeklySummary> = withContext(Dispatchers.IO) {
         val days = activeDayKeys(userId, 90)
         val grouped = days.groupBy { weekStartOf(it) }
@@ -74,11 +69,10 @@ class ProgressRepository(private val db: AppDatabase) {
 
     // ---------- EXISTING (with a small fix) ----------
     suspend fun dailySummary(userId: Int, dayKey: Int): DailySummary = withContext(Dispatchers.IO) {
-        // Try to read the snapshot first
+
         val existing = db.macroDiaryDao().get(userId, dayKey)
         if (existing != null) return@withContext toDaily(existing, userId)
 
-        // If missing, compute on the fly but DO NOT persist if intake is zero
         val totals = db.foodLogDao().totalsForDay(userId, dayKey)
         val plan   = db.macroPlanDao().getLatestForUser(userId)
         val hasIntake = (totals.calories > 0.0 || totals.protein > 0.0 ||
@@ -89,7 +83,6 @@ class ProgressRepository(private val db: AppDatabase) {
         )
 
         if (!hasIntake) {
-            // Return a computed view for the UI without creating a noisy DB row
             val planCalories = plan?.calories ?: 0
             val planProtein  = plan?.protein  ?: 0
             val planCarbs    = plan?.carbs    ?: 0
@@ -106,7 +99,6 @@ class ProgressRepository(private val db: AppDatabase) {
             )
         }
 
-        // Intake exists → persist snapshot for consistency
         val md = MacroDiary(
             userId = userId,
             dayKey = dayKey,
@@ -129,7 +121,7 @@ class ProgressRepository(private val db: AppDatabase) {
             val from = decrementDayKey(endDayKey, 6) // 7-day window
             val list = db.macroDiaryDao().between(userId, from, endDayKey)
 
-            // Ensure all days present (fill missing with zeros)
+            // Ensure all days present
             val filled = (0..6).map { i ->
                 val dk = decrementDayKey(endDayKey, 6 - i)
                 val row = list.find { it.dayKey == dk }
@@ -150,7 +142,6 @@ class ProgressRepository(private val db: AppDatabase) {
         }
 
     private suspend fun toDaily(md: MacroDiary, userId: Int): DailySummary {
-        // Fallback to latest plan if the snapshot’s plan fields are zeroed
         val latest = db.macroPlanDao().getLatestForUser(userId)
         val planCalories = if (md.planCalories > 0) md.planCalories else (latest?.calories ?: 0)
         val planProtein  = if (md.planProtein  > 0) md.planProtein  else (latest?.protein  ?: 0)
@@ -174,8 +165,6 @@ class ProgressRepository(private val db: AppDatabase) {
         )
     }
 
-
-    // decrement by N days using DayKey arithmetic (YYYYMMDD)
     private fun decrementDayKey(dayKey: Int, days: Int): Int {
         val y = dayKey / 10_000
         val m = (dayKey / 100) % 100

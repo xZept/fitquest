@@ -27,7 +27,7 @@
             android:contentDescription="Shop" />
     </LinearLayout>
 
-    <!-- Coins badge (top-right) -->
+    <!-- Coins badge -->
     <ImageView
         android:id="@+id/iv_coin_anim"
         android:layout_width="28dp"
@@ -169,7 +169,6 @@
             android:layout_height="2dp"
             android:background="#1F000000" />
 
-        <!-- Lower area: tab bar + list -->
         <LinearLayout
             android:id="@+id/lower_items_container"
             android:layout_width="match_parent"
@@ -177,7 +176,6 @@
             android:layout_weight="2"
             android:orientation="vertical">
 
-            <!-- Tab bar -->
             <LinearLayout
                 android:id="@+id/tab_bar"
                 android:layout_width="match_parent"

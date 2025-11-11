@@ -50,7 +50,6 @@
         <activity android:name="com.example.fitquest.WeeklyReviewActivity" />
         <activity android:name=".DiaryHistoryActivity"/>
 
-        <!-- Weight reminder broadcast receiver (explicit internal receiver) -->
         <receiver
             android:name=".WeightReminderReceiver"
             android:exported="false" />
@@ -59,7 +58,6 @@
             android:name=".MacroSnapshotReceiver"
             android:exported="false" />
 
-        <!-- The prompt activity you want to show -->
         <activity
             android:name=".WeightPromptActivity"
             android:exported="false"
@@ -69,7 +67,7 @@
 
         <receiver
             android:name=".BootCompletedReceiver"
-            android:exported="true">     <!-- MUST be true for implicit system broadcasts -->
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED"/>
                 <!-- optional but recommended: -->

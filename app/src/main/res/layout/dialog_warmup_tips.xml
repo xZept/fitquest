@@ -4,7 +4,6 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <!-- Your panel art -->
     <ImageView
         android:id="@+id/bgPanel"
         android:layout_width="match_parent"
@@ -13,7 +12,6 @@
         android:adjustViewBounds="true"
         android:scaleType="fitCenter" />
 
-    <!-- Overlay content stacked vertically -->
     <LinearLayout
         android:id="@+id/content"
         android:layout_width="match_parent"
@@ -34,7 +32,6 @@
             android:textSize="20sp"
             android:gravity="center" />
 
-        <!-- Give the pager a FIXED height so it cannot collapse -->
         <androidx.viewpager2.widget.ViewPager2
             android:id="@+id/pager"
             android:layout_width="match_parent"
@@ -51,7 +48,6 @@
             app:tabIndicator="@android:color/transparent"
             app:tabRippleColor="@android:color/transparent" />
 
-        <!-- bottom row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -74,6 +70,5 @@
                 android:text="Next"
                 android:textAllCaps="false" />
         </LinearLayout>
-
     </LinearLayout>
 </FrameLayout>

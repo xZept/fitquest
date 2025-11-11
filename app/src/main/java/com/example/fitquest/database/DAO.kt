@@ -172,7 +172,7 @@ interface WorkoutSessionDao {
     """)
     suspend fun getCompletedSessionsForUser(userId: Int): List<BasicSession>
 
-    // NEW: count completed sessions in a time range (endedAt>0 and coinsEarned>0)
+    // count completed sessions in a time range (endedAt>0 and coinsEarned>0)
     @Query("""
         SELECT COUNT(*) FROM workoutSession
         WHERE userId = :uid
@@ -252,7 +252,7 @@ data class MonsterListItem(
     val spriteRes: String,
     val price: Int,
     val owned: Boolean,
-    val locked: Boolean   // ← NEW: locked if cheaper monsters aren’t owned yet
+    val locked: Boolean
 )
 
 @Dao
@@ -308,14 +308,12 @@ interface MonsterDao {
     @Query("DELETE FROM monster WHERE code NOT IN (:keep)")
     suspend fun deleteAllExcept(keep: List<String>)
 
-    // Allow price/name/sprite updates without recreating rows
     @Query("UPDATE monster SET price = :price WHERE code = :code")
     suspend fun updatePrice(code: String, price: Int)
 
     @Query("UPDATE monster SET name = :name, spriteRes = :spriteRes WHERE code = :code")
     suspend fun updateMeta(code: String, name: String, spriteRes: String)
 
-    // Number of cheaper monsters the user hasn't bought (progress prereqs)
     @Query("""
         SELECT COUNT(*) FROM monster m
         WHERE m.price < (SELECT price FROM monster WHERE code = :code)
@@ -494,7 +492,7 @@ data class ItemListItem(
     val name: String,
     val spriteRes: String,
     val price: Int,
-    val quantity: Int   // owned qty (0 if none)
+    val quantity: Int
 )
 
 @Dao

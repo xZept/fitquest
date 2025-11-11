@@ -5,23 +5,18 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_workout">
 
-    <!-- Main vertical content -->
     <LinearLayout
         android:id="@+id/content_column"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:paddingBottom="96dp">
-        <!-- paddingBottom ensures content never hides behind bottom bar -->
-
-        <!-- Top half: avatar vs monster + HP bar -->
         <FrameLayout
             android:id="@+id/scene_host"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1.3">
 
-            <!-- Monster HP bar (centered, fixed 412x64) -->
             <LinearLayout
                 android:id="@+id/hp_bar_container"
                 android:layout_width="wrap_content"
@@ -74,9 +69,6 @@
                 </FrameLayout>
             </LinearLayout>
 
-
-
-            <!-- animation -->
             <ImageView
                 android:id="@+id/iv_monster"
                 android:layout_width="370dp"
@@ -86,7 +78,6 @@
                 android:contentDescription="Monster" />
         </FrameLayout>
 
-        <!-- Bottom panel: current exercise card (actions moved out) -->
         <LinearLayout
             android:id="@+id/panel"
             android:layout_width="match_parent"
@@ -163,8 +154,6 @@
 
         </LinearLayout>
     </LinearLayout>
-
-    <!-- Sticky bottom bar -->
     <LinearLayout
         android:id="@+id/bottom_bar"
         android:layout_width="match_parent"

@@ -9,7 +9,7 @@
     android:paddingTop="24dp"
     android:paddingBottom="24dp">
 
-    <!-- App Title (stick to top) -->
+    <!-- App Title -->
     <ImageView
         android:id="@+id/imgTitle"
         android:layout_width="wrap_content"
@@ -21,7 +21,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Form (centered between title and sign-up link) -->
     <LinearLayout
         android:id="@+id/formContainer"
         android:layout_width="0dp"
@@ -64,9 +63,6 @@
             android:layout_marginBottom="16dp"
             android:imeOptions="actionDone"
             android:singleLine="true"/>
-
-        <!-- Login Button -->
-
     </LinearLayout>
 
     <ImageButton
@@ -78,7 +74,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/formContainer" />
 
-    <!-- Sign Up Text (stick to bottom) -->
+    <!-- Sign Up Text -->
     <TextView
         android:id="@+id/tvSignUpLink"
         android:layout_width="wrap_content"

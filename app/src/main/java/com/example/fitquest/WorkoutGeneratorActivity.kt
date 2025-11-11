@@ -35,7 +35,6 @@ class  WorkoutGeneratorActivity : AppCompatActivity() {
 
         setupInputFocusEffects()
 
-        // ✅ Hide navigation bar
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
             window.insetsController?.apply {
@@ -83,7 +82,6 @@ class  WorkoutGeneratorActivity : AppCompatActivity() {
         inputWeight.filters = arrayOf(InputFilter.LengthFilter(3))
         inputHealthCondition.filters = arrayOf(filter)
 
-        // Split seekbar
         seekbarSplit.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                 val days = if (progress < 1) 1 else progress
@@ -94,7 +92,6 @@ class  WorkoutGeneratorActivity : AppCompatActivity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        // Submit button
         btnSubmit.setOnClickListener {
             it.startAnimation(pressAnim)
             val height = inputHeight.text.toString().trim().toFloatOrNull()
@@ -109,7 +106,6 @@ class  WorkoutGeneratorActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // ✅ Send goal + dietType to MacroActivity
             val macroIntent = Intent(this, MacroActivity::class.java)
             macroIntent.putExtra("GOAL", goal)
             macroIntent.putExtra("DIET_TYPE", dietType)
@@ -118,7 +114,6 @@ class  WorkoutGeneratorActivity : AppCompatActivity() {
 
             startActivity(macroIntent)
 
-            // ✅ Send workout data to WorkoutActivity
             val workoutIntent = Intent(this, WorkoutActivity::class.java)
             workoutIntent.putExtra("HEIGHT_CM", height)
             workoutIntent.putExtra("WEIGHT_KG", weight)
@@ -129,9 +124,6 @@ class  WorkoutGeneratorActivity : AppCompatActivity() {
             workoutIntent.putExtra("SPLIT_DAYS", splitDays)
             startActivity(workoutIntent)
         }
-
-
-
     }
 
     private fun showExplanation(message: String) {
@@ -192,7 +184,7 @@ class  WorkoutGeneratorActivity : AppCompatActivity() {
         try {
             val inputStream = context.assets.open("meal_dataset.csv")
             val reader = BufferedReader(InputStreamReader(inputStream))
-            reader.readLine() // skip header
+            reader.readLine()
             var line: String?
             while (reader.readLine().also { line = it } != null) {
                 val tokens = line!!.split(",")

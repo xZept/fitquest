@@ -10,7 +10,6 @@ import com.example.fitquest.utils.MacroCalculator
 
 class FitquestRepository(context: Context) {
 
-    // Use the singleton — it already has fallbackToDestructiveMigration() in AppDatabase.
     private val db: AppDatabase = AppDatabase.getInstance(context)
 
     private val userDAO = db.userDAO()
@@ -18,8 +17,6 @@ class FitquestRepository(context: Context) {
     private val macroPlanDao = db.macroPlanDao()
 
     // --- Users ---
-
-    /** Inserts a single user and returns the new rowId (userId). */
     suspend fun insertUser(user: User): Long {
         Log.d("FitquestDB", "Inserting user: $user")
         val newId = userDAO.insert(user)
@@ -27,7 +24,6 @@ class FitquestRepository(context: Context) {
         return newId
     }
 
-    /** Returns the authenticated user's id, or null if no match. */
     suspend fun authenticateUser(username: String, password: String): Int? {
         Log.d("FitquestDB", "Authenticating user: username=$username")
         val user = userDAO.authenticateUser(username, password)
@@ -43,7 +39,6 @@ class FitquestRepository(context: Context) {
 
     // --- Profiles ---
 
-    /** Insert profile rows captured during registration. */
     suspend fun insertUserProfile(userProfile: UserProfile): Long {
         Log.d("FitquestDB", "Inserting profile: $userProfile")
         val newId = userProfileDAO.insert(userProfile)
@@ -83,7 +78,7 @@ class FitquestRepository(context: Context) {
 
         macroPlanDao.upsert(plan)
 
-        // Update today's plan *only if* a diary row already exists or there's actual intake today.
+        // Update today's plan
         val zone = java.time.ZoneId.of("Asia/Manila")
         val now  = java.time.ZonedDateTime.now(zone)
         val dk   = now.year * 10_000 + now.monthValue * 100 + now.dayOfMonth
@@ -93,7 +88,7 @@ class FitquestRepository(context: Context) {
         val existingToday = db.macroDiaryDao().get(userId, dk)
 
         if (existingToday != null) {
-            // Keep the actual intake values; just refresh the plan fields
+            // Keep the actual intake values if they exist
             db.macroDiaryDao().upsert(
                 existingToday.copy(
                     planCalories = plan.calories,
@@ -121,7 +116,6 @@ class FitquestRepository(context: Context) {
                 )
             )
         }
-        // else: no existing row and no intake → do nothing (don’t create noise)
 
         return plan
     }

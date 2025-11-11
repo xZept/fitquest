@@ -13,7 +13,7 @@ class Food {
     )
 
     fun macrosForPortion(food: Food, portion: Portion): PortionMacros {
-        val factor = portion.gramWeight / 100.0         // edible grams → 100g factor
+        val factor = portion.gramWeight / 100.0
         return PortionMacros(
             calories = food.kcalPer100g * factor,
             protein  = food.proteinPer100g * factor,

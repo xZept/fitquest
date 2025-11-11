@@ -4,11 +4,9 @@
 
     <dimen name="meal_scroll_height">350dp</dimen>
 
-    <!-- Buy Food button -->
     <dimen name="buy_food_size">56dp</dimen>
     <dimen name="buy_food_margin">8dp</dimen>
 
-    <!-- 👇 ONLY the button clearance (56 + 8 = 64). Add a few dp if you want a tiny gap. -->
     <dimen name="content_bottom_inset">64dp</dimen>
 
     <dimen name="hp_bar_width">200dp</dimen>

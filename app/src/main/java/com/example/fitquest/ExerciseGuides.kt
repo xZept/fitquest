@@ -16,35 +16,27 @@ object ExerciseGuides {
     )
 
     private var loaded = false
-    private val byName = HashMap<String, Guide>(512)   // key = normalized name
+    private val byName = HashMap<String, Guide>(512)
 
     fun ensureLoaded(ctx: Context) {
         if (loaded) return
         try {
-            // --- read info (name, description, instructions, id) ---
             val infoRows = readCsv(ctx, "exercises_info.csv")
-            // make column lookup forgiving
             val infoCols = infoRows.firstOrNull()?.keys?.associateBy { it.trim().lowercase(Locale.US) } ?: emptyMap()
             val idKeyInfo = infoCols.keys.firstOrNull { it.startsWith("exercise_id") } ?: "exercise_id (fk)"
             val nameKey   = infoCols.keys.firstOrNull { it.contains("exercise_name") } ?: "exercise_name"
             val descKey   = infoCols.keys.firstOrNull { it.contains("description") } ?: "description"
             val instrKey  = infoCols.keys.firstOrNull { it.contains("instruction") } ?: "instructions"
-
-            // --- read videos (exercise_id, youtube_link) ---
             val vidRows = readCsv(ctx, "exercise_video_dataset.csv")
             val vidCols = vidRows.firstOrNull()?.keys?.associateBy { it.trim().lowercase(Locale.US) } ?: emptyMap()
             val idKeyVid = vidCols.keys.firstOrNull { it.startsWith("exercise_id") } ?: "exercise_id"
             val linkKey  = vidCols.keys.firstOrNull { it.contains("youtube") } ?: "youtube_link"
-
-            // build a quick map id -> youtube
             val idToYoutube = HashMap<Int, String?>()
             for (r in vidRows) {
                 val id = r[idKeyVid]!!.trim().toIntOrNull() ?: continue
                 val link = r[linkKey]?.trim().takeUnless { it.isNullOrBlank() }
                 idToYoutube[id] = link
             }
-
-            // join info+videos on exercise_id, then index by normalized name
             var added = 0
             for (r in infoRows) {
                 val id = r[idKeyInfo]?.trim()?.toIntOrNull() ?: continue
@@ -70,20 +62,17 @@ object ExerciseGuides {
     fun findByName(name: String): Guide? {
         val norm = normalize(name)
         byName[norm]?.let { return it }
-
-        // fallback: lenient contains match to help when UI name differs slightly
         val candidates = byName.keys.filter { it.contains(norm) || norm.contains(it) }
         return candidates.firstOrNull()?.let { byName[it] }
     }
 
     private fun normalize(s: String): String =
         s.lowercase(Locale.US)
-            .replace(Regex("\\([^)]*\\)"), " ") // remove (...) parts
-            .replace(Regex("[^a-z0-9]+"), " ")  // squash punctuation/dashes/underscores
+            .replace(Regex("\\([^)]*\\)"), " ")
+            .replace(Regex("[^a-z0-9]+"), " ")
             .trim()
             .replace(Regex("\\s+"), " ")
 
-    /** Minimal CSV reader that respects quotes. */
     private fun readCsv(ctx: Context, assetName: String): List<Map<String, String>> {
         val rows = mutableListOf<Map<String, String>>()
         ctx.assets.open(assetName).use { ins ->
@@ -92,7 +81,6 @@ object ExerciseGuides {
                 br.lineSequence().forEach { line ->
                     if (line.isBlank()) return@forEach
                     val cols = parseCsvLine(line)
-                    // pad or trim to header size
                     val fixed = if (cols.size < header.size)
                         cols + List(header.size - cols.size) { "" }
                     else cols.take(header.size)
@@ -113,7 +101,7 @@ object ExerciseGuides {
             when {
                 c == '"' -> {
                     if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
-                        sb.append('"'); i++ // escaped quote
+                        sb.append('"'); i++
                     } else {
                         inQuotes = !inQuotes
                     }

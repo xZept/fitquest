@@ -1,6 +1,5 @@
 package com.example.fitquest.utils
 
-/** Simple CSV parser that handles quoted fields and escaped quotes (""). */
 internal fun String.parseCsvLine(): List<String> {
     val out = mutableListOf<String>()
     val sb = StringBuilder()

@@ -46,7 +46,6 @@
                 android:src="@android:drawable/ic_media_next" />
         </LinearLayout>
 
-        <!-- Kcal deviation row -->
         <TextView
             android:id="@+id/tv_week_kcal"
             android:layout_width="wrap_content"
@@ -61,7 +60,6 @@
             android:layout_marginTop="6dp"
             app:trackThickness="10dp" />
 
-        <!-- Protein row -->
         <TextView
             android:id="@+id/tv_week_protein"
             android:layout_width="wrap_content"

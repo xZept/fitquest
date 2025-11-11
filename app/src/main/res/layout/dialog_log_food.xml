@@ -9,7 +9,6 @@
     app:cardPreventCornerOverlap="false"
     app:cardElevation="0dp">
 
-    <!-- Put your PNG background on an inner container -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -17,7 +16,6 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-    <!-- CONTENT -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/til_amount"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -76,7 +74,6 @@
             android:inputType="none"/>
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- FOOTER: image buttons pinned at the bottom of the panel -->
         <LinearLayout
             android:id="@+id/footer_buttons"
             android:layout_width="match_parent"

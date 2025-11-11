@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Animated background spans the whole dialog -->
+    <!-- Animated background  -->
     <ImageView
         android:id="@+id/iv_rest_bg"
         android:layout_width="match_parent"
@@ -12,7 +12,6 @@
         android:adjustViewBounds="false"
         android:scaleType="centerCrop" />
 
-    <!-- Foreground content on top of the animated bg -->
     <LinearLayout
         android:id="@+id/dialog_content"
         android:layout_width="match_parent"

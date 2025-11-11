@@ -56,7 +56,6 @@
             android:contentDescription="Buy button" />
     </LinearLayout>
 
-    <!-- Dark overlay shown only for NOT ENOUGH -->
     <View
         android:id="@+id/overlay_dim"
         android:layout_width="match_parent"

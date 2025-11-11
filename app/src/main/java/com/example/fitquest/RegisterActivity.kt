@@ -94,18 +94,13 @@ class RegisterActivity : AppCompatActivity() {
                 false
             }
         }
-
-        // Show for a few seconds on entry
         lifecycleScope.launch {
-            // prepare & fade in
             welcomeBanner.alpha = 0f
             welcomeBanner.visibility = View.VISIBLE
             welcomeBanner.animate().alpha(1f).setDuration(200).withLayer().start()
 
-            // stay visible for N ms
             delay(8000)
 
-            // fade out, then hide
             welcomeBanner.animate()
                 .alpha(0f)
                 .setDuration(220)
@@ -114,10 +109,8 @@ class RegisterActivity : AppCompatActivity() {
                 .start()
         }
 
-        // === Animated background (spritesheet) ===
         val root = findViewById<ConstraintLayout>(R.id.registerLayout)
 
-// Prevent density scaling to keep frame grid exact
         val opts = BitmapFactory.Options().apply {
             inScaled = false
             inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
@@ -139,11 +132,9 @@ class RegisterActivity : AppCompatActivity() {
             scaleMode = SpriteSheetDrawable.ScaleMode.CENTER_CROP
         )
 
-    // Put the animated sheet behind everything
         root.background = bgSprite
 
 
-        // Initialize sex options
         male = findViewById(R.id.iv_male)
         female = findViewById(R.id.iv_female)
 
@@ -176,8 +167,6 @@ class RegisterActivity : AppCompatActivity() {
             window.navigationBarColor = Color.TRANSPARENT
         }
 
-//        setupInputFocusEffects()
-
         val mainLayout = findViewById<View>(R.id.registerLayout)
         ViewCompat.setOnApplyWindowInsetsListener(mainLayout) { view, insets ->
             val systemInsets = insets.getInsets(Type.systemBars())
@@ -206,12 +195,10 @@ class RegisterActivity : AppCompatActivity() {
         val birthdayEditText = findViewById<EditText>(R.id.et_birthday).apply {
             background = ContextCompat.getDrawable(context, R.drawable.user_input_bg_selector)
             setOnClickListener {
-                showBanner(help[R.id.et_birthday] ?: "")   // ← add this
+                showBanner(help[R.id.et_birthday] ?: "")
                 it.pulseThenSetActivated(text.isNotBlank())
-                // open date picker after…
             }
         }
-//        wireEditText(birthdayEditText) // optional: keeps state by value if you later allow typing
 
         // Form fields
         val firstNameEditText = findViewById<EditText>(R.id.et_first_name)
@@ -227,18 +214,11 @@ class RegisterActivity : AppCompatActivity() {
         val registerButton = findViewById<ImageButton>(R.id.btn_register)
         val tvFitnessGoal = findViewById<TextView>(R.id.tv_fitness_goal)
         val spinnerActivityLevel = findViewById<Spinner>(R.id.spinner_activity_levels)
-//        wireSpinner(spinnerActivityLevel, placeholderIndex = 0) // adjust index if no placeholder
-//        wireSpinner(spinnerGoal, placeholderIndex = 0)
         wireSpinnerHint(spinnerActivityLevel, R.id.spinner_activity_levels)
-        // Constrain inputs
         heightEditText.applyNumericConstraints(MIN_HEIGHT_CM, MAX_HEIGHT_CM, maxDecimals = 1)
         weightEditText.applyNumericConstraints(MIN_WEIGHT_KG, MAX_WEIGHT_KG, maxDecimals = 1)
         goalWeightEditText.applyNumericConstraints(MIN_WEIGHT_KG, MAX_WEIGHT_KG, maxDecimals = 1)
-
-        // After you define goalWeightEditText:
-        wireEditText(goalWeightEditText) // add this
-
-        // Small helper to compare decimals
+        wireEditText(goalWeightEditText)
         fun nearlyEqual(a: Float, b: Float, eps: Float = 0.5f) = kotlin.math.abs(a - b) < eps
 
         // Compute goal from weight & goal weight
@@ -252,7 +232,6 @@ class RegisterActivity : AppCompatActivity() {
             }
         }
 
-        // Update the label whenever inputs change
         fun updateFitnessGoalUI() {
             val goal = deriveFitnessGoal()
             tvFitnessGoal.text = "Fitness Goal: " + (goal ?: "—")
@@ -308,7 +287,6 @@ class RegisterActivity : AppCompatActivity() {
             spinnerActivityLevel.adapter = adapter
         }
 
-        // Filter: Allow only letters, space, and hyphen
         val nameFilter = InputFilter { source, _, _, _, _, _ ->
             val allowedPattern = Regex("^[a-zA-Z\\-\\s]+$")
             if (source.isEmpty() || source.matches(allowedPattern)) source else ""
@@ -342,7 +320,6 @@ class RegisterActivity : AppCompatActivity() {
         setupCapitalization(firstNameEditText)
         setupCapitalization(lastNameEditText)
 
-        // Date Picker & Age Calculation
         birthdayEditText.setOnClickListener {
             showBanner(help[R.id.et_birthday] ?: "")
             val calendar = Calendar.getInstance()
@@ -441,7 +418,7 @@ class RegisterActivity : AppCompatActivity() {
                             sex = selectedSex!!,
                             username = username,
                             email = email,
-                            password = password, // Note: Passwords should be hashed in a real app
+                            password = password,
                         )
                         val newUserId = repository.insertUser(newUser)
                         Log.d("FitquestDB", "Inserted user id: $newUserId")
@@ -452,7 +429,7 @@ class RegisterActivity : AppCompatActivity() {
                             userId = newUserId.toInt(),
                             height = heightVal.roundToInt(),
                             weight = weightVal.roundToInt(),
-                            goalWeight = goalWeightVal?.roundToInt(), // NEW
+                            goalWeight = goalWeightVal?.roundToInt(),
                             activityLevel = activityLevel,
                             goal = goal
                         )
@@ -464,7 +441,7 @@ class RegisterActivity : AppCompatActivity() {
                             com.example.fitquest.database.WeightLog(
                                 userId   = newUserId.toInt(),
                                 loggedAt = System.currentTimeMillis(),
-                                weightKg = weightVal!!.toFloat()   // you already validated non-null and range
+                                weightKg = weightVal!!.toFloat()
                             )
                         )
 
@@ -472,10 +449,8 @@ class RegisterActivity : AppCompatActivity() {
                         Log.d("FitquestDB", "Registering new user: $newUser")
                         Log.d("FitquestDB", "Adding new user profile: $newUserProfile")
 
-                        // Calculate macros
                         repository.computeAndSaveMacroPlan(newUserId.toInt())
 
-                        // Log macros for the day every 11:59 PM
                         ReminderScheduler.scheduleNext2359PHT(applicationContext)
 
                         Toast.makeText(
@@ -487,7 +462,6 @@ class RegisterActivity : AppCompatActivity() {
                         startActivity(Intent(this@RegisterActivity, LoginActivity::class.java))
                         finish()
 
-                        // --- END OF FINAL CHANGES ---
                     }
                 }
             }
@@ -519,7 +493,6 @@ class RegisterActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    // Function for logging macros every 11:59 PM
     private fun scheduleMidnightMacroSnapshot() {
         val zone = ZoneId.of("Asia/Manila")
         val now = ZonedDateTime.now(zone)
@@ -534,7 +507,6 @@ class RegisterActivity : AppCompatActivity() {
             .addTag("macroSnapshotDaily")
             .build()
 
-        // Don’t reschedule every app start; keep the existing timing.
         androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "macroSnapshotDaily",
             androidx.work.ExistingPeriodicWorkPolicy.KEEP,
@@ -544,7 +516,6 @@ class RegisterActivity : AppCompatActivity() {
     private fun showBanner(text: String, holdMs: Long = 4000L) {
         welcomeBanner.text = text
 
-        // cancel any pending hide
         bannerHideRunnable?.let { welcomeBanner.removeCallbacks(it) }
 
         if (welcomeBanner.visibility != View.VISIBLE) {
@@ -552,8 +523,6 @@ class RegisterActivity : AppCompatActivity() {
             welcomeBanner.visibility = View.VISIBLE
             welcomeBanner.animate().alpha(1f).setDuration(180).withLayer().start()
         }
-
-        // schedule fade-out
         bannerHideRunnable = Runnable {
             welcomeBanner.animate()
                 .alpha(0f)
@@ -565,11 +534,8 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     private fun View.pulseThenSetActivated(activateAfter: Boolean, totalMs: Long = 360L) {
-        // Play pulse
         background = ContextCompat.getDrawable(context, R.drawable.user_input_pulse)
         (background as? AnimationDrawable)?.start()
-
-        // After pulse, restore selector & set final state
         postDelayed({
             background = ContextCompat.getDrawable(context, R.drawable.user_input_bg_selector)
             isActivated = activateAfter
@@ -584,7 +550,6 @@ class RegisterActivity : AppCompatActivity() {
 
         et.setOnFocusChangeListener { v, hasFocus ->
             if (hasFocus) {
-                // 🔹 show the explanation for THIS field
                 showBanner(help[et.id] ?: "")
                 v.pulseThenSetActivated(et.text.isNotBlank())
             } else {
@@ -609,7 +574,6 @@ class RegisterActivity : AppCompatActivity() {
     private fun wireSpinner(sp: Spinner, placeholderIndex: Int = 0) {
         sp.background = ContextCompat.getDrawable(this, R.drawable.user_input_bg_selector)
 
-        // Pulse when the user taps to open
         sp.setOnTouchListener { v, e ->
             if (e.action == MotionEvent.ACTION_DOWN) {
                 v.pulseThenSetActivated(sp.selectedItemPosition != placeholderIndex)
@@ -617,7 +581,6 @@ class RegisterActivity : AppCompatActivity() {
             false
         }
 
-        // Lock visual state based on selection
         sp.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>, view: View?, pos: Int, id: Long) {
                 val active = pos != placeholderIndex
@@ -672,29 +635,21 @@ class RegisterActivity : AppCompatActivity() {
     private fun isHeightValid(v: Float): Boolean = v in MIN_HEIGHT_CM..MAX_HEIGHT_CM
     private fun isWeightValid(v: Float): Boolean = v in MIN_WEIGHT_KG..MAX_WEIGHT_KG
 
-    /** Limits to given range and decimal places while typing */
     private fun EditText.applyNumericConstraints(min: Float, max: Float, maxDecimals: Int) {
-        // Filter: only digits and a single dot
         val digits = "0123456789."
         this.filters = arrayOf(InputFilter { src, _, _, dest, dstart, dend ->
-            // block multiple dots
             if (src.contains('.')) {
                 if (dest.contains('.')) return@InputFilter ""
-                // prevent starting with '.' -> prefix with 0
                 if (dstart == 0 && (dest.isEmpty() || dest.toString() == "")) return@InputFilter "0."
             }
-            // block non-allowed chars
             if (src.any { it !in digits }) return@InputFilter ""
 
-            // enforce decimal places
             val newTxt = (dest.substring(0, dstart) + src + dest.substring(dend))
             val dotIdx = newTxt.indexOf('.')
             if (dotIdx >= 0 && newTxt.length - dotIdx - 1 > maxDecimals) return@InputFilter ""
-            // allow tentative empty/partial states
             return@InputFilter src
         })
 
-        // Real-time range clamp + error
         this.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -710,7 +665,4 @@ class RegisterActivity : AppCompatActivity() {
             }
         })
     }
-
-
-
 }

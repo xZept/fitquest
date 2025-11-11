@@ -56,7 +56,6 @@ class SpriteSheetDrawable(
         canvas.drawBitmap(sheet, src, dest, paint)
     }
 
-    // SpriteSheetDrawable.kt  (inside class SpriteSheetDrawable)
     fun resetToStart() {
         frameIndex = 0
         invalidateSelf()
@@ -69,7 +68,7 @@ class SpriteSheetDrawable(
             if (loop) {
                 frameIndex = 0
             } else {
-                frameIndex = totalFrames - 1 // clamp to last frame
+                frameIndex = totalFrames - 1
                 running = false
                 invalidateSelf()
                 return

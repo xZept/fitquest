@@ -36,7 +36,6 @@ fun Fragment.showLogFoodDialog(
     var apiPortions: List<ApiPortion> = emptyList()
 
 
-    // Units: load only what the API actually provides for this food
     binding.actvUnit.isEnabled = false
     binding.actvUnit.setText("Loading units…", false)
 
@@ -80,29 +79,25 @@ fun Fragment.showLogFoodDialog(
     )
 
     val dialog = MaterialAlertDialogBuilder(requireContext())
-        .setView(binding.root)   // no positive/negative buttons
+        .setView(binding.root)
         .create()
 
     dialog.setOnShowListener {
-        // Make wrapper transparent so your PNG shows
         dialog.window?.setBackgroundDrawable(
             android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)
         )
         (binding.root.parent as? ViewGroup)?.setPadding(0, 0, 0, 0)
 
-        // Optional ripple feedback
         val attrs = intArrayOf(android.R.attr.selectableItemBackgroundBorderless)
         val ta = requireContext().obtainStyledAttributes(attrs)
         val ripple = ta.getDrawable(0); ta.recycle()
         binding.root.findViewById<ImageButton>(R.id.btn_cancel_img).foreground = ripple
         binding.root.findViewById<ImageButton>(R.id.btn_add_img).foreground = ripple
 
-        // Cancel
         binding.root.findViewById<ImageButton>(R.id.btn_cancel_img).setOnClickListener {
             dialog.dismiss()
         }
 
-        // Add (moved from default positive button)
         val addBtnImg = binding.root.findViewById<ImageButton>(R.id.btn_add_img)
         addBtnImg.setOnClickListener {
             val amountText = binding.etAmount.text?.toString()?.trim().orEmpty()
@@ -139,7 +134,6 @@ fun Fragment.showLogFoodDialog(
                         inputQuantity = amount
                     )
 
-
                     onLogged(logId); dialog.dismiss()
                 } catch (t: Throwable) {
                     addBtnImg.isEnabled = true
@@ -165,7 +159,6 @@ fun FragmentActivity.showLogFoodDialog(
 ) {
     val binding = DialogLogFoodBinding.inflate(LayoutInflater.from(this))
 
-    // Units: load only what the API actually provides for this food
     binding.actvUnit.isEnabled = false
     binding.actvUnit.setText("Loading units…", false)
 
@@ -202,7 +195,7 @@ fun FragmentActivity.showLogFoodDialog(
     )
 
     val dialog = MaterialAlertDialogBuilder(this)
-        .setView(binding.root)   // no positive/negative buttons
+        .setView(binding.root)
         .create()
 
     dialog.setOnShowListener {

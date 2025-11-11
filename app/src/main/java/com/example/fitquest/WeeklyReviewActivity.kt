@@ -17,7 +17,7 @@ class WeeklyReviewActivity : AppCompatActivity() {
     private lateinit var pbWeekKcal: com.google.android.material.progressindicator.LinearProgressIndicator
     private lateinit var pbWeekProtein: com.google.android.material.progressindicator.LinearProgressIndicator
 
-    private var activeEndDayKey: Int = 0  // last day of the shown range
+    private var activeEndDayKey: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,9 +34,7 @@ class WeeklyReviewActivity : AppCompatActivity() {
         pbWeekKcal = findViewById(R.id.pb_week_kcal)
         pbWeekProtein = findViewById(R.id.pb_week_protein)
 
-        activeEndDayKey = todayDayKey() // default: 7-day window ending today
-        // If you prefer calendar weeks (Mon–Sun), use:
-        // activeEndDayKey = endOfIsoWeekDayKey(todayDayKey())
+        activeEndDayKey = todayDayKey()
 
         fun refresh(endDk: Int) {
             lifecycleScope.launch {
@@ -66,7 +64,6 @@ class WeeklyReviewActivity : AppCompatActivity() {
                 pbWeekProtein.setProgressCompat(proteinAvg.coerceAtMost(100), true)
                 pbWeekProtein.setIndicatorColor(if (proteinAvg <= 100) ok else over)
 
-                // Enable/disable Next: don't allow going into the future
                 btnNext.isEnabled = addDaysToDayKey(endDk, 7) <= todayDayKey()
                 btnNext.alpha = if (btnNext.isEnabled) 1f else 0.5f
             }
@@ -101,8 +98,6 @@ class WeeklyReviewActivity : AppCompatActivity() {
         val dt = java.time.LocalDate.of(y, m, d).plusDays(delta.toLong())
         return dt.year * 10_000 + dt.monthValue * 100 + dt.dayOfMonth
     }
-
-    // Optional: align to calendar week (ISO Mon–Sun)
     private fun endOfIsoWeekDayKey(dayKey: Int): Int {
         val y = dayKey / 10_000
         val m = (dayKey / 100) % 100

@@ -46,7 +46,6 @@ class DiaryActivity : AppCompatActivity() {
             tab.customView = tv
         }.attach()
 
-        // Grow selected tab text, shrink unselected
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(t: TabLayout.Tab) {
                 (t.customView as? TextView)?.apply { textSize = 18f }
@@ -59,11 +58,9 @@ class DiaryActivity : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener {
             it.startAnimation(pressAnim)
-            // If there's a previous screen, this behaves like a normal back.
             if (!isTaskRoot) {
                 onBackPressedDispatcher.onBackPressed()
             } else {
-                // Fallback: ensure we land on ProfileActivity
                 startActivity(
                     Intent(this, ProfileActivity::class.java)
                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)

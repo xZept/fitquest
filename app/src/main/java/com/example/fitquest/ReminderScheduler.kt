@@ -25,7 +25,6 @@ object ReminderScheduler {
         val triggerAt = next.toInstant().toEpochMilli()
 
         if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
-            // Inexact fallback
             if (Build.VERSION.SDK_INT >= 19) am.setWindow(AlarmManager.RTC_WAKEUP, triggerAt, 15 * 60 * 1000L, pi)
             else am.set(AlarmManager.RTC_WAKEUP, triggerAt, pi)
             return
@@ -37,8 +36,6 @@ object ReminderScheduler {
             else                        -> am.set(AlarmManager.RTC_WAKEUP, triggerAt, pi)
         }
     }
-
-    /** DEBUG: fire in N minutes (kept, but now with safe fallback). */
     fun scheduleInMinutes(ctx: Context, minutes: Int) {
         val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(ctx, WeightReminderReceiver::class.java)
@@ -48,7 +45,6 @@ object ReminderScheduler {
 
         val triggerAt = System.currentTimeMillis() + minutes * 60_000L
 
-        // Fallback if exact-alarm permission isn’t granted on API 31+
         if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
             if (Build.VERSION.SDK_INT >= 19) {
                 am.setWindow(AlarmManager.RTC_WAKEUP, triggerAt, 15 * 1000L, pi) // small window for debug
@@ -67,8 +63,6 @@ object ReminderScheduler {
         }
     }
 
-
-    /** DEBUG: fire in N seconds (use this for 15s). */
     fun scheduleInSeconds(ctx: Context, seconds: Int) =
         scheduleInMillis(ctx, seconds * 1_000L, requestCode = 1002)
 
@@ -82,7 +76,6 @@ object ReminderScheduler {
         val triggerAt = System.currentTimeMillis() + delayMs
 
         if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
-            // Inexact fallback for debug
             if (Build.VERSION.SDK_INT >= 19) am.setWindow(AlarmManager.RTC_WAKEUP, triggerAt, 5_000L, pi)
             else am.set(AlarmManager.RTC_WAKEUP, triggerAt, pi)
             return
@@ -99,7 +92,6 @@ object ReminderScheduler {
         val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(ctx, MacroSnapshotReceiver::class.java)
 
-        // Distinct request code so it doesn't collide with weight alarm
         val pi = PendingIntent.getBroadcast(
             ctx, 1011, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or immutableFlag()
@@ -112,7 +104,6 @@ object ReminderScheduler {
         val triggerAt = next.toInstant().toEpochMilli()
 
         if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
-            // Inexact fallback (may fire within ~15 min window)
             if (Build.VERSION.SDK_INT >= 19) am.setWindow(AlarmManager.RTC_WAKEUP, triggerAt, 15 * 60 * 1000L, pi)
             else am.set(AlarmManager.RTC_WAKEUP, triggerAt, pi)
             return

@@ -37,7 +37,7 @@ class DailyHistoryFragment : Fragment() {
 
             val repo = ProgressRepository(db)
 
-            // NEW: only days that actually have data (no prebuilt 0..13 loop)
+
             val summaries = withContext(Dispatchers.IO) {
                 repo.dailyHistory(uid, limit = 30)   // <- uses activeDayKeys under the hood
             }
@@ -48,7 +48,7 @@ class DailyHistoryFragment : Fragment() {
             summaries.forEach { s ->
                 val row = inf.inflate(R.layout.item_daily_history_row, list, false)
 
-                // Convert dayKey -> LocalDate for the label you already show
+                // Convert dayKey -> LocalDate
                 val y = s.dayKey / 10_000
                 val m = (s.dayKey / 100) % 100
                 val d = s.dayKey % 100

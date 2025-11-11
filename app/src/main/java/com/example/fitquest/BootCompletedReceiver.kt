@@ -8,9 +8,8 @@ class BootCompletedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED,
-            Intent.ACTION_TIME_CHANGED,       // user changed the time (manifest action is TIME_SET)
-            Intent.ACTION_TIMEZONE_CHANGED -> { // user changed timezone
-                // Re-schedule the next daily reminder after reboot/time change
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED -> {
                 ReminderScheduler.scheduleNext6am(context.applicationContext)
                 ReminderScheduler.scheduleNext2359PHT(context.applicationContext)
 

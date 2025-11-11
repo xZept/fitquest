@@ -36,12 +36,10 @@ class WeeklyHistoryFragment : Fragment() {
 
             val repo = ProgressRepository(db)
 
-            // Only weeks that actually have data
             val weeks = withContext(Dispatchers.IO) {
                 repo.weeklyHistory(uid, limitWeeks = 12)
             }
 
-            // ✅ Fetch latest plan ONCE (outside the loop)
             val latestPlanCals = withContext(Dispatchers.IO) {
                 db.macroPlanDao().getLatestForUser(uid)?.calories ?: 0
             }
@@ -50,8 +48,7 @@ class WeeklyHistoryFragment : Fragment() {
             val inf = LayoutInflater.from(ctx)
 
             weeks.forEach { w ->
-                // If your WeeklySummary has explicit start/end, use them.
-                val daysList = w.days  // List<DailySummary>
+                val daysList = w.days
 
                 val startDk = daysList.minOf { it.dayKey }
                 val endDk   = daysList.maxOf { it.dayKey }
@@ -65,13 +62,11 @@ class WeeklyHistoryFragment : Fragment() {
                 val startDate = dkToDate(startDk)
                 val endDate   = dkToDate(endDk)
 
-                // ✅ Fallback to latest plan when planCalories == 0
                 val planPerDay = daysList.map { s ->
                     if (s.planCalories > 0) s.planCalories else latestPlanCals
                 }
                 val avgPlan = if (planPerDay.isNotEmpty()) planPerDay.average().toInt() else 0
 
-                // --- Compute the text you already show ---
                 val avgCals = daysList.map { it.calories }.average().toInt()
                 val dev     = if (avgPlan > 0) (avgCals - avgPlan) else 0
                 val workouts = daysList.sumOf { it.workoutsCompletedToday }

@@ -20,7 +20,7 @@ class FoodRepository(
     private val api: FdcService,
     private val db: AppDatabase
 ) {
-//
+
     suspend fun deleteLog(logId: Long) = withContext(Dispatchers.IO) {
         val log = db.foodLogDao().getById(logId) ?: return@withContext
         db.foodLogDao().deleteById(logId)
@@ -52,7 +52,6 @@ class FoodRepository(
         db.foodLogDao().updateServing(
             logId, newGrams, cals, pro, carb, fat, inputUnit, inputQuantity, inputLabel
         ).also {
-            // keep MacroDiary in sync
             upsertMacroDiaryFor(log.userId, log.dayKey)
         }
     }
@@ -69,27 +68,21 @@ class FoodRepository(
         return db.foodLogDao().totalsForDay(userId, dk)
     }
 
-    // 1) SEARCH & SHOW MATCHES
     suspend fun search(term: String, page: Int = 1, pageSize: Int = 50) =
         api.searchFoods(query = term, pageNumber = page, pageSize = pageSize).foods
-
-    // 2) GET MACROS FOR A GIVEN MEASUREMENT (returns computed macros)
     suspend fun getMacrosForMeasurement(fdcId: Long, userInput: MeasurementInput): PortionMacros =
         withContext(Dispatchers.IO) {
             val detail = api.getFood(fdcId)
             detail.debugDump()
 
-            // ensure the food exists locally (for dedupe & logging)
             val foodId = db.foodDao().upsertKeepId(detail.toFoodEntity())
             val existing = db.portionDao().getForFood(foodId)
             if (existing.isEmpty()) {
                 db.portionDao().insertAll(detail.toPortions(foodId))
             }
 
-            // resolve grams for the user's input
             val grams = resolveGrams(userInput, detail, db.portionDao().getForFood(foodId))
 
-            // compute from per-100g baseline (your schema)
             val f = db.foodDao().getById(foodId)!!
             val factor = grams / 100.0
             PortionMacros(
@@ -135,7 +128,7 @@ class FoodRepository(
             inputLabel = inputLabel
         )
 
-        db.foodLogDao().insert(log).also {  // <-- this Long becomes the return value
+        db.foodLogDao().insert(log).also {
             upsertMacroDiaryFor(userId, log.dayKey)
         }
     }

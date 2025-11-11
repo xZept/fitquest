@@ -36,7 +36,7 @@ class DiaryHistoryActivity : AppCompatActivity() {
             tab.text = titles[pos]
         }.attach()
 
-        // Hide system navigation (repo)
+        // Hide system navigation
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false)
             window.insetsController?.apply {

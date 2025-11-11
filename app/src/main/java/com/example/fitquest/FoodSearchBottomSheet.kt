@@ -36,8 +36,6 @@ class FoodSearchBottomSheet(
     private var searchJob: Job? = null
     private var recentJob: Job? = null
 
-
-    // Create adapter only after viewLifecycleOwner exists
     private lateinit var adapter: FoodSearchAdapter
 
     override fun onCreateDialog(savedInstanceState: Bundle?) =
@@ -65,7 +63,6 @@ class FoodSearchBottomSheet(
         binding.rvResults.layoutManager = LinearLayoutManager(requireContext())
         binding.rvResults.adapter = adapter
 
-        // initial populate: show recent foods
         showRecents(limit = 10)
 
         binding.etSearch.addTextChangedListener { queryFlow.value = it?.toString().orEmpty() }
@@ -97,7 +94,6 @@ class FoodSearchBottomSheet(
         binding.tvEmpty.isVisible = false
         binding.rvResults.isVisible = false
 
-        // cancel any in-flight search, then load recents
         searchJob?.cancel()
         recentJob?.cancel()
         recentJob = viewLifecycleOwner.lifecycleScope.launch {
@@ -132,7 +128,6 @@ class FoodSearchBottomSheet(
                     repo.search(term, page = 1, pageSize = 50)
                 }
 
-                // Log and render
                 android.util.Log.d("FoodSearch", "results=${items.size} for '$term'")
                 adapter.submit(items)
                 android.util.Log.d("FoodSearch", "adapter itemCount=${adapter.itemCount}")
@@ -141,7 +136,6 @@ class FoodSearchBottomSheet(
                 binding.tvEmpty.isVisible = items.isEmpty()
                 binding.tvEmpty.text = if (items.isEmpty()) "No results." else ""
             } catch (ce: CancellationException) {
-                // normal during fast typing
                 throw ce
             } catch (he: retrofit2.HttpException) {
                 val code = he.code()
@@ -185,9 +179,8 @@ private class FoodSearchAdapter(
 
     private val items = mutableListOf<FdcSearchFood>()
 
-    // Avoid multiple network calls while scrolling the same id
-    private val textCache = mutableMapOf<Long, String>()           // fdcId -> "Protein: Xg; Fat: Yg; Carbs: Zg"
-    private val inFlight  = mutableMapOf<Long, Deferred<String>>() // fdcId -> job
+    private val textCache = mutableMapOf<Long, String>()
+    private val inFlight  = mutableMapOf<Long, Deferred<String>>()
 
     fun submit(newItems: List<FdcSearchFood>) {
         val oldItems = items.toList()
@@ -213,14 +206,13 @@ private class FoodSearchAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
-        holder.bind(item) { onClick(item) }  // ← click now uses the actual item
+        holder.bind(item) { onClick(item) }
 
-        // Sub line: cached or fetch once
         val cached = textCache[item.fdcId]
         if (cached != null) {
             holder.bindSub(cached)
         } else {
-            holder.bindSub("") // or " "
+            holder.bindSub("")
             val job = inFlight[item.fdcId] ?: scope.async(Dispatchers.IO) {
                 val pm = repo.previewMacrosPer100g(item.fdcId)
                 "Protein: ${pm.protein.toInt()}g; Fat: ${pm.fat.toInt()}g; Carbs: ${pm.carbs.toInt()}g"

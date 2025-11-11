@@ -33,10 +33,7 @@ private lateinit var emptyView: TextView
 
 class FoodHistory : AppCompatActivity() {
 
-    // Create the adapter
     private val diaryAdapter = MacroDiaryAdapter { item ->
-        // Handle item click (toast for now)
-//        Toast.makeText(this, "Clicked ${item.dayKey}", Toast.LENGTH_SHORT).show()
     }
 
     private lateinit var pressAnim: android.view.animation.Animation
@@ -52,8 +49,6 @@ class FoodHistory : AppCompatActivity() {
 
         rv = findViewById(R.id.rvDiary)
         emptyView = findViewById(R.id.tvEmpty)
-
-        // LayoutManager + adapter
         rv.setHasFixedSize(true)
         rv.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
         rv.adapter = diaryAdapter
@@ -72,7 +67,6 @@ class FoodHistory : AppCompatActivity() {
 
                 diaryAdapter.submitList(history)
 
-                // Toggle empty state
                 emptyView.isVisible = history.isEmpty()
                 rv.isVisible = history.isNotEmpty()
             }
@@ -80,11 +74,9 @@ class FoodHistory : AppCompatActivity() {
 
         findViewById<ImageButton>(R.id.btnBack).setOnClickListener {
             it.startAnimation(pressAnim)
-            // If there's a previous screen, this behaves like a normal back.
             if (!isTaskRoot) {
                 onBackPressedDispatcher.onBackPressed()
             } else {
-                // Fallback: ensure we land on ProfileActivity
                 startActivity(
                     Intent(this, ProfileActivity::class.java)
                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)

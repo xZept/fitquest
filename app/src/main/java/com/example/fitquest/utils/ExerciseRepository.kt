@@ -9,7 +9,6 @@ import kotlin.random.Random
 
 object ExerciseRepository {
 
-    // Load exercises (matches your CSV header)
     fun loadExercises(context: Context, assetName: String = "exercises.csv"): List<Exercise> {
         val list = mutableListOf<Exercise>()
         val input = context.assets.open(assetName)
@@ -99,9 +98,8 @@ object ExerciseRepository {
         return out
     }
 
-    // --- Filters / helpers (kept simple and documented for team) ---
 
-    // Equipment filter: returns same list if pref is blank or "gym"
+    // Equipment filter
     fun List<Exercise>.filterByEquipment(pref: String): List<Exercise> {
         if (pref.isBlank()) return this
         val p = pref.lowercase()
@@ -126,7 +124,7 @@ object ExerciseRepository {
         }
     }
 
-    // Convert condition string to list and check against exercise.restrictedFor
+    // Convert condition string to list and check
     private val conditionKeywords = mapOf(
         "strength" to listOf("wrist", "carpal tunnel", "forearm"),
         "beginner friendly" to listOf("shoulder", "rotator cuff", "labral tear", "impingement"),
@@ -192,7 +190,6 @@ object ExerciseRepository {
         else -> listOf("Full Body")
     }
 
-    // allocate to buckets (keeps simple, deterministic selection)
     fun allocateToBuckets(pool: List<Exercise>, dayBuckets: List<String>): Map<String, List<Exercise>> {
         val result = mutableMapOf<String, MutableList<Exercise>>()
         val used = mutableSetOf<Int>()

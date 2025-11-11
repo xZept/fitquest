@@ -51,15 +51,12 @@ class WeightPromptActivity : AppCompatActivity() {
 
                 val db = AppDatabase.getInstance(applicationContext)
 
-                // 1) Update profile (you already do this)
                 val profile = db.userProfileDAO().getProfileByUserId(uid)
                 if (profile != null) {
                     db.userProfileDAO().update(profile.copy(weight = w.roundToInt()))
-                    // Optional: recompute macros
                     FitquestRepository(this@WeightPromptActivity).computeAndSaveMacroPlan(uid)
                 }
 
-                // 2) Record every entry
                 db.weightLogDao().insert(
                     com.example.fitquest.database.WeightLog(
                         userId = uid,
